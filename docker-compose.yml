@@ -1,0 +1,40 @@
+services:
+  database:
+    image: mysql:8.4.11
+    container_name: qrvet_database
+    ports:
+        - "3306:3306"
+    networks:
+      - qrvet_network
+    environment:
+      MYSQL_DATABASE: ${DB_NAME}
+      MYSQL_USER: ${DB_USER}
+      MYSQL_PASSWORD: ${DB_PASSWORD}
+      MYSQL_ROOT_PASSWORD: ${DB_ROOT_PASSWORD}
+    volumes:
+      - database_data:/var/lib/mysql
+
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: qrvet_backend
+    ports:
+      - "8080:8080"
+    networks:
+      - qrvet_network
+    environment:
+      TZ: ${TZ}
+      SPRING_DATASOURCE_URL: ${DB_URL}
+      SPRING_DATASOURCE_USERNAME: ${DB_USER}
+      SPRING_DATASOURCE_PASSWORD: ${DB_PASSWORD}
+      SPRING_PROFILES_ACTIVE: ${SPRING_PROFILE}
+    depends_on:
+      - database
+
+
+networks:
+  qrvet_network:
+
+volumes:
+  database_data:
