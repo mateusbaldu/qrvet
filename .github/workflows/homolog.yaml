@@ -1,10 +1,10 @@
-name: Backend CI Pipeline
+name: Backend - Homologação
 
 on:
   push:
-    branches: [ "main", "homologacao" ]
+    branches: [ "homologacao" ]
   pull_request:
-    branches: [ "main", "homologacao" ]
+    branches: [ "homologacao" ]
 
 jobs:
   build:
@@ -27,16 +27,3 @@ jobs:
           cd backend
           chmod +x mvnw
           ./mvnw clean compile
-
-  docker:
-    name: Build Docker Image
-    needs: build
-    if: github.ref == 'refs/heads/main' && github.event_name == 'push'
-    runs-on: ubuntu-latest
-
-    steps:
-      - name: Checkout repository
-        uses: actions/checkout@v4
-
-      - name: Build Docker Image
-        run: docker build -t qrvet-backend:latest ./backend
