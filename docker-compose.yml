@@ -32,6 +32,18 @@ services:
     depends_on:
       - database
 
+  frontend:
+      build:
+        context: ./frontend
+        dockerfile: Dockerfile
+      container_name: qrvet_frontend
+      ports:
+        - "3000:80"
+      networks:
+        - qrvet_network
+      depends_on:
+        - backend
+
 
 networks:
   qrvet_network:
