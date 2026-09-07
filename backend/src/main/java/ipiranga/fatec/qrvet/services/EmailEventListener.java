@@ -17,7 +17,7 @@ public class EmailEventListener {
     public EmailEventListener(
             JavaMailSender mail,
             @Value("${qrvet.frontend-url}") String frontend,
-            @Value("${backend.mail-from}") String sender) {
+            @Value("${qrvet.mail-from}") String sender) {
         this.mail = mail;
         this.frontend = frontend;
         this.sender = sender;

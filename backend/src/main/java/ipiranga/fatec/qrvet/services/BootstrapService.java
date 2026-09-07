@@ -25,7 +25,7 @@ public class BootstrapService {
     public BootstrapService(
             UserRepository users,
             PasswordEncoder passwordEncoder,
-            @Value("${backend.bootstrap-secret}") String secret) {
+            @Value("${qrvet.bootstrap-secret}") String secret) {
         this.users = users;
         this.passwordEncoder = passwordEncoder;
         this.secret = secret;
