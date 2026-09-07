@@ -1,4 +1,4 @@
-package ipiranga.fatec.qrvet.security;
+package ipiranga.fatec.qrvet.services;
 
 import ipiranga.fatec.qrvet.models.User;
 import org.springframework.security.authentication.BadCredentialsException;
