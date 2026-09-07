@@ -15,6 +15,17 @@
 body { margin: 0; min-width: 320px; min-height: 100vh; color: var(--ink); background: #fff; }
 button, input { font: inherit; }
 .auth-shell { overflow: hidden; }
+.session-loading {
+  display: flex; min-height: 100vh; align-items: center; justify-content: center; gap: .8rem;
+  color: var(--green-700); background: #f4f8f6; font-weight: 600;
+}
+.api-feedback {
+  margin-bottom: 1.25rem; padding: .8rem 1rem; border: 1px solid; border-radius: .75rem;
+  font-size: .88rem; line-height: 1.45;
+}
+.api-feedback.success { color: #126345; background: #e8f8f0; border-color: #bce3cf; }
+.api-feedback.error { color: #943d3d; background: #fff0f0; border-color: #efcaca; }
+.api-feedback button { margin-left: .4rem; padding: 0; color: inherit; background: transparent; border: 0; font-weight: 700; text-decoration: underline; }
 
 .auth-story {
   position: relative;

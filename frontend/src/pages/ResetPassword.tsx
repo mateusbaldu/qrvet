@@ -1,11 +1,17 @@
 import { useState, type FormEvent } from 'react'
 import { ArrowLeft, ArrowRight, Check, Circle } from 'lucide-react'
-import { Link } from 'react-router-dom'
+import { Link, useNavigate, useSearchParams } from 'react-router-dom'
 import { RecoveryCard } from '../components/RecoveryCard'
+import { apiRequest, errorMessage } from '../services/api'
 
 export function ResetPassword() {
   const [senha, setSenha] = useState('')
   const [confirmacao, setConfirmacao] = useState('')
+  const [erro, setErro] = useState('')
+  const [enviando, setEnviando] = useState(false)
+  const [params] = useSearchParams()
+  const navigate = useNavigate()
+  const token = params.get('token')
 
   const requisitos = [
     { texto: 'Pelo menos 8 caracteres', atendido: senha.length >= 8 },
@@ -19,8 +25,21 @@ export function ResetPassword() {
   const senhasIguais = confirmacao.length > 0 && senha === confirmacao
   const formularioValido = senhaValida && senhasIguais
 
-  function enviar(event: FormEvent<HTMLFormElement>) {
+  async function enviar(event: FormEvent<HTMLFormElement>) {
     event.preventDefault()
+    if (!token) return
+    setErro('')
+    setEnviando(true)
+    try {
+      await apiRequest('/auth/reset-password', {
+        method: 'POST', body: JSON.stringify({ token, newPassword: senha }),
+      }, false)
+      navigate('/login', { replace: true, state: { message: 'Senha redefinida. Você já pode entrar.' } })
+    } catch (error) {
+      setErro(errorMessage(error))
+    } finally {
+      setEnviando(false)
+    }
   }
 
   return (
@@ -29,6 +48,8 @@ export function ResetPassword() {
       title="Crie uma nova senha."
       description="Escolha uma senha segura e confirme-a antes de continuar."
     >
+      {!token && <div className="api-feedback error" role="alert">O link de recuperação não possui um token válido.</div>}
+      {erro && <div className="api-feedback error" role="alert">{erro}</div>}
       <form onSubmit={enviar}>
         <div className="mb-4">
           <label className="form-label auth-label" htmlFor="nova-senha">Nova senha</label>
@@ -87,9 +108,9 @@ export function ResetPassword() {
         <button
           className="btn auth-submit w-100 d-flex align-items-center justify-content-center gap-3"
           type="submit"
-          disabled={!formularioValido}
+          disabled={!formularioValido || !token || enviando}
         >
-          Redefinir minha senha <ArrowRight size={20} />
+          {enviando ? <><span className="spinner-border spinner-border-sm" /> Alterando...</> : <>Redefinir minha senha <ArrowRight size={20} /></>}
         </button>
       </form>
 

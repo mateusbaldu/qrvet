@@ -70,6 +70,7 @@
   color: var(--green-950); background: #d8f3e6; border-radius: 50%; font-size: .72rem; font-weight: 700;
 }
 .member-avatar.pending { color: #83918c; background: #edf2f0; }
+.member-avatar img { width: 100%; height: 100%; border-radius: inherit; object-fit: cover; }
 .member-pending .member-cell strong { color: #84918d; }
 .permission-badge, .status-badge {
   display: inline-flex; align-items: center; gap: .35rem; padding: .3rem .55rem;
@@ -120,6 +121,7 @@
 }
 .team-modal h2 { margin: 0 2.5rem .65rem 0; color: var(--ink); font-size: 1.55rem; font-weight: 700; letter-spacing: -.035em; }
 .team-modal > p { margin: 0 0 1.75rem; color: var(--muted); font-size: .93rem; line-height: 1.55; }
+.team-modal .api-feedback { margin-bottom: 1rem; }
 .team-modal-actions { display: flex; justify-content: flex-end; gap: .7rem; margin-top: 1.5rem; }
 .team-modal-cancel { color: #51635d; background: #fff; border: 1px solid #d7e1dc; border-radius: .7rem; font-weight: 600; }
 .team-modal-cancel:hover, .team-modal-cancel:focus-visible { color: var(--green-950); background: #f4f8f6; border-color: #bdccc5; }

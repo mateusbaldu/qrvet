@@ -1,7 +1,9 @@
-import { useEffect, useState } from 'react'
+import { useState } from 'react'
 import { ChevronLeft, ChevronRight, LogOut, Menu, PawPrint, UserRound, Users, X } from 'lucide-react'
-import { Link, NavLink, Outlet, useLocation } from 'react-router-dom'
+import { Link, NavLink, Outlet, useLocation, useNavigate } from 'react-router-dom'
 import '../styles/layout.css'
+import { useAuth } from '../auth/auth-context'
+import { initials, roleLabel } from '../services/api'
 
 const titulos: Record<string, string> = {
   '/equipe': 'Equipe',
@@ -12,15 +14,26 @@ export function AppLayout() {
   const [menuAberto, setMenuAberto] = useState(false)
   const [menuRecolhido, setMenuRecolhido] = useState(false)
   const location = useLocation()
+  const navigate = useNavigate()
+  const { user, logout } = useAuth()
   const tituloAtual = titulos[location.pathname] ?? 'QRVet'
 
-  useEffect(() => setMenuAberto(false), [location.pathname])
+  async function sair() {
+    await logout().catch(() => undefined)
+    navigate('/login', { replace: true })
+  }
+
+  if (!user) return null
+
+  const avatar = user.avatarUrl
+    ? <img src={user.avatarUrl} alt="" />
+    : initials(user.name)
 
   return (
     <div className="app-shell">
       <aside className={`app-sidebar ${menuAberto ? 'open' : ''} ${menuRecolhido ? 'collapsed' : ''}`} aria-label="Menu principal">
         <div className="sidebar-heading">
-          <Link to="/equipe" className="sidebar-brand">
+          <Link to="/equipe" className="sidebar-brand" onClick={() => setMenuAberto(false)}>
             <span className="sidebar-logo"><PawPrint size={25} /></span>
             <span><strong>QRVet</strong><small>Gestão veterinária</small></span>
           </Link>
@@ -41,18 +54,18 @@ export function AppLayout() {
 
         <nav className="sidebar-nav">
           <span className="sidebar-section-label">CLÍNICA</span>
-          <NavLink to="/equipe" title={menuRecolhido ? 'Equipe' : undefined} className={({ isActive }) => isActive ? 'active' : ''}>
+          <NavLink to="/equipe" onClick={() => setMenuAberto(false)} title={menuRecolhido ? 'Equipe' : undefined} className={({ isActive }) => isActive ? 'active' : ''}>
             <Users size={19} /> <span className="sidebar-link-text">Equipe</span>
           </NavLink>
-          <NavLink to="/meu-perfil" title={menuRecolhido ? 'Meu perfil' : undefined} className={({ isActive }) => isActive ? 'active' : ''}>
+          <NavLink to="/meu-perfil" onClick={() => setMenuAberto(false)} title={menuRecolhido ? 'Meu perfil' : undefined} className={({ isActive }) => isActive ? 'active' : ''}>
             <UserRound size={19} /> <span className="sidebar-link-text">Meu perfil</span>
           </NavLink>
         </nav>
 
         <div className="sidebar-user mt-auto">
-          <span className="sidebar-avatar">DS</span>
-          <span><strong>Dra. Sarah</strong><small>Administradora</small></span>
-          <Link to="/login" aria-label="Sair"><LogOut size={18} /></Link>
+          <span className="sidebar-avatar">{avatar}</span>
+          <span><strong>{user.name}</strong><small>{roleLabel(user.role)}</small></span>
+          <button type="button" onClick={sair} aria-label="Sair"><LogOut size={18} /></button>
         </div>
       </aside>
 
@@ -68,8 +81,8 @@ export function AppLayout() {
           </div>
 
           <Link to="/meu-perfil" className="header-profile" aria-label="Abrir meu perfil">
-            <span className="header-profile-text"><strong>Dra. Sarah Jenkins</strong><small>Administradora</small></span>
-            <span className="header-avatar">DS</span>
+            <span className="header-profile-text"><strong>{user.name}</strong><small>{roleLabel(user.role)}</small></span>
+            <span className="header-avatar">{avatar}</span>
           </Link>
         </header>
 

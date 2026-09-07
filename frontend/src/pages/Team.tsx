@@ -1,375 +1,186 @@
-import { useMemo, useState } from 'react'
+import { useCallback, useEffect, useMemo, useState } from 'react'
 import {
-  CheckCircle2,
-  Clock3,
-  Mail,
-  MoreVertical,
-  Pencil,
-  Search,
-  Send,
-  ShieldCheck,
-  Stethoscope,
-  Trash2,
-  UserRound,
-  UserPlus,
-  Users,
-  X,
-  XCircle,
+  CheckCircle2, Clock3, Mail, MoreVertical, Pencil, Search, Send, ShieldCheck,
+  Stethoscope, Trash2, UserPlus, UserRound, Users, X, XCircle,
 } from 'lucide-react'
+import { useAuth } from '../auth/auth-context'
+import { apiRequest, errorMessage, initials, type Role } from '../services/api'
 import '../styles/team.css'
 
 type Filtro = 'Todos' | 'Admins' | 'Veterinários' | 'Recepcionistas' | 'Pendentes'
 type TipoAcao = 'permissao' | 'remover' | 'reenviar' | 'cancelar'
-
 type Membro = {
-  nome: string
-  email: string
-  iniciais: string
-  permissao: 'Admin' | 'Veterinário' | 'Recepcionista'
-  status: string
-  pendente?: boolean
-  data: string
+  id: string; name: string; email: string; avatarUrl: string | null; role: Role
+  status: 'ACTIVE' | 'INACTIVE' | 'PENDING' | 'EXPIRED'; lastActivityAt: string | null
+  createdAt: string; expiresAt: string | null; invitation: boolean
 }
-
-const membros: Membro[] = [
-  { nome: 'Dra. Sarah Jenkins', email: 'sarah@qrvet.clinic', iniciais: 'SJ', permissao: 'Admin', status: 'Ativo · Agora', data: '14/01/2026' },
-  { nome: 'Mike Ross', email: 'mike@qrvet.clinic', iniciais: 'MR', permissao: 'Veterinário', status: 'Ativo · Há 2h', data: '02/02/2026' },
-  { nome: 'Anna Costa', email: 'anna@qrvet.clinic', iniciais: 'AC', permissao: 'Veterinário', status: 'Inativo', data: '11/03/2026' },
-  { nome: 'Camila Alves', email: 'camila@qrvet.clinic', iniciais: 'CA', permissao: 'Recepcionista', status: 'Ativo · Há 35 min', data: '08/04/2026' },
-  { nome: 'Aguardando aceite', email: 'lucas@qrvet.clinic', iniciais: 'LC', permissao: 'Veterinário', status: 'Convite pendente', pendente: true, data: '17/05/2026' },
-]
+type TeamResponse = { items: Membro[]; summary: { total: number; roles: Record<Role, number>; pending: number } }
 
 const filtros: Filtro[] = ['Todos', 'Admins', 'Veterinários', 'Recepcionistas', 'Pendentes']
+const permissionLabels: Record<Role, string> = { ADMIN: 'Admin', VETERINARIAN: 'Veterinário', RECEPTIONIST: 'Recepcionista' }
+
+function statusText(member: Membro) {
+  if (member.status === 'PENDING') return 'Convite pendente'
+  if (member.status === 'EXPIRED') return 'Convite expirado'
+  if (member.status === 'INACTIVE') return 'Inativo'
+  if (!member.lastActivityAt) return 'Ativo'
+  const minutes = Math.max(0, Math.floor((Date.now() - new Date(member.lastActivityAt).getTime()) / 60_000))
+  if (minutes < 2) return 'Ativo · Agora'
+  if (minutes < 60) return `Ativo · Há ${minutes} min`
+  if (minutes < 1_440) return `Ativo · Há ${Math.floor(minutes / 60)}h`
+  return `Ativo · Há ${Math.floor(minutes / 1_440)}d`
+}
+
+function formattedDate(value: string) {
+  return new Intl.DateTimeFormat('pt-BR').format(new Date(value))
+}
 
 export function Team() {
+  const { user, updateUser } = useAuth()
+  const isAdmin = user?.role === 'ADMIN'
+  const [membros, setMembros] = useState<Membro[]>([])
   const [busca, setBusca] = useState('')
   const [filtro, setFiltro] = useState<Filtro>('Todos')
+  const [carregando, setCarregando] = useState(true)
+  const [erro, setErro] = useState('')
+  const [mensagem, setMensagem] = useState('')
   const [modalAberto, setModalAberto] = useState(false)
   const [emailConvite, setEmailConvite] = useState('')
+  const [cargoConvite, setCargoConvite] = useState<Role>('VETERINARIAN')
   const [menuAberto, setMenuAberto] = useState<string | null>(null)
   const [acaoAtual, setAcaoAtual] = useState<{ tipo: TipoAcao; membro: Membro } | null>(null)
-  const [novaPermissao, setNovaPermissao] = useState<Membro['permissao']>('Veterinário')
+  const [novaPermissao, setNovaPermissao] = useState<Role>('VETERINARIAN')
+  const [processando, setProcessando] = useState(false)
 
-  function enviarConvite(event: React.FormEvent<HTMLFormElement>) {
+  const carregarEquipe = useCallback(async () => {
+    setErro('')
+    try {
+      const response = await apiRequest<TeamResponse>('/team/members')
+      setMembros(response.items)
+    } catch (error) {
+      setErro(errorMessage(error))
+    } finally {
+      setCarregando(false)
+    }
+  }, [])
+
+  useEffect(() => {
+    let active = true
+    apiRequest<TeamResponse>('/team/members')
+      .then((response) => { if (active) setMembros(response.items) })
+      .catch((error) => { if (active) setErro(errorMessage(error)) })
+      .finally(() => { if (active) setCarregando(false) })
+    return () => { active = false }
+  }, [])
+
+  async function enviarConvite(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault()
-    setModalAberto(false)
-    setEmailConvite('')
+    setProcessando(true); setErro('')
+    try {
+      await apiRequest('/team/invitations', { method: 'POST', body: JSON.stringify({ email: emailConvite, role: cargoConvite }) })
+      setModalAberto(false); setEmailConvite(''); setCargoConvite('VETERINARIAN')
+      setMensagem('Convite enviado. Ele já pode ser visualizado no Mailpit.')
+      await carregarEquipe()
+    } catch (error) { setErro(errorMessage(error)) } finally { setProcessando(false) }
   }
 
   function abrirAcao(tipo: TipoAcao, membro: Membro) {
-    setMenuAberto(null)
-    setNovaPermissao(membro.permissao)
-    setAcaoAtual({ tipo, membro })
+    setMenuAberto(null); setErro(''); setMensagem(''); setNovaPermissao(membro.role); setAcaoAtual({ tipo, membro })
   }
 
-  function confirmarAcao(event: React.FormEvent<HTMLFormElement>) {
+  async function confirmarAcao(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault()
-    setAcaoAtual(null)
+    if (!acaoAtual) return
+    setProcessando(true); setErro('')
+    try {
+      if (acaoAtual.tipo === 'permissao') {
+        await apiRequest(`/team/members/${acaoAtual.membro.id}/role`, { method: 'PATCH', body: JSON.stringify({ role: novaPermissao }) })
+        if (user?.id === acaoAtual.membro.id) updateUser({ ...user, role: novaPermissao })
+        setMensagem('Permissão alterada com sucesso.')
+      } else if (acaoAtual.tipo === 'remover') {
+        await apiRequest(`/team/members/${acaoAtual.membro.id}`, { method: 'DELETE' }); setMensagem('Membro removido da equipe.')
+      } else if (acaoAtual.tipo === 'reenviar') {
+        await apiRequest(`/team/invitations/${acaoAtual.membro.id}/resend`, { method: 'POST' }); setMensagem('Convite reenviado. Confira o Mailpit.')
+      } else {
+        await apiRequest(`/team/invitations/${acaoAtual.membro.id}`, { method: 'DELETE' }); setMensagem('Convite cancelado.')
+      }
+      setAcaoAtual(null); await carregarEquipe()
+    } catch (error) { setErro(errorMessage(error)) } finally { setProcessando(false) }
   }
 
   const membrosFiltrados = useMemo(() => {
     const termo = busca.trim().toLocaleLowerCase('pt-BR')
-
     return membros.filter((membro) => {
-      const correspondeBusca = !termo || `${membro.nome} ${membro.email}`.toLocaleLowerCase('pt-BR').includes(termo)
-      const correspondeFiltro =
-        filtro === 'Todos' ||
-        (filtro === 'Admins' && membro.permissao === 'Admin') ||
-        (filtro === 'Veterinários' && membro.permissao === 'Veterinário' && !membro.pendente) ||
-        (filtro === 'Recepcionistas' && membro.permissao === 'Recepcionista' && !membro.pendente) ||
-        (filtro === 'Pendentes' && membro.pendente)
-
+      const correspondeBusca = !termo || `${membro.name} ${membro.email}`.toLocaleLowerCase('pt-BR').includes(termo)
+      const correspondeFiltro = filtro === 'Todos'
+        || (filtro === 'Admins' && membro.role === 'ADMIN' && !membro.invitation)
+        || (filtro === 'Veterinários' && membro.role === 'VETERINARIAN' && !membro.invitation)
+        || (filtro === 'Recepcionistas' && membro.role === 'RECEPTIONIST' && !membro.invitation)
+        || (filtro === 'Pendentes' && membro.status === 'PENDING')
       return correspondeBusca && correspondeFiltro
     })
-  }, [busca, filtro])
+  }, [busca, filtro, membros])
 
-  return (
-    <main className="team-page">
-      <div className="team-container">
-        <header className="team-heading">
-          <div>
-            <h1>Equipe</h1>
-            <p>Gerencie quem tem acesso à clínica e suas permissões.</p>
-          </div>
-          <button className="btn team-invite" type="button" onClick={() => setModalAberto(true)}>
-            <UserPlus size={18} /> Convidar membro
-          </button>
-        </header>
+  const count = (role: Role) => membros.filter((m) => m.role === role && !m.invitation && m.status === 'ACTIVE').length
+  const pending = membros.filter((m) => m.status === 'PENDING').length
 
-        <section className="row g-3 team-stats" aria-label="Resumo da equipe">
-          <div className="col-6 col-xl">
-            <button className={`team-stat-card ${filtro === 'Todos' ? 'active' : ''}`} type="button" onClick={() => setFiltro('Todos')} aria-pressed={filtro === 'Todos'}>
-              <span><Users size={16} /> Total</span><strong>{membros.length}</strong>
-            </button>
-          </div>
-          <div className="col-6 col-xl">
-            <button className={`team-stat-card admin ${filtro === 'Admins' ? 'active' : ''}`} type="button" onClick={() => setFiltro('Admins')} aria-pressed={filtro === 'Admins'}>
-              <span><ShieldCheck size={16} /> Admins</span><strong>{membros.filter((membro) => membro.permissao === 'Admin' && !membro.pendente).length}</strong>
-            </button>
-          </div>
-          <div className="col-6 col-xl">
-            <button className={`team-stat-card vet ${filtro === 'Veterinários' ? 'active' : ''}`} type="button" onClick={() => setFiltro('Veterinários')} aria-pressed={filtro === 'Veterinários'}>
-              <span><Stethoscope size={16} /> Veterinários</span><strong>{membros.filter((membro) => membro.permissao === 'Veterinário' && !membro.pendente).length}</strong>
-            </button>
-          </div>
-          <div className="col-6 col-xl">
-            <button className={`team-stat-card receptionist ${filtro === 'Recepcionistas' ? 'active' : ''}`} type="button" onClick={() => setFiltro('Recepcionistas')} aria-pressed={filtro === 'Recepcionistas'}>
-              <span><UserRound size={16} /> Recepcionistas</span><strong>{membros.filter((membro) => membro.permissao === 'Recepcionista' && !membro.pendente).length}</strong>
-            </button>
-          </div>
-          <div className="col-6 col-xl">
-            <button className={`team-stat-card pending ${filtro === 'Pendentes' ? 'active' : ''}`} type="button" onClick={() => setFiltro('Pendentes')} aria-pressed={filtro === 'Pendentes'}>
-              <span><Clock3 size={16} /> Pendentes</span><strong>{membros.filter((membro) => membro.pendente).length}</strong>
-            </button>
-          </div>
-        </section>
+  return <main className="team-page"><div className="team-container">
+    <header className="team-heading"><div><h1>Equipe</h1><p>Gerencie quem tem acesso à clínica e suas permissões.</p></div>
+      {isAdmin && <button className="btn team-invite" type="button" onClick={() => { setErro(''); setMensagem(''); setModalAberto(true) }}><UserPlus size={18} /> Convidar membro</button>}
+    </header>
+    {mensagem && <div className="api-feedback success" role="status">{mensagem}</div>}
+    {erro && <div className="api-feedback error" role="alert">{erro} <button type="button" onClick={() => void carregarEquipe()}>Tentar novamente</button></div>}
 
-        <section className="team-toolbar" aria-label="Busca e filtros">
-          <label className="team-search" htmlFor="buscar-membro">
-            <Search size={18} aria-hidden="true" />
-            <input
-              id="buscar-membro"
-              type="search"
-              value={busca}
-              onChange={(event) => setBusca(event.target.value)}
-              placeholder="Buscar por nome ou e-mail..."
-            />
-          </label>
-          <div className="team-filters" role="group" aria-label="Filtrar membros">
-            {filtros.map((opcao) => (
-              <button
-                className={filtro === opcao ? 'active' : ''}
-                type="button"
-                key={opcao}
-                onClick={() => setFiltro(opcao)}
-                aria-pressed={filtro === opcao}
-              >
-                {opcao}
-              </button>
-            ))}
-          </div>
-        </section>
+    <section className="row g-3 team-stats" aria-label="Resumo da equipe">
+      <StatCard label="Total" value={membros.length} active={filtro === 'Todos'} onClick={() => setFiltro('Todos')} icon={<Users size={16} />} />
+      <StatCard label="Admins" value={count('ADMIN')} active={filtro === 'Admins'} onClick={() => setFiltro('Admins')} icon={<ShieldCheck size={16} />} kind="admin" />
+      <StatCard label="Veterinários" value={count('VETERINARIAN')} active={filtro === 'Veterinários'} onClick={() => setFiltro('Veterinários')} icon={<Stethoscope size={16} />} kind="vet" />
+      <StatCard label="Recepcionistas" value={count('RECEPTIONIST')} active={filtro === 'Recepcionistas'} onClick={() => setFiltro('Recepcionistas')} icon={<UserRound size={16} />} kind="receptionist" />
+      <StatCard label="Pendentes" value={pending} active={filtro === 'Pendentes'} onClick={() => setFiltro('Pendentes')} icon={<Clock3 size={16} />} kind="pending" />
+    </section>
 
-        <section className="team-table-card" aria-label="Membros da equipe">
-          <div className="table-responsive">
-            <table className="table team-table align-middle mb-0">
-              <thead>
-                <tr>
-                  <th scope="col">Membro</th>
-                  <th scope="col">Permissão</th>
-                  <th scope="col">Status</th>
-                  <th scope="col">Adicionado em</th>
-                  <th scope="col"><span className="visually-hidden">Ações</span></th>
-                </tr>
-              </thead>
-              <tbody>
-                {membrosFiltrados.map((membro) => (
-                  <tr key={membro.email} className={membro.pendente ? 'member-pending' : ''}>
-                    <td>
-                      <div className="member-cell">
-                        <span className={`member-avatar ${membro.pendente ? 'pending' : ''}`}>
-                          {membro.pendente ? <Mail size={16} /> : membro.iniciais}
-                        </span>
-                        <span><strong>{membro.nome}</strong><small>{membro.email}</small></span>
-                      </div>
-                    </td>
-                    <td>
-                      <span className={`permission-badge ${membro.permissao === 'Admin' ? 'admin' : membro.permissao === 'Veterinário' ? 'vet' : 'receptionist'}`}>
-                        {membro.permissao === 'Admin' ? <ShieldCheck size={13} /> : membro.permissao === 'Veterinário' ? <Stethoscope size={13} /> : <UserRound size={13} />}
-                        {membro.permissao}
-                      </span>
-                    </td>
-                    <td>
-                      <span className={`status-badge ${membro.pendente ? 'pending' : membro.status === 'Inativo' ? 'inactive' : ''}`}>
-                        {membro.pendente ? <Clock3 size={13} /> : membro.status === 'Inativo' ? <XCircle size={13} /> : <CheckCircle2 size={13} />}
-                      </span>
-                    </td>
-                    <td className="member-date">{membro.data}</td>
-                    <td className="text-end member-actions-cell">
-                      <button
-                        className="member-actions"
-                        type="button"
-                        aria-label={`Ações de ${membro.nome}`}
-                        aria-expanded={menuAberto === membro.email}
-                        aria-controls={`menu-${membro.email}`}
-                        onClick={() => setMenuAberto((atual) => atual === membro.email ? null : membro.email)}
-                      >
-                        <MoreVertical size={18} />
-                      </button>
-                      {menuAberto === membro.email && (
-                        <div className="member-menu" id={`menu-${membro.email}`} role="menu">
-                          {membro.pendente ? (
-                            <>
-                              <button type="button" role="menuitem" onClick={() => abrirAcao('reenviar', membro)}>
-                                <Send size={15} /> Reenviar convite
-                              </button>
-                              <button type="button" role="menuitem" className="danger" onClick={() => abrirAcao('cancelar', membro)}>
-                                <XCircle size={15} /> Cancelar convite
-                              </button>
-                            </>
-                          ) : (
-                            <>
-                              <button type="button" role="menuitem" onClick={() => abrirAcao('permissao', membro)}>
-                                <Pencil size={15} /> Alterar permissão
-                              </button>
-                              <button type="button" role="menuitem" className="danger" onClick={() => abrirAcao('remover', membro)}>
-                                <Trash2 size={15} /> Remover da equipe
-                              </button>
-                            </>
-                          )}
-                        </div>
-                      )}
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
+    <section className="team-toolbar" aria-label="Busca e filtros">
+      <label className="team-search" htmlFor="buscar-membro"><Search size={18} /><input id="buscar-membro" type="search" value={busca} onChange={(event) => setBusca(event.target.value)} placeholder="Buscar por nome ou e-mail..." /></label>
+      <div className="team-filters" role="group" aria-label="Filtrar membros">{filtros.map((opcao) => <button className={filtro === opcao ? 'active' : ''} type="button" key={opcao} onClick={() => setFiltro(opcao)} aria-pressed={filtro === opcao}>{opcao}</button>)}</div>
+    </section>
 
-          {membrosFiltrados.length === 0 && (
-            <div className="team-empty">
-              <Search size={25} />
-              <strong>Nenhum membro encontrado</strong>
-              <span>Tente alterar sua busca ou selecionar outro filtro.</span>
-            </div>
-          )}
-        </section>
-      </div>
+    <section className="team-table-card" aria-label="Membros da equipe">
+      {carregando ? <div className="team-empty"><span className="spinner-border" /><strong>Carregando equipe...</strong></div> : <div className="table-responsive"><table className="table team-table align-middle mb-0">
+        <thead><tr><th>Membro</th><th>Permissão</th><th>Status</th><th>Adicionado em</th><th><span className="visually-hidden">Ações</span></th></tr></thead>
+        <tbody>{membrosFiltrados.map((membro) => <tr key={membro.id} className={membro.invitation ? 'member-pending' : ''}>
+          <td><div className="member-cell"><span className={`member-avatar ${membro.invitation ? 'pending' : ''}`}>{membro.invitation ? <Mail size={16} /> : membro.avatarUrl ? <img src={membro.avatarUrl} alt="" /> : initials(membro.name)}</span><span><strong>{membro.name}</strong><small>{membro.email}</small></span></div></td>
+          <td><PermissionBadge role={membro.role} /></td>
+          <td><span className={`status-badge ${membro.status === 'PENDING' || membro.status === 'EXPIRED' ? 'pending' : membro.status === 'INACTIVE' ? 'inactive' : ''}`}>{membro.status === 'PENDING' || membro.status === 'EXPIRED' ? <Clock3 size={13} /> : membro.status === 'INACTIVE' ? <XCircle size={13} /> : <CheckCircle2 size={13} />}{statusText(membro)}</span></td>
+          <td className="member-date">{formattedDate(membro.createdAt)}</td>
+          <td className="text-end member-actions-cell">{isAdmin && <><button className="member-actions" type="button" aria-label={`Ações de ${membro.name}`} onClick={() => setMenuAberto((atual) => atual === membro.id ? null : membro.id)}><MoreVertical size={18} /></button>
+            {menuAberto === membro.id && <div className="member-menu" role="menu">{membro.invitation ? <><button type="button" onClick={() => abrirAcao('reenviar', membro)}><Send size={15} /> Reenviar convite</button>{membro.status === 'PENDING' && <button type="button" className="danger" onClick={() => abrirAcao('cancelar', membro)}><XCircle size={15} /> Cancelar convite</button>}</> : <><button type="button" onClick={() => abrirAcao('permissao', membro)}><Pencil size={15} /> Alterar permissão</button><button type="button" className="danger" onClick={() => abrirAcao('remover', membro)}><Trash2 size={15} /> Remover da equipe</button></>}</div>}</>}</td>
+        </tr>)}</tbody>
+      </table></div>}
+      {!carregando && membrosFiltrados.length === 0 && <div className="team-empty"><Search size={25} /><strong>Nenhum membro encontrado</strong><span>Tente alterar sua busca ou selecionar outro filtro.</span></div>}
+    </section>
+  </div>
 
-      {modalAberto && (
-        <div
-          className="team-modal-backdrop"
-          role="presentation"
-          onMouseDown={(event) => {
-            if (event.target === event.currentTarget) setModalAberto(false)
-          }}
-        >
-          <section className="team-modal" role="dialog" aria-modal="true" aria-labelledby="invite-title">
-            <button className="team-modal-close" type="button" onClick={() => setModalAberto(false)} aria-label="Fechar">
-              <X size={20} />
-            </button>
-            <span className="team-modal-icon"><UserPlus size={23} /></span>
-            <h2 id="invite-title">Convidar membro</h2>
-            <p>Enviaremos um convite para o profissional fazer parte da equipe da clínica.</p>
+  {modalAberto && <div className="team-modal-backdrop" onMouseDown={(event) => { if (event.target === event.currentTarget) setModalAberto(false) }}><section className="team-modal" role="dialog" aria-modal="true">
+    <button className="team-modal-close" onClick={() => setModalAberto(false)} aria-label="Fechar"><X size={20} /></button><span className="team-modal-icon"><UserPlus size={23} /></span><h2>Convidar membro</h2><p>O profissional receberá um convite para criar a conta.</p>{erro && <div className="api-feedback error" role="alert">{erro}</div>}
+    <form onSubmit={enviarConvite}><label className="form-label auth-label" htmlFor="email-convite">E-mail do membro</label><input className="form-control auth-input" id="email-convite" type="email" value={emailConvite} onChange={(event) => setEmailConvite(event.target.value)} required autoFocus />
+      <label className="form-label auth-label mt-3" htmlFor="cargo-convite">Permissão inicial</label><select className="form-select profile-input" id="cargo-convite" value={cargoConvite} onChange={(event) => setCargoConvite(event.target.value as Role)}><option value="VETERINARIAN">Veterinário</option><option value="RECEPTIONIST">Recepcionista</option><option value="ADMIN">Administrador</option></select>
+      <div className="team-modal-actions"><button className="btn team-modal-cancel" type="button" onClick={() => setModalAberto(false)}>Cancelar</button><button className="btn team-invite" disabled={processando}>{processando ? 'Enviando...' : <><Send size={17} /> Enviar convite</>}</button></div>
+    </form></section></div>}
 
-            <form onSubmit={enviarConvite}>
-              <label className="form-label auth-label" htmlFor="email-convite">E-mail do membro</label>
-              <input
-                className="form-control auth-input"
-                id="email-convite"
-                type="email"
-                value={emailConvite}
-                onChange={(event) => setEmailConvite(event.target.value)}
-                placeholder="exemplo@exemplo.com"
-                autoComplete="email"
-                autoFocus
-                required
-              />
-              <div className="team-modal-actions">
-                <button className="btn team-modal-cancel" type="button" onClick={() => setModalAberto(false)}>Cancelar</button>
-                <button className="btn team-invite" type="submit"><Send size={17} /> Enviar convite</button>
-              </div>
-            </form>
-          </section>
-        </div>
-      )}
+  {acaoAtual && <div className="team-modal-backdrop" onMouseDown={(event) => { if (event.target === event.currentTarget) setAcaoAtual(null) }}><section className={`team-modal ${acaoAtual.tipo === 'remover' || acaoAtual.tipo === 'cancelar' ? 'team-modal-danger' : ''}`} role="dialog" aria-modal="true">
+    <button className="team-modal-close" onClick={() => setAcaoAtual(null)} aria-label="Fechar"><X size={20} /></button><span className="team-modal-icon">{acaoAtual.tipo === 'permissao' && <Pencil size={22} />}{acaoAtual.tipo === 'remover' && <Trash2 size={22} />}{acaoAtual.tipo === 'reenviar' && <Send size={22} />}{acaoAtual.tipo === 'cancelar' && <XCircle size={22} />}</span>
+    <h2>{acaoAtual.tipo === 'permissao' ? 'Alterar permissão' : acaoAtual.tipo === 'remover' ? 'Remover da equipe?' : acaoAtual.tipo === 'reenviar' ? 'Reenviar convite?' : 'Cancelar convite?'}</h2>
+    <p>{acaoAtual.tipo === 'permissao' ? `Escolha o nível de acesso de ${acaoAtual.membro.name}.` : acaoAtual.tipo === 'remover' ? `${acaoAtual.membro.name} perderá o acesso à clínica.` : acaoAtual.tipo === 'reenviar' ? `Um novo convite será enviado para ${acaoAtual.membro.email}.` : `O convite de ${acaoAtual.membro.email} deixará de ser válido.`}</p>{erro && <div className="api-feedback error" role="alert">{erro}</div>}
+    <form onSubmit={confirmarAcao}>{acaoAtual.tipo === 'permissao' && <fieldset className="permission-options"><legend>Permissão do membro</legend>{(['VETERINARIAN', 'ADMIN', 'RECEPTIONIST'] as Role[]).map((role) => <label className={novaPermissao === role ? 'selected' : ''} key={role}><input type="radio" name="permissao" checked={novaPermissao === role} onChange={() => setNovaPermissao(role)} /><span className="permission-option-icon">{role === 'ADMIN' ? <ShieldCheck size={18} /> : role === 'VETERINARIAN' ? <Stethoscope size={18} /> : <UserRound size={18} />}</span><span><strong>{permissionLabels[role]}</strong><small>{role === 'ADMIN' ? 'Gerencia equipe, permissões e configurações.' : role === 'VETERINARIAN' ? 'Acesso às rotinas clínicas e aos pacientes.' : 'Acesso ao atendimento e às rotinas administrativas.'}</small></span></label>)}</fieldset>}
+      <div className="team-modal-actions"><button className="btn team-modal-cancel" type="button" onClick={() => setAcaoAtual(null)}>Cancelar</button><button className={`btn ${acaoAtual.tipo === 'remover' || acaoAtual.tipo === 'cancelar' ? 'team-danger-button' : 'team-invite'}`} disabled={processando || (acaoAtual.tipo === 'permissao' && novaPermissao === acaoAtual.membro.role)}>{processando ? 'Processando...' : acaoAtual.tipo === 'permissao' ? 'Salvar alteração' : acaoAtual.tipo === 'remover' ? 'Remover membro' : acaoAtual.tipo === 'reenviar' ? 'Reenviar convite' : 'Cancelar convite'}</button></div>
+    </form></section></div>}
+  </main>
+}
 
-      {acaoAtual && (
-        <div
-          className="team-modal-backdrop"
-          role="presentation"
-          onMouseDown={(event) => {
-            if (event.target === event.currentTarget) setAcaoAtual(null)
-          }}
-        >
-          <section
-            className={`team-modal ${acaoAtual.tipo === 'remover' || acaoAtual.tipo === 'cancelar' ? 'team-modal-danger' : ''}`}
-            role="dialog"
-            aria-modal="true"
-            aria-labelledby="member-action-title"
-          >
-            <button className="team-modal-close" type="button" onClick={() => setAcaoAtual(null)} aria-label="Fechar">
-              <X size={20} />
-            </button>
+function StatCard({ label, value, active, onClick, icon, kind = '' }: { label: string; value: number; active: boolean; onClick: () => void; icon: React.ReactNode; kind?: string }) {
+  return <div className="col-6 col-xl"><button type="button" className={`team-stat-card ${kind} ${active ? 'active' : ''}`} onClick={onClick} aria-pressed={active}><span>{icon}{label}</span><strong>{value}</strong></button></div>
+}
 
-            <span className="team-modal-icon">
-              {acaoAtual.tipo === 'permissao' && <Pencil size={22} />}
-              {acaoAtual.tipo === 'remover' && <Trash2 size={22} />}
-              {acaoAtual.tipo === 'reenviar' && <Send size={22} />}
-              {acaoAtual.tipo === 'cancelar' && <XCircle size={22} />}
-            </span>
-
-            <h2 id="member-action-title">
-              {acaoAtual.tipo === 'permissao' && 'Alterar permissão'}
-              {acaoAtual.tipo === 'remover' && 'Remover da equipe?'}
-              {acaoAtual.tipo === 'reenviar' && 'Reenviar convite?'}
-              {acaoAtual.tipo === 'cancelar' && 'Cancelar convite?'}
-            </h2>
-
-            <p>
-              {acaoAtual.tipo === 'permissao' && `Escolha o nível de acesso de ${acaoAtual.membro.nome}.`}
-              {acaoAtual.tipo === 'remover' && `${acaoAtual.membro.nome} perderá o acesso à clínica e aos dados da equipe.`}
-              {acaoAtual.tipo === 'reenviar' && `Um novo convite será enviado para ${acaoAtual.membro.email}.`}
-              {acaoAtual.tipo === 'cancelar' && `O convite enviado para ${acaoAtual.membro.email} deixará de ser válido.`}
-            </p>
-
-            <form onSubmit={confirmarAcao}>
-              {acaoAtual.tipo === 'permissao' && (
-                <fieldset className="permission-options">
-                  <legend>Permissão do membro</legend>
-                  <label className={novaPermissao === 'Veterinário' ? 'selected' : ''}>
-                    <input
-                      type="radio"
-                      name="permissao"
-                      value="Veterinário"
-                      checked={novaPermissao === 'Veterinário'}
-                      onChange={() => setNovaPermissao('Veterinário')}
-                    />
-                    <span className="permission-option-icon"><Stethoscope size={18} /></span>
-                    <span><strong>Veterinário</strong><small>Acesso às rotinas clínicas e aos pacientes.</small></span>
-                  </label>
-                  <label className={novaPermissao === 'Admin' ? 'selected' : ''}>
-                    <input
-                      type="radio"
-                      name="permissao"
-                      value="Admin"
-                      checked={novaPermissao === 'Admin'}
-                      onChange={() => setNovaPermissao('Admin')}
-                    />
-                    <span className="permission-option-icon"><ShieldCheck size={18} /></span>
-                    <span><strong>Administrador</strong><small>Gerencia equipe, permissões e configurações.</small></span>
-                  </label>
-                  <label className={novaPermissao === 'Recepcionista' ? 'selected' : ''}>
-                    <input
-                      type="radio"
-                      name="permissao"
-                      value="Recepcionista"
-                      checked={novaPermissao === 'Recepcionista'}
-                      onChange={() => setNovaPermissao('Recepcionista')}
-                    />
-                    <span className="permission-option-icon"><UserRound size={18} /></span>
-                    <span><strong>Recepcionista</strong><small>Acesso ao atendimento e às rotinas administrativas.</small></span>
-                  </label>
-                </fieldset>
-              )}
-
-              <div className="team-modal-actions">
-                <button className="btn team-modal-cancel" type="button" onClick={() => setAcaoAtual(null)}>Cancelar</button>
-                <button
-                  className={`btn ${acaoAtual.tipo === 'remover' || acaoAtual.tipo === 'cancelar' ? 'team-danger-button' : 'team-invite'}`}
-                  type="submit"
-                  disabled={acaoAtual.tipo === 'permissao' && novaPermissao === acaoAtual.membro.permissao}
-                >
-                  {acaoAtual.tipo === 'permissao' && 'Salvar alteração'}
-                  {acaoAtual.tipo === 'remover' && 'Remover membro'}
-                  {acaoAtual.tipo === 'reenviar' && <><Send size={17} /> Reenviar convite</>}
-                  {acaoAtual.tipo === 'cancelar' && 'Cancelar convite'}
-                </button>
-              </div>
-            </form>
-          </section>
-        </div>
-      )}
-    </main>
-  )
+function PermissionBadge({ role }: { role: Role }) {
+  return <span className={`permission-badge ${role === 'ADMIN' ? 'admin' : role === 'VETERINARIAN' ? 'vet' : 'receptionist'}`}>{role === 'ADMIN' ? <ShieldCheck size={13} /> : role === 'VETERINARIAN' ? <Stethoscope size={13} /> : <UserRound size={13} />}{permissionLabels[role]}</span>
 }
