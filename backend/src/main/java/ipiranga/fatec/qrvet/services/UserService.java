@@ -3,11 +3,13 @@ package ipiranga.fatec.qrvet.services;
 import ipiranga.fatec.qrvet.dtos.request.PaginationRequest;
 import ipiranga.fatec.qrvet.dtos.request.ResetPasswordRequest;
 import ipiranga.fatec.qrvet.dtos.request.UserRequest;
+import ipiranga.fatec.qrvet.dtos.filter.UserSearchFilter;
 import ipiranga.fatec.qrvet.dtos.response.*;
 import ipiranga.fatec.qrvet.models.User;
 import ipiranga.fatec.qrvet.event.InvitationEmailRequested;
 import ipiranga.fatec.qrvet.exceptions.*;
 import ipiranga.fatec.qrvet.repositories.UserRepository;
+import ipiranga.fatec.qrvet.specifications.UserSpecifications;
 import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.PageImpl;
@@ -44,16 +46,12 @@ public class UserService {
     }
 
     @Transactional(readOnly = true)
-    public PageResponse<UserResponse> listAllUsers(PaginationRequest pagination) {
-        String search = searchPattern(pagination.q());
+    public PageResponse<UserResponse> listAllUsers(
+            PaginationRequest pagination,
+            UserSearchFilter filter) {
         return PageResponse.from(
                 repository.findAll(
-                                (r, c, b) ->
-                                        b.or(
-                                                b.like(b.lower(r.get("name")), search),
-                                                b.like(
-                                                        b.lower(r.get("email")),
-                                                        search)),
+                                UserSpecifications.matches(filter),
                                 pageable(pagination.page(), pagination.size()))
                         .map(UserResponse::from));
     }
@@ -156,7 +154,4 @@ public class UserService {
         return PageRequest.of(page, size, Sort.by("id").descending());
     }
 
-    private String searchPattern(String query) {
-        return "%" + query.trim().toLowerCase(Locale.ROOT).replace("%", "\\%").replace("_", "\\_") + "%";
-    }
 }
