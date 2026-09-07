@@ -13,6 +13,11 @@ services:
       MYSQL_ROOT_PASSWORD: ${DB_ROOT_PASSWORD}
     volumes:
       - database_data:/var/lib/mysql
+    healthcheck:
+      test: [ "CMD-SHELL", "MYSQL_PWD=$$MYSQL_PASSWORD mysql -h 127.0.0.1 -u $$MYSQL_USER -D $$MYSQL_DATABASE -e 'SELECT 1'" ]
+      interval: 5s
+      timeout: 5s
+      retries: 30
 
   backend:
     build:
@@ -25,12 +30,30 @@ services:
       - qrvet_network
     environment:
       TZ: ${TZ}
-      SPRING_DATASOURCE_URL: ${DB_URL}
+      SPRING_DATASOURCE_URL: jdbc:mysql://database:3306/${DB_NAME}
       SPRING_DATASOURCE_USERNAME: ${DB_USER}
       SPRING_DATASOURCE_PASSWORD: ${DB_PASSWORD}
-      SPRING_PROFILES_ACTIVE: ${SPRING_PROFILE}
+      SPRING_PROFILES_ACTIVE: ${SPRING_PROFILES_ACTIVE}
+      SPRING_DATA_REDIS_HOST: redis
+      SPRING_DATA_REDIS_PORT: 6379
+      SPRING_MAIL_HOST: ${SPRING_MAIL_HOST}
+      SPRING_MAIL_PORT: ${SPRING_MAIL_PORT}
+      SPRING_MAIL_USERNAME: ${SPRING_MAIL_USERNAME}
+      SPRING_MAIL_PASSWORD: ${SPRING_MAIL_PASSWORD}
+      SPRING_MAIL_PROPERTIES_MAIL_SMTP_AUTH: ${SPRING_MAIL_PROPERTIES_MAIL_SMTP_AUTH}
+      SPRING_MAIL_PROPERTIES_MAIL_SMTP_STARTTLS_ENABLE: ${SPRING_MAIL_PROPERTIES_MAIL_SMTP_STARTTLS_ENABLE}
+      SPRING_MAIL_PROPERTIES_MAIL_SMTP_STARTTLS_REQUIRED: ${SPRING_MAIL_PROPERTIES_MAIL_SMTP_STARTTLS_REQUIRED}
+      SPRING_MAIL_PROPERTIES_MAIL_SMTP_SSL_ENABLE: ${SPRING_MAIL_PROPERTIES_MAIL_SMTP_SSL_ENABLE}
+      QRVET_JWT_SECRET: ${QRVET_JWT_SECRET}
+      QRVET_FRONTEND_URL: ${QRVET_FRONTEND_URL}
+      QRVET_COOKIE_SECURE: ${QRVET_COOKIE_SECURE}
+      QRVET_BOOTSTRAP_SECRET: ${QRVET_BOOTSTRAP_SECRET}
+      QRVET_MAIL_FROM: ${QRVET_MAIL_FROM}
     depends_on:
-      - database
+      database:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
 
   frontend:
       build:
@@ -43,6 +66,19 @@ services:
         - qrvet_network
       depends_on:
         - backend
+
+  redis:
+    image: redis:8.2-alpine
+    container_name: qrvet_redis
+    ports:
+      - "6379:6379"
+    networks:
+      - qrvet_network
+    healthcheck:
+      test: [ "CMD", "redis-cli", "ping" ]
+      interval: 5s
+      timeout: 5s
+      retries: 30
 
 
 networks:
