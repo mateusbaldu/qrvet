@@ -31,7 +31,7 @@ public class TeamService {
 
     @Transactional
     public TeamData list(UUID clinicId) {
-        List<UserAccount> members = users.findAllByClinicIdOrderByCreatedAtAsc(clinicId);
+        List<UserAccount> members = users.findAllByClinicIdAndStatusOrderByCreatedAtAsc(clinicId, UserStatus.ACTIVE);
         List<TeamInvitation> pending = invitations
             .findAllByClinicIdAndStatusOrderByInvitedAtAsc(clinicId, InvitationStatus.PENDING);
         pending.stream().filter(TeamInvitation::isExpired).forEach(TeamInvitation::markExpired);

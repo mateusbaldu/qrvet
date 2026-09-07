@@ -17,7 +17,7 @@ public interface UserAccountRepository extends JpaRepository<UserAccount, UUID> 
     @EntityGraph(attributePaths = "clinic")
     Optional<UserAccount> findByEmailIgnoreCase(String email);
     boolean existsByEmailIgnoreCase(String email);
-    List<UserAccount> findAllByClinicIdOrderByCreatedAtAsc(UUID clinicId);
+    List<UserAccount> findAllByClinicIdAndStatusOrderByCreatedAtAsc(UUID clinicId, UserStatus status);
     Optional<UserAccount> findByIdAndClinicId(UUID id, UUID clinicId);
     long countByClinicIdAndRoleAndStatus(UUID clinicId, Role role, UserStatus status);
 }

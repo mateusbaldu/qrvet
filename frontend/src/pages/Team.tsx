@@ -11,7 +11,7 @@ type Filtro = 'Todos' | 'Admins' | 'Veterinários' | 'Recepcionistas' | 'Pendent
 type TipoAcao = 'permissao' | 'remover' | 'reenviar' | 'cancelar'
 type Membro = {
   id: string; name: string; email: string; avatarUrl: string | null; role: Role
-  status: 'ACTIVE' | 'INACTIVE' | 'PENDING' | 'EXPIRED'; lastActivityAt: string | null
+  status: 'ONLINE' | 'INACTIVE' | 'PENDING' | 'EXPIRED'; lastActivityAt: string | null
   createdAt: string; expiresAt: string | null; invitation: boolean
 }
 type TeamResponse = { items: Membro[]; summary: { total: number; roles: Record<Role, number>; pending: number } }
@@ -22,13 +22,12 @@ const permissionLabels: Record<Role, string> = { ADMIN: 'Admin', VETERINARIAN: '
 function statusText(member: Membro) {
   if (member.status === 'PENDING') return 'Convite pendente'
   if (member.status === 'EXPIRED') return 'Convite expirado'
-  if (member.status === 'INACTIVE') return 'Inativo'
-  if (!member.lastActivityAt) return 'Ativo'
+  if (member.status === 'ONLINE') return 'Online agora'
+  if (!member.lastActivityAt) return 'Inativo'
   const minutes = Math.max(0, Math.floor((Date.now() - new Date(member.lastActivityAt).getTime()) / 60_000))
-  if (minutes < 2) return 'Ativo · Agora'
-  if (minutes < 60) return `Ativo · Há ${minutes} min`
-  if (minutes < 1_440) return `Ativo · Há ${Math.floor(minutes / 60)}h`
-  return `Ativo · Há ${Math.floor(minutes / 1_440)}d`
+  if (minutes < 60) return `Inativo · Há ${Math.max(1, minutes)} min`
+  if (minutes < 1_440) return `Inativo · Há ${Math.floor(minutes / 60)}h`
+  return `Inativo · Há ${Math.floor(minutes / 1_440)}d`
 }
 
 function formattedDate(value: string) {
@@ -66,11 +65,15 @@ export function Team() {
 
   useEffect(() => {
     let active = true
-    apiRequest<TeamResponse>('/team/members')
-      .then((response) => { if (active) setMembros(response.items) })
-      .catch((error) => { if (active) setErro(errorMessage(error)) })
-      .finally(() => { if (active) setCarregando(false) })
-    return () => { active = false }
+    const refreshPresence = () => {
+      void apiRequest<TeamResponse>('/team/members')
+        .then((response) => { if (active) setMembros(response.items) })
+        .catch((error) => { if (active) setErro(errorMessage(error)) })
+        .finally(() => { if (active) setCarregando(false) })
+    }
+    refreshPresence()
+    const interval = window.setInterval(refreshPresence, 60_000)
+    return () => { active = false; window.clearInterval(interval) }
   }, [])
 
   async function enviarConvite(event: React.FormEvent<HTMLFormElement>) {
@@ -121,7 +124,7 @@ export function Team() {
     })
   }, [busca, filtro, membros])
 
-  const count = (role: Role) => membros.filter((m) => m.role === role && !m.invitation && m.status === 'ACTIVE').length
+  const count = (role: Role) => membros.filter((m) => m.role === role && !m.invitation).length
   const pending = membros.filter((m) => m.status === 'PENDING').length
 
   return <main className="team-page"><div className="team-container">

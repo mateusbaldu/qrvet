@@ -11,6 +11,7 @@ import jakarta.validation.Valid;
 import jakarta.validation.constraints.Email;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
+import java.time.Duration;
 import java.time.Instant;
 import java.util.ArrayList;
 import java.util.EnumMap;
@@ -19,6 +20,7 @@ import java.util.Map;
 import java.util.UUID;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.DeleteMapping;
@@ -35,17 +37,20 @@ import org.springframework.web.bind.annotation.RestController;
 public class TeamController {
     private final TeamService teamService;
     private final UserAccountRepository users;
+    private final Duration onlineWindow;
 
-    public TeamController(TeamService teamService, UserAccountRepository users) {
+    public TeamController(TeamService teamService, UserAccountRepository users,
+                          @Value("${app.presence.online-seconds}") long onlineSeconds) {
         this.teamService = teamService;
         this.users = users;
+        this.onlineWindow = Duration.ofSeconds(onlineSeconds);
     }
 
     @GetMapping("/members")
     public TeamResponse list(@AuthenticationPrincipal AuthenticatedUser principal) {
         TeamService.TeamData data = teamService.list(principal.clinicId());
         List<MemberResponse> items = new ArrayList<>();
-        data.members().forEach(user -> items.add(MemberResponse.from(user)));
+        data.members().forEach(user -> items.add(MemberResponse.from(user, onlineWindow)));
         data.invitations().forEach(invitation -> items.add(MemberResponse.from(invitation)));
 
         Map<Role, Long> roles = new EnumMap<>(Role.class);
@@ -85,7 +90,7 @@ public class TeamController {
     @PreAuthorize("hasRole('ADMIN')")
     public MemberResponse changeRole(@AuthenticationPrincipal AuthenticatedUser principal, @PathVariable UUID id,
                                      @Valid @RequestBody RoleRequest request) {
-        return MemberResponse.from(teamService.changeRole(principal.clinicId(), id, request.role()));
+        return MemberResponse.from(teamService.changeRole(principal.clinicId(), id, request.role()), onlineWindow);
     }
 
     @DeleteMapping("/members/{id}")
@@ -103,10 +108,12 @@ public class TeamController {
     public record MemberResponse(UUID id, String name, String email, String avatarUrl, Role role,
                                  String status, Instant lastActivityAt, Instant createdAt,
                                  Instant expiresAt, boolean invitation) {
-        static MemberResponse from(UserAccount user) {
+        static MemberResponse from(UserAccount user, Duration onlineWindow) {
             String avatar = user.getAvatarData() == null ? null : "/api/users/" + user.getId() + "/avatar";
+            boolean online = user.getLastActivityAt() != null
+                && user.getLastActivityAt().isAfter(Instant.now().minus(onlineWindow));
             return new MemberResponse(user.getId(), user.getName(), user.getEmail(), avatar, user.getRole(),
-                user.getStatus().name(), user.getLastActivityAt(), user.getCreatedAt(), null, false);
+                online ? "ONLINE" : "INACTIVE", user.getLastActivityAt(), user.getCreatedAt(), null, false);
         }
         static MemberResponse from(TeamInvitation invitation) {
             return new MemberResponse(invitation.getId(), "Aguardando aceite", invitation.getEmail(), null,

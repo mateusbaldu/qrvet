@@ -1,5 +1,5 @@
 import { useEffect, useState, type ReactNode } from 'react'
-import { loginRequest, logoutRequest, refreshSession, type User } from '../services/api'
+import { apiRequest, loginRequest, logoutRequest, refreshSession, type User } from '../services/api'
 import { AuthContext } from './auth-context'
 
 export function AuthProvider({ children }: { children: ReactNode }) {
@@ -20,6 +20,26 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       window.removeEventListener('qrvet:unauthorized', clearSession)
     }
   }, [])
+
+  useEffect(() => {
+    if (!user) return
+
+    const sendHeartbeat = () => {
+      if (document.visibilityState === 'visible' && document.hasFocus()) {
+        void apiRequest('/users/me/heartbeat', { method: 'POST' }).catch(() => undefined)
+      }
+    }
+    const onVisibilityChange = () => sendHeartbeat()
+    sendHeartbeat()
+    const interval = window.setInterval(sendHeartbeat, 120_000)
+    window.addEventListener('focus', sendHeartbeat)
+    document.addEventListener('visibilitychange', onVisibilityChange)
+    return () => {
+      window.clearInterval(interval)
+      window.removeEventListener('focus', sendHeartbeat)
+      document.removeEventListener('visibilitychange', onVisibilityChange)
+    }
+  }, [user])
 
   async function login(email: string, password: string) {
     const response = await loginRequest(email, password)

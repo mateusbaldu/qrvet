@@ -55,7 +55,7 @@ public class AuthService {
         if (user.getStatus() != UserStatus.ACTIVE) {
             throw new ApiException(HttpStatus.FORBIDDEN, "USER_INACTIVE", "Este usuário está inativo.");
         }
-        user.markLogin();
+        user.markActivity();
         return issueTokens(user);
     }
 

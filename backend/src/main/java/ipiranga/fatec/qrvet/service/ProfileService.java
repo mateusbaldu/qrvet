@@ -67,6 +67,9 @@ public class ProfileService {
     @Transactional
     public void removeAvatar(UUID userId) { user(userId).removeAvatar(); }
 
+    @Transactional
+    public void heartbeat(UUID userId) { user(userId).markActivity(); }
+
     public UserAccount user(UUID id) {
         return users.findById(id)
             .orElseThrow(() -> new ApiException(HttpStatus.NOT_FOUND, "USER_NOT_FOUND", "Usuário não encontrado."));

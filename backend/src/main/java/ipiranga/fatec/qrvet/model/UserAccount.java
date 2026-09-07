@@ -99,7 +99,7 @@ public class UserAccount {
     public byte[] getAvatarData() { return avatarData; }
     public String getAvatarContentType() { return avatarContentType; }
 
-    public void markLogin() { this.lastActivityAt = Instant.now(); }
+    public void markActivity() { this.lastActivityAt = Instant.now(); }
     public void changeRole(Role role) { this.role = role; }
     public void deactivate() { this.status = UserStatus.INACTIVE; }
     public void updateProfile(String name, String email, String phone, String crmv) {

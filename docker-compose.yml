@@ -14,7 +14,7 @@ services:
     volumes:
       - database_data:/var/lib/mysql
     healthcheck:
-      test: ["CMD", "mysqladmin", "ping", "-h", "localhost", "-u${DB_USER}", "-p${DB_PASSWORD}"]
+      test: ["CMD-SHELL", "mysql --protocol=TCP -h localhost -u\"$${MYSQL_USER}\" -p\"$${MYSQL_PASSWORD}\" \"$${MYSQL_DATABASE}\" -e 'SELECT 1' >/dev/null 2>&1"]
       interval: 5s
       timeout: 5s
       retries: 20
@@ -44,6 +44,7 @@ services:
       MAIL_PORT: 1025
       MAIL_FROM: ${MAIL_FROM:-QRVet <noreply@qrvet.local>}
       APP_SEED_DEMO: ${APP_SEED_DEMO:-true}
+      PRESENCE_ONLINE_SECONDS: ${PRESENCE_ONLINE_SECONDS:-300}
     depends_on:
       database:
         condition: service_healthy

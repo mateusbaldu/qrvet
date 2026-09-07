@@ -62,6 +62,12 @@ public class ProfileController {
         return ResponseEntity.noContent().build();
     }
 
+    @PostMapping("/me/heartbeat")
+    public ResponseEntity<Void> heartbeat(@AuthenticationPrincipal AuthenticatedUser principal) {
+        profiles.heartbeat(principal.id());
+        return ResponseEntity.noContent().build();
+    }
+
     @GetMapping("/{id}/avatar")
     public ResponseEntity<byte[]> avatarContent(@PathVariable UUID id) {
         UserAccount user = profiles.user(id);

@@ -57,8 +57,17 @@ PATCH  /api/users/me
 PATCH  /api/users/me/password
 POST   /api/users/me/avatar
 DELETE /api/users/me/avatar
+POST   /api/users/me/heartbeat
 GET    /api/users/{id}/avatar
 ```
 
 Para testar e-mail, faça uma recuperação de senha ou crie um convite e abra o
 Mailpit. Nenhum e-mail é enviado para a internet.
+
+## Presença
+
+O front envia um heartbeat a cada dois minutos enquanto a aba está visível e em
+foco. O membro aparece como online se o último heartbeat ocorreu nos últimos
+cinco minutos (`PRESENCE_ONLINE_SECONDS`). Contas removidas são desativadas e
+deixam de aparecer na equipe; portanto, “Inativo” representa presença, não
+bloqueio da conta.

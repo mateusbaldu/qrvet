@@ -35,13 +35,11 @@ public class DemoDataSeeder implements CommandLineRunner {
     public void run(String... args) {
         if (users.count() > 0) return;
         Clinic clinic = clinics.save(new Clinic("Clínica QRVet"));
-        create(clinic, "Dra. Sarah Jenkins", "sarah@qrvet.clinic", Role.ADMIN,
+        create(clinic, "Dr. Kauan Torres", "kauan@qrvet.com", Role.ADMIN,
             "(11) 99999-1234", "CRMV-SP 12345");
         create(clinic, "Mike Ross", "mike@qrvet.clinic", Role.VETERINARIAN, null, "CRMV-SP 23456");
-        UserAccount anna = create(clinic, "Anna Costa", "anna@qrvet.clinic", Role.VETERINARIAN,
+        create(clinic, "Anna Costa", "anna@qrvet.clinic", Role.VETERINARIAN,
             null, "CRMV-SP 34567");
-        anna.deactivate();
-        users.save(anna);
         create(clinic, "Camila Alves", "camila@qrvet.clinic", Role.RECEPTIONIST, null, null);
 
         String invitationToken = TokenTools.randomToken();

@@ -30,6 +30,7 @@ import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.MvcResult;
+import jakarta.servlet.http.Cookie;
 
 @SpringBootTest
 @AutoConfigureMockMvc
@@ -74,7 +75,26 @@ class ApiFlowTests {
         mvc.perform(get("/api/team/members").header("Authorization", "Bearer " + matcher.group(1)))
             .andExpect(status().isOk())
             .andExpect(jsonPath("$.items[0].email").value("admin@qrvet.test"))
+            .andExpect(jsonPath("$.items[0].status").value("ONLINE"))
             .andExpect(jsonPath("$.summary.roles.ADMIN").value(1));
+    }
+
+    @Test
+    void refreshCookieRestoresSessionAfterPageReload() throws Exception {
+        MvcResult login = mvc.perform(post("/api/auth/login")
+                .contentType(MediaType.APPLICATION_JSON)
+                .content("{\"email\":\"admin@qrvet.test\",\"password\":\"Qrvet@123\"}"))
+            .andExpect(status().isOk())
+            .andReturn();
+
+        Cookie refreshCookie = login.getResponse().getCookie("qrvet_refresh");
+        if (refreshCookie == null) throw new AssertionError("Refresh cookie não retornado");
+
+        mvc.perform(post("/api/auth/refresh").cookie(refreshCookie))
+            .andExpect(status().isOk())
+            .andExpect(cookie().httpOnly("qrvet_refresh", true))
+            .andExpect(jsonPath("$.accessToken").exists())
+            .andExpect(jsonPath("$.user.email").value("admin@qrvet.test"));
     }
 
     @Test
