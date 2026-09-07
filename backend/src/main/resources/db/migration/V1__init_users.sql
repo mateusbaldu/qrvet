@@ -7,7 +7,7 @@ CREATE TABLE usuario (
     ativo BIT NOT NULL,
     versao_autenticacao BIGINT NOT NULL,
     confirmado BIT NOT NULL DEFAULT 1,
-    CONSTRAINT uk_usuario_email UNIQUE (email)
+    CONSTRAINT uk_usuario_email UNIQUE (email),
 
     CONSTRAINT chk_usuario_perfil
     CHECK (perfil IN (
