@@ -10,6 +10,7 @@ import ipiranga.fatec.qrvet.exceptions.*;
 import ipiranga.fatec.qrvet.repositories.UserRepository;
 import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.PageImpl;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Sort;
 import org.springframework.data.redis.core.StringRedisTemplate;
@@ -122,11 +123,20 @@ public class UserService {
 
 
     @Transactional(readOnly = true)
-    public List<ActiveSessionResponse> listSessions(Long userId) {
+    public PageResponse<ActiveSessionResponse> listSessions(Long userId, PaginationRequest pagination) {
         repository.findById(userId).orElseThrow(() -> new ResourceNotFoundException("User not found."));
-        return sessions.listSessions(userId).stream()
+        Pageable pageable = pageable(pagination.page(), pagination.size());
+        List<ActiveSessionResponse> sessionItems = sessions.listSessions(userId).stream()
                 .map(s -> new ActiveSessionResponse(s.jti(), s.createdAt(), s.expiresAt()))
+                .sorted((left, right) -> right.createdAt().compareTo(left.createdAt()))
                 .toList();
+        return PageResponse.from(new PageImpl<>(
+                sessionItems.stream()
+                        .skip(pageable.getOffset())
+                        .limit(pageable.getPageSize())
+                        .toList(),
+                pageable,
+                sessionItems.size()));
     }
 
     public void revokeSession(Long userId, String jti) {
