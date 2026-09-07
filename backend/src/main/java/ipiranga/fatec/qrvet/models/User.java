@@ -2,7 +2,8 @@ package ipiranga.fatec.qrvet.models;
 
 import ipiranga.fatec.qrvet.models.enums.Role;
 import jakarta.persistence.*;
-import java.time.*;
+import org.springframework.security.crypto.password.PasswordEncoder;
+
 
 @Entity
 @Table(name = "usuario")
@@ -45,6 +46,14 @@ public class User {
     }
 
     public User() {}
+
+    public void setPassword(String password, PasswordEncoder encoder) {
+        this.passwordHash = encoder.encode(password);
+    }
+
+    public boolean passwordMatches(String password, PasswordEncoder encoder) {
+        return encoder.matches(password, passwordHash);
+    }
 
     public Long getId() {
         return id;
