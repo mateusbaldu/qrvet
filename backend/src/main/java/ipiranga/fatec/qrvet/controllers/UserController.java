@@ -3,6 +3,7 @@ package ipiranga.fatec.qrvet.controllers;
 import ipiranga.fatec.qrvet.dtos.request.PaginationRequest;
 import ipiranga.fatec.qrvet.dtos.request.ResetPasswordRequest;
 import ipiranga.fatec.qrvet.dtos.request.UserRequest;
+import ipiranga.fatec.qrvet.dtos.filter.UserSearchFilter;
 import ipiranga.fatec.qrvet.dtos.response.*;
 import ipiranga.fatec.qrvet.services.UserService;
 import jakarta.validation.Valid;
@@ -19,10 +20,11 @@ public class UserController {
         this.service = service;
     }
 
-    @GetMapping({"/users", "/usuarios"})
+    @GetMapping({"/users", })
     public PageResponse<UserResponse> list(
-            @Valid @ModelAttribute PaginationRequest pagination) {
-        return service.listAllUsers(pagination);
+            @Valid @ModelAttribute PaginationRequest pagination,
+            @ModelAttribute UserSearchFilter filter) {
+        return service.listAllUsers(pagination, filter);
     }
 
     @PostMapping("/users")

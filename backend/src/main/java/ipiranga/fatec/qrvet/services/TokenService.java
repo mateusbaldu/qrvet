@@ -1,5 +1,6 @@
 package ipiranga.fatec.qrvet.services;
 
+import ipiranga.fatec.qrvet.dtos.RefreshToken;
 import ipiranga.fatec.qrvet.models.User;
 import org.springframework.security.authentication.BadCredentialsException;
 import org.springframework.security.oauth2.jose.jws.MacAlgorithm;
@@ -70,6 +71,4 @@ public class TokenService {
                                 JwsHeader.with(MacAlgorithm.HS256).build(), claims))
                 .getTokenValue();
     }
-
-    public record RefreshToken(String value, String jti) {}
 }

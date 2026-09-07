@@ -28,14 +28,14 @@ import java.util.List;
 public class SecurityConfig {
     private static final List<String> PUBLIC_ENDPOINTS =
             List.of(
-                    "/v1/auth/login",
-                    "/v1/auth/csrf",
-                    "/v1/auth/logout",
-                    "/v1/auth/refresh",
-                    "/v1/auth/forgot-password",
-                    "/v1/auth/reset-password",
-                    "/v1/auth/confirm-invitation",
-                    "/v1/bootstrap/admin");
+                    "/qrvet/v1/auth/login",
+                    "/qrvet/v1/auth/csrf",
+                    "/qrvet/v1/auth/logout",
+                    "/qrvet/v1/auth/refresh",
+                    "/qrvet/v1/auth/forgot-password",
+                    "/qrvet/v1/auth/reset-password",
+                    "/qrvet/v1/auth/confirm-invitation",
+                    "/qrvet/v1/bootstrap/admin");
 
     private final CustomJwtAuthenticationConverter jwtConverter;
 

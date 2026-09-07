@@ -1,6 +1,7 @@
 package ipiranga.fatec.qrvet.services;
 
 import ipiranga.fatec.qrvet.dtos.AuthSession;
+import ipiranga.fatec.qrvet.dtos.RefreshToken;
 import ipiranga.fatec.qrvet.dtos.request.*;
 import ipiranga.fatec.qrvet.dtos.response.*;
 import ipiranga.fatec.qrvet.dtos.RecoveryData;
@@ -50,7 +51,7 @@ public class AuthService {
             throw new BadCredentialsException("Invalid credentials");
 
         Instant now = Instant.now();
-        TokenService.RefreshToken refresh = tokens.generateRefreshToken(user, now);
+        RefreshToken refresh = tokens.generateRefreshToken(user, now);
         sessoes.registerSession(user.getId(), refresh.jti(), now);
 
         AccessTokenResponse accessToken = new AccessTokenResponse(tokens.generateAccessToken(user, now));
