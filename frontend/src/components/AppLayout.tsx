@@ -64,7 +64,7 @@ export function AppLayout() {
             <button className="app-menu-button d-lg-none" type="button" onClick={() => setMenuAberto(true)} aria-label="Abrir menu">
               <Menu size={22} />
             </button>
-            <div><small>Clínica QRVet</small><strong>{tituloAtual}</strong></div>
+            <div><small>QRVet</small><strong>{tituloAtual}</strong></div>
           </div>
 
           <Link to="/meu-perfil" className="header-profile" aria-label="Abrir meu perfil">

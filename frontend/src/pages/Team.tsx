@@ -10,6 +10,7 @@ import {
   ShieldCheck,
   Stethoscope,
   Trash2,
+  UserRound,
   UserPlus,
   Users,
   X,
@@ -17,14 +18,14 @@ import {
 } from 'lucide-react'
 import '../styles/team.css'
 
-type Filtro = 'Todos' | 'Admins' | 'Veterinários' | 'Pendentes'
+type Filtro = 'Todos' | 'Admins' | 'Veterinários' | 'Recepcionistas' | 'Pendentes'
 type TipoAcao = 'permissao' | 'remover' | 'reenviar' | 'cancelar'
 
 type Membro = {
   nome: string
   email: string
   iniciais: string
-  permissao: 'Admin' | 'Veterinário'
+  permissao: 'Admin' | 'Veterinário' | 'Recepcionista'
   status: string
   pendente?: boolean
   data: string
@@ -34,10 +35,11 @@ const membros: Membro[] = [
   { nome: 'Dra. Sarah Jenkins', email: 'sarah@qrvet.clinic', iniciais: 'SJ', permissao: 'Admin', status: 'Ativo · Agora', data: '14/01/2026' },
   { nome: 'Mike Ross', email: 'mike@qrvet.clinic', iniciais: 'MR', permissao: 'Veterinário', status: 'Ativo · Há 2h', data: '02/02/2026' },
   { nome: 'Anna Costa', email: 'anna@qrvet.clinic', iniciais: 'AC', permissao: 'Veterinário', status: 'Inativo', data: '11/03/2026' },
+  { nome: 'Camila Alves', email: 'camila@qrvet.clinic', iniciais: 'CA', permissao: 'Recepcionista', status: 'Ativo · Há 35 min', data: '08/04/2026' },
   { nome: 'Aguardando aceite', email: 'lucas@qrvet.clinic', iniciais: 'LC', permissao: 'Veterinário', status: 'Convite pendente', pendente: true, data: '17/05/2026' },
 ]
 
-const filtros: Filtro[] = ['Todos', 'Admins', 'Veterinários', 'Pendentes']
+const filtros: Filtro[] = ['Todos', 'Admins', 'Veterinários', 'Recepcionistas', 'Pendentes']
 
 export function Team() {
   const [busca, setBusca] = useState('')
@@ -74,6 +76,7 @@ export function Team() {
         filtro === 'Todos' ||
         (filtro === 'Admins' && membro.permissao === 'Admin') ||
         (filtro === 'Veterinários' && membro.permissao === 'Veterinário' && !membro.pendente) ||
+        (filtro === 'Recepcionistas' && membro.permissao === 'Recepcionista' && !membro.pendente) ||
         (filtro === 'Pendentes' && membro.pendente)
 
       return correspondeBusca && correspondeFiltro
@@ -94,24 +97,29 @@ export function Team() {
         </header>
 
         <section className="row g-3 team-stats" aria-label="Resumo da equipe">
-          <div className="col-6 col-xl-3">
+          <div className="col-6 col-xl">
             <button className={`team-stat-card ${filtro === 'Todos' ? 'active' : ''}`} type="button" onClick={() => setFiltro('Todos')} aria-pressed={filtro === 'Todos'}>
               <span><Users size={16} /> Total</span><strong>{membros.length}</strong>
             </button>
           </div>
-          <div className="col-6 col-xl-3">
+          <div className="col-6 col-xl">
             <button className={`team-stat-card admin ${filtro === 'Admins' ? 'active' : ''}`} type="button" onClick={() => setFiltro('Admins')} aria-pressed={filtro === 'Admins'}>
-              <span><ShieldCheck size={16} /> Admins</span><strong>1</strong>
+              <span><ShieldCheck size={16} /> Admins</span><strong>{membros.filter((membro) => membro.permissao === 'Admin' && !membro.pendente).length}</strong>
             </button>
           </div>
-          <div className="col-6 col-xl-3">
+          <div className="col-6 col-xl">
             <button className={`team-stat-card vet ${filtro === 'Veterinários' ? 'active' : ''}`} type="button" onClick={() => setFiltro('Veterinários')} aria-pressed={filtro === 'Veterinários'}>
-              <span><Stethoscope size={16} /> Veterinários</span><strong>2</strong>
+              <span><Stethoscope size={16} /> Veterinários</span><strong>{membros.filter((membro) => membro.permissao === 'Veterinário' && !membro.pendente).length}</strong>
             </button>
           </div>
-          <div className="col-6 col-xl-3">
+          <div className="col-6 col-xl">
+            <button className={`team-stat-card receptionist ${filtro === 'Recepcionistas' ? 'active' : ''}`} type="button" onClick={() => setFiltro('Recepcionistas')} aria-pressed={filtro === 'Recepcionistas'}>
+              <span><UserRound size={16} /> Recepcionistas</span><strong>{membros.filter((membro) => membro.permissao === 'Recepcionista' && !membro.pendente).length}</strong>
+            </button>
+          </div>
+          <div className="col-6 col-xl">
             <button className={`team-stat-card pending ${filtro === 'Pendentes' ? 'active' : ''}`} type="button" onClick={() => setFiltro('Pendentes')} aria-pressed={filtro === 'Pendentes'}>
-              <span><Clock3 size={16} /> Pendentes</span><strong>1</strong>
+              <span><Clock3 size={16} /> Pendentes</span><strong>{membros.filter((membro) => membro.pendente).length}</strong>
             </button>
           </div>
         </section>
@@ -166,14 +174,14 @@ export function Team() {
                       </div>
                     </td>
                     <td>
-                      <span className={`permission-badge ${membro.permissao === 'Admin' ? 'admin' : 'vet'}`}>
-                        {membro.permissao === 'Admin' ? <ShieldCheck size={13} /> : <Stethoscope size={13} />}
+                      <span className={`permission-badge ${membro.permissao === 'Admin' ? 'admin' : membro.permissao === 'Veterinário' ? 'vet' : 'receptionist'}`}>
+                        {membro.permissao === 'Admin' ? <ShieldCheck size={13} /> : membro.permissao === 'Veterinário' ? <Stethoscope size={13} /> : <UserRound size={13} />}
                         {membro.permissao}
                       </span>
                     </td>
                     <td>
                       <span className={`status-badge ${membro.pendente ? 'pending' : membro.status === 'Inativo' ? 'inactive' : ''}`}>
-                        {membro.pendente ? <Clock3 size={13} /> : <CheckCircle2 size={13} />}
+                        {membro.pendente ? <Clock3 size={13} /> : membro.status === 'Inativo' ? <XCircle size={13} /> : <CheckCircle2 size={13} />}
                       </span>
                     </td>
                     <td className="member-date">{membro.data}</td>
@@ -330,6 +338,17 @@ export function Team() {
                     />
                     <span className="permission-option-icon"><ShieldCheck size={18} /></span>
                     <span><strong>Administrador</strong><small>Gerencia equipe, permissões e configurações.</small></span>
+                  </label>
+                  <label className={novaPermissao === 'Recepcionista' ? 'selected' : ''}>
+                    <input
+                      type="radio"
+                      name="permissao"
+                      value="Recepcionista"
+                      checked={novaPermissao === 'Recepcionista'}
+                      onChange={() => setNovaPermissao('Recepcionista')}
+                    />
+                    <span className="permission-option-icon"><UserRound size={18} /></span>
+                    <span><strong>Recepcionista</strong><small>Acesso ao atendimento e às rotinas administrativas.</small></span>
                   </label>
                 </fieldset>
               )}
