@@ -26,7 +26,6 @@ import java.util.Locale;
 import java.util.UUID;
 
 @Service
-@Transactional
 @PreAuthorize("hasRole('ADMIN')")
 public class UserService {
     private static final int MAX_PAGE_SIZE = 100;
@@ -59,6 +58,7 @@ public class UserService {
                         .map(UserResponse::from));
     }
 
+    @Transactional
     public UserResponse createUser(UserRequest userRequest) {
         String email = userRequest.email().trim().toLowerCase(Locale.ROOT);
         if (repository.findByEmailIgnoreCase(email).isPresent())
@@ -77,6 +77,7 @@ public class UserService {
 
         return UserResponse.from(newUser);
     }
+
 
     public void sendInvitationToUserById(Long id) {
         User u = repository.findUserByIdWithLock(id)
@@ -101,6 +102,7 @@ public class UserService {
         }
     }
 
+    @Transactional
     public void confirmUserInvitation(ResetPasswordRequest request) {
         if (request.newPassword().getBytes(StandardCharsets.UTF_8).length > 72) {
             throw new InvalidRequestException("Password must have a max of 72 characters.");

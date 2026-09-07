@@ -1,6 +1,7 @@
 package ipiranga.fatec.qrvet.repositories;
 
 import ipiranga.fatec.qrvet.models.User;
+import ipiranga.fatec.qrvet.models.enums.Role;
 import jakarta.persistence.LockModeType;
 import java.util.*;
 import org.springframework.data.jpa.repository.*;
@@ -13,4 +14,6 @@ public interface UserRepository
     Optional<User> findUserByIdWithLock(@Param("id") Long id);
 
     Optional<User> findByEmailIgnoreCase(String email);
+
+    long countByRole(Role role);
 }
