@@ -1,6 +1,6 @@
 package ipiranga.fatec.qrvet.services;
 
-import ipiranga.fatec.qrvet.models.RecoveryData;
+import ipiranga.fatec.qrvet.dtos.RecoveryData;
 import org.springframework.data.redis.core.StringRedisTemplate;
 import org.springframework.stereotype.Service;
 
