@@ -16,8 +16,6 @@ import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.security.oauth2.jwt.Jwt;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 
 import java.nio.charset.StandardCharsets;
 import java.time.Instant;
@@ -25,8 +23,6 @@ import java.util.UUID;
 
 @Service
 public class AuthService {
-    private static final Logger LOGGER = LoggerFactory.getLogger(AuthService.class);
-
     private final UserRepository users;
     private final PasswordEncoder passwordEncoder;
     private final TokenService tokens;
@@ -50,12 +46,8 @@ public class AuthService {
     public AuthSession login(LoginRequest request) {
         User user = users.findByEmailIgnoreCase(request.email().trim())
                 .filter(v -> v.isActive() && v.isConfirmed())
-                .orElseThrow(() -> {
-                    LOGGER.warn("Login rejected: account was not found, is inactive, or is unconfirmed");
-                    return new BadCredentialsException("Invalid credentials");
-                });
+                .orElseThrow(() ->  new BadCredentialsException("Invalid credentials"));
         if (!user.passwordMatches(request.password(), passwordEncoder)) {
-            LOGGER.warn("Login rejected: password does not match the eligible account");
             throw new BadCredentialsException("Invalid credentials");
         }
 
@@ -82,7 +74,9 @@ public class AuthService {
 
     @Transactional
     public void heartbeat() {
-        User user = users.findUserByIdWithLock(current.getCurrent().getId()).orElseThrow();
+        User user = users.findUserByIdWithLock(
+                current.getCurrent().getId())
+                .orElseThrow(() -> new ResourceNotFoundException("User not found"));
         user.setLastActivityAt(Instant.now());
     }
 
