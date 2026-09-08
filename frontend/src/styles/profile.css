@@ -44,6 +44,8 @@
 .profile-section-heading p { margin: 0; color: var(--muted); font-size: .85rem; }
 .profile-input { min-height: 3.3rem; padding: .7rem 1rem; border-color: var(--border); border-radius: .75rem; box-shadow: none; }
 .profile-input:focus { border-color: var(--green-700); box-shadow: 0 0 0 .2rem rgb(34 106 84 / 12%); }
+.profile-input[readonly] { color: #53645e; background: #f5f8f6; }
+.profile-api-note { margin: 1rem 0 0; color: #84918d; font-size: .78rem; }
 .profile-form-actions { display: flex; justify-content: flex-end; margin-top: 1.5rem; }
 .profile-primary-button {
   display: inline-flex; min-height: 2.85rem; align-items: center; justify-content: center; gap: .5rem;

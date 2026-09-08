@@ -1,11 +1,15 @@
 import { useState, type FormEvent } from 'react'
 import { ArrowLeft, ArrowRight, Check, Circle } from 'lucide-react'
-import { Link } from 'react-router-dom'
+import { Link, useNavigate } from 'react-router-dom'
 import { RecoveryCard } from '../components/RecoveryCard'
+import { authApi, readableError } from '../services/api'
 
-export function ResetPassword() {
+export function ResetPassword({ invitation = false }: { invitation?: boolean }) {
   const [senha, setSenha] = useState('')
   const [confirmacao, setConfirmacao] = useState('')
+  const [erro, setErro] = useState('')
+  const [enviando, setEnviando] = useState(false)
+  const navigate = useNavigate()
 
   const requisitos = [
     { texto: 'Pelo menos 8 caracteres', atendido: senha.length >= 8 },
@@ -19,17 +23,39 @@ export function ResetPassword() {
   const senhasIguais = confirmacao.length > 0 && senha === confirmacao
   const formularioValido = senhaValida && senhasIguais
 
-  function enviar(event: FormEvent<HTMLFormElement>) {
+  async function enviar(event: FormEvent<HTMLFormElement>) {
     event.preventDefault()
+    const token = new URLSearchParams(window.location.hash.slice(1)).get('token')
+      ?? new URLSearchParams(window.location.search).get('token')
+    if (!token) {
+      setErro('Este link não contém um token válido. Solicite um novo e-mail.')
+      return
+    }
+
+    setErro('')
+    setEnviando(true)
+    try {
+      if (invitation) await authApi.confirmInvitation(token, senha)
+      else await authApi.resetPassword(token, senha)
+      navigate('/login', {
+        replace: true,
+        state: { message: invitation ? 'Cadastro confirmado. Agora você já pode entrar.' : 'Senha redefinida com sucesso.' },
+      })
+    } catch (error) {
+      setErro(readableError(error))
+    } finally {
+      setEnviando(false)
+    }
   }
 
   return (
     <RecoveryCard
-      eyebrow="NOVA SENHA"
-      title="Crie uma nova senha."
-      description="Escolha uma senha segura e confirme-a antes de continuar."
+      eyebrow={invitation ? 'PRIMEIRO ACESSO' : 'NOVA SENHA'}
+      title={invitation ? 'Confirme seu cadastro.' : 'Crie uma nova senha.'}
+      description={invitation ? 'Escolha sua senha para ativar a conta e acessar o QRVet.' : 'Escolha uma senha segura e confirme-a antes de continuar.'}
     >
       <form onSubmit={enviar}>
+        {erro && <p className="form-message error" role="alert">{erro}</p>}
         <div className="mb-4">
           <label className="form-label auth-label" htmlFor="nova-senha">Nova senha</label>
           <input
@@ -87,9 +113,9 @@ export function ResetPassword() {
         <button
           className="btn auth-submit w-100 d-flex align-items-center justify-content-center gap-3"
           type="submit"
-          disabled={!formularioValido}
+          disabled={!formularioValido || enviando}
         >
-          Redefinir minha senha <ArrowRight size={20} />
+          {enviando ? 'Salvando...' : invitation ? 'Ativar minha conta' : 'Redefinir minha senha'} {!enviando && <ArrowRight size={20} />}
         </button>
       </form>
 

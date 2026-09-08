@@ -5,6 +5,7 @@ import { ResetPassword } from './pages/ResetPassword'
 import { Team } from './pages/Team'
 import { Profile } from './pages/Profile'
 import { AppLayout } from './components/AppLayout'
+import { AdminRoute, ProtectedRoute } from './auth/RouteGuards'
 
 export default function App() {
   return (
@@ -13,9 +14,15 @@ export default function App() {
         <Route path="/login" element={<Login />} />
         <Route path="/esqueci-senha" element={<ForgotPassword />} />
         <Route path="/redefinir-senha" element={<ResetPassword />} />
-        <Route element={<AppLayout />}>
-          <Route path="/equipe" element={<Team />} />
-          <Route path="/meu-perfil" element={<Profile />} />
+        <Route path="/reset-password" element={<ResetPassword />} />
+        <Route path="/registro" element={<ResetPassword invitation />} />
+        <Route element={<ProtectedRoute />}>
+          <Route element={<AppLayout />}>
+            <Route element={<AdminRoute />}>
+              <Route path="/equipe" element={<Team />} />
+            </Route>
+            <Route path="/meu-perfil" element={<Profile />} />
+          </Route>
         </Route>
         <Route path="*" element={<Navigate to="/login" replace />} />
       </Routes>

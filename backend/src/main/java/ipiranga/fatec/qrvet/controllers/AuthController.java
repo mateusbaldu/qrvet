@@ -72,6 +72,12 @@ public class AuthController {
         return auth.currentUser();
     }
 
+    @PostMapping("/heartbeat")
+    public ResponseEntity<Void> heartbeat() {
+        auth.heartbeat();
+        return ResponseEntity.noContent().build();
+    }
+
     @PutMapping("/password")
     public ResponseEntity<Void> password(
             @Valid @RequestBody PasswordRequest r,
