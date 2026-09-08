@@ -4,6 +4,8 @@ import ipiranga.fatec.qrvet.models.enums.Role;
 import jakarta.persistence.*;
 import org.springframework.security.crypto.password.PasswordEncoder;
 
+import java.time.Instant;
+
 
 @Entity
 @Table(name = "usuario")
@@ -33,6 +35,27 @@ public class User {
 
     @Column(name = "confirmado", nullable = false)
     private boolean confirmed = true;
+
+    @Column(name = "ultima_atividade_em", columnDefinition = "TIMESTAMP(6)")
+    private Instant lastActivityAt;
+
+    @Column(name = "criado_em", nullable = false, updatable = false, columnDefinition = "TIMESTAMP(6)")
+    private Instant createdAt;
+
+    @Column(name = "atualizado_em", nullable = false, columnDefinition = "TIMESTAMP(6)")
+    private Instant updatedAt;
+
+    @PrePersist
+    void initializeAuditTimestamps() {
+        Instant now = Instant.now();
+        createdAt = now;
+        updatedAt = now;
+    }
+
+    @PreUpdate
+    void updateAuditTimestamp() {
+        updatedAt = Instant.now();
+    }
 
     public User(Long id, String name, String email, String passwordHash, Role role, boolean active, long authenticationVersion, boolean confirmed) {
         this.id = id;
@@ -117,5 +140,21 @@ public class User {
 
     public void setConfirmed(boolean confirmed) {
         this.confirmed = confirmed;
+    }
+
+    public Instant getLastActivityAt() {
+        return lastActivityAt;
+    }
+
+    public void setLastActivityAt(Instant lastActivityAt) {
+        this.lastActivityAt = lastActivityAt;
+    }
+
+    public Instant getCreatedAt() {
+        return createdAt;
+    }
+
+    public Instant getUpdatedAt() {
+        return updatedAt;
     }
 }

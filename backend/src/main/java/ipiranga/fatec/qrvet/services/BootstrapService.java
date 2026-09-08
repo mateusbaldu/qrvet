@@ -38,6 +38,20 @@ public class BootstrapService {
         if (users.countByRole(Role.ADMIN) > 0)
             throw new OperationConflictException("The admin account already exists.");
 
+        persistAdmin(request);
+    }
+
+    @Transactional
+    public boolean createInitialAdmin(BootstrapAdminRequest request) {
+        if (users.countByRole(Role.ADMIN) > 0) return false;
+
+        validateInitialAdmin(request);
+        persistAdmin(request);
+        return true;
+    }
+
+    private void persistAdmin(BootstrapAdminRequest request) {
+
         String email = request.email().trim().toLowerCase(Locale.ROOT);
         if (users.findByEmailIgnoreCase(email).isPresent())
             throw new ResourceAlreadyExistsException("User with e-mail already exists.");
@@ -50,6 +64,24 @@ public class BootstrapService {
         newUser.setConfirmed(true);
         newUser.setPassword(request.password(), passwordEncoder);
         users.save(newUser);
+    }
+
+    private void validateInitialAdmin(BootstrapAdminRequest request) {
+        if (request.name() == null || request.name().isBlank() || request.name().length() > 120) {
+            throw new InvalidRequestException("Initial administrator name is invalid.");
+        }
+        if (request.email() == null
+                || request.email().isBlank()
+                || request.email().length() > 254
+                || !request.email().contains("@")) {
+            throw new InvalidRequestException("Initial administrator e-mail is invalid.");
+        }
+        if (request.password() == null
+                || request.password().length() < 8
+                || request.password().getBytes(StandardCharsets.UTF_8).length > 72) {
+            throw new InvalidRequestException(
+                    "Initial administrator password must have between 8 and 72 bytes.");
+        }
     }
 
     private void validateSecret(String providedSecret) {

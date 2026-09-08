@@ -16,6 +16,8 @@ import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.security.oauth2.jwt.Jwt;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.nio.charset.StandardCharsets;
 import java.time.Instant;
@@ -23,6 +25,8 @@ import java.util.UUID;
 
 @Service
 public class AuthService {
+    private static final Logger LOGGER = LoggerFactory.getLogger(AuthService.class);
+
     private final UserRepository users;
     private final PasswordEncoder passwordEncoder;
     private final TokenService tokens;
@@ -45,12 +49,18 @@ public class AuthService {
     @Transactional
     public AuthSession login(LoginRequest request) {
         User user = users.findByEmailIgnoreCase(request.email().trim())
-                        .filter(v -> v.isActive() && v.isConfirmed())
-                        .orElseThrow(() -> new BadCredentialsException("Invalid credentials"));
-        if (!user.passwordMatches(request.password(), passwordEncoder))
+                .filter(v -> v.isActive() && v.isConfirmed())
+                .orElseThrow(() -> {
+                    LOGGER.warn("Login rejected: account was not found, is inactive, or is unconfirmed");
+                    return new BadCredentialsException("Invalid credentials");
+                });
+        if (!user.passwordMatches(request.password(), passwordEncoder)) {
+            LOGGER.warn("Login rejected: password does not match the eligible account");
             throw new BadCredentialsException("Invalid credentials");
+        }
 
         Instant now = Instant.now();
+        user.setLastActivityAt(now);
         RefreshToken refresh = tokens.generateRefreshToken(user, now);
         sessoes.registerSession(user.getId(), refresh.jti(), now);
 
@@ -68,6 +78,12 @@ public class AuthService {
     @Transactional(readOnly = true)
     public UserResponse currentUser() {
         return UserResponse.from(current.getCurrent());
+    }
+
+    @Transactional
+    public void heartbeat() {
+        User user = users.findUserByIdWithLock(current.getCurrent().getId()).orElseThrow();
+        user.setLastActivityAt(Instant.now());
     }
 
     @Transactional
