@@ -1,35 +1,33 @@
-# React + TypeScript + Vite
+# Frontend QRVet
 
-This template provides a minimal setup to get React working in Vite with HMR and some Oxlint rules.
+Execute `npm ci` e `npm run dev` nesta pasta. O Vite atende em http://localhost:5173 e encaminha `/qrvet/api` para o backend em http://localhost:8080. Para outra origem da API, configure `VITE_API_URL` antes da compilação.
 
-Currently, two official plugins are available:
+## Fluxos disponíveis
 
-- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react) uses [Oxc](https://oxc.rs)
-- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react-swc) uses [SWC](https://swc.rs/)
+- Autenticação, convite, recuperação de senha e perfil.
+- Equipe e gestão de sessões (administrador).
+- Tutores: cadastro, busca por nome e pacientes vinculados.
+- Pacientes: cadastro com tutor, listagem e abertura de internação.
+- Baias: listagem por situação; criação, edição e manutenção pelo administrador. Ocupação e liberação são feitas pelo backend durante a internação.
+- Internações: abertura, listagem das ativas, consulta por código, detalhes, alta/óbito e QR Code para baixar.
+- Cuidados: registro e histórico de alimentação, início/fim e histórico de jejum. Alimentação fica bloqueada enquanto o jejum estiver ativo.
+- Consulta pública: `/public/internacoes/qr/:token`, sem login; também é possível colar o código/endereço em `/consultar-qr`.
+- Configuração inicial: `/configuracao-inicial`, com a chave de bootstrap exigida pelo backend.
 
-## React Compiler
+## Permissões e integração
 
-The React Compiler is enabled on this template. See [this documentation](https://react.dev/learn/react-compiler) for more information.
+As permissões das telas seguem os serviços Java. Administradores, veterinários e recepcionistas acessam cadastros e internações. Alimentação e jejum são disponíveis para administradores, veterinários e auxiliares técnicos.
 
-Note: This will impact Vite dev & build performances.
-You can also try [the experimental native React Compiler support in plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react/README.md#rust-react-compiler) by using `compiler: true` in the plugin options instead of using the Babel plugin.
+A API atual não permite que auxiliares listem internações ou consultem seus detalhes. Por isso, `/cuidados` recebe o código da internação informado pela equipe. O backend rejeita registros em internações encerradas.
 
-## Expanding the Oxlint configuration
+Somente administradores podem listar usuários. No formulário de internação, o administrador seleciona o veterinário; os outros perfis informam seu código (preenchido com o próprio código para veterinários).
 
-If you are developing a production application, we recommend enabling type-aware lint rules by installing `oxlint-tsgolint` and editing `.oxlintrc.json`:
+Configure `QRVET_PUBLIC_URL` no backend com a origem pública do frontend para que o QR Code gerado abra o site correto. Recursos como medicação, edição de pacientes e histórico geral de internações não têm endpoints nesta versão do backend e não foram adicionados como ações fictícias.
 
-```json
-{
-  "$schema": "./node_modules/oxlint/configuration_schema.json",
-  "plugins": ["react", "typescript", "oxc"],
-  "options": {
-    "typeAware": true
-  },
-  "rules": {
-    "react/rules-of-hooks": "error",
-    "react/only-export-components": ["warn", { "allowConstantExport": true }]
-  }
-}
-```
+## Verificação
 
-See the [Oxlint rules documentation](https://oxc.rs/docs/guide/usage/linter/rules) for the full list of rules and categories.
+- `npm run build`
+- `npm run lint`
+- Com Vite em execução, rode `node tests/clinic-smoke.mjs`. O teste requer Playwright e Microsoft Edge; `PLAYWRIGHT_MODULE` pode apontar para uma instalação externa do Playwright.
+
+O teste de navegador usa respostas simuladas da API e verifica cadastro, abertura e encerramento de internação, jejum/alimentação, situação de baia, revogação de sessão, permissões e layout público móvel. Não valida banco de dados, entrega de e-mails ou integração real com o backend.
