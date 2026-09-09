@@ -12,6 +12,7 @@ import org.springframework.data.repository.query.Param;
 public interface InternacaoRepository extends JpaRepository<Internacao, Long> {
     boolean existsByPacienteIdAndStatus(Long pacienteId, InternacaoStatus status);
     Page<Internacao> findAllByStatus(InternacaoStatus status, Pageable pageable);
+    Optional<Internacao> findByUuidToken(java.util.UUID uuidToken);
 
     @Lock(LockModeType.PESSIMISTIC_WRITE)
     @Query("select i from Internacao i where i.id = :id")
