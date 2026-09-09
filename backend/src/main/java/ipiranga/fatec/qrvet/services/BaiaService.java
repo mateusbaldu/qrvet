@@ -13,6 +13,7 @@ import ipiranga.fatec.qrvet.models.Baia;
 import ipiranga.fatec.qrvet.models.enums.BaiaStatus;
 import ipiranga.fatec.qrvet.repositories.BaiaRepository;
 import ipiranga.fatec.qrvet.utils.PaginationUtils;
+import org.springframework.data.domain.PageRequest;
 import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.stereotype.Service;
@@ -38,10 +39,15 @@ public class BaiaService {
         if (status == BaiaStatus.OCUPADA) {
             throw new OperationConflictException("A bay cannot be created as occupied.");
         }
+        String observacao = null;
+        if (request.observacao() != null && !request.observacao().isBlank()) {
+            observacao = request.observacao().trim();
+        }
+
         Baia baia = Baia.builder()
                 .identificacao(identificacao)
                 .status(status)
-                .observacao(normalizedObservation(request.observacao()))
+                .observacao(observacao)
                 .build();
         try {
             return BaiaResponse.from(repository.saveAndFlush(baia));
@@ -76,7 +82,11 @@ public class BaiaService {
                 .ifPresent(existing -> {
                     throw new ResourceAlreadyExistsException("A bay with this identification already exists.");
                 });
-        baia.updateDetails(identificacao, normalizedObservation(request.observacao()));
+        String observacao = null;
+        if (request.observacao() != null && !request.observacao().isBlank()) {
+            observacao = request.observacao().trim();
+        }
+        baia.updateDetails(identificacao, observacao);
         try {
             return BaiaResponse.from(repository.saveAndFlush(baia));
         } catch (DataIntegrityViolationException exception) {
@@ -130,7 +140,4 @@ public class BaiaService {
         return value.trim();
     }
 
-    private String normalizedObservation(String value) {
-        return value == null || value.isBlank() ? null : value.trim();
-    }
 }
