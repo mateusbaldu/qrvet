@@ -8,8 +8,7 @@ import ipiranga.fatec.qrvet.exceptions.ResourceNotFoundException;
 import ipiranga.fatec.qrvet.models.Paciente;
 import ipiranga.fatec.qrvet.repositories.PacienteRepository;
 import ipiranga.fatec.qrvet.repositories.TutorRepository;
-import org.springframework.data.domain.PageRequest;
-import org.springframework.data.domain.Sort;
+import ipiranga.fatec.qrvet.utils.PaginationUtils;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -44,18 +43,15 @@ public class PacienteService {
 
     @Transactional(readOnly = true)
     public PageResponse<PacienteResponse> list(PaginationRequest pagination) {
-        return PageResponse.from(pacienteRepository.findAll(pageable(pagination)).map(PacienteResponse::from));
+        return PageResponse.from(pacienteRepository.findAll(PaginationUtils.byId(pagination))
+                .map(PacienteResponse::from));
     }
 
     @Transactional(readOnly = true)
     public PageResponse<PacienteResponse> listByTutor(Long tutorId, PaginationRequest pagination) {
         if (!tutorRepository.existsById(tutorId))
             throw new ResourceNotFoundException("Tutor not found.");
-        return PageResponse.from(pacienteRepository.findAllByTutorId(tutorId, pageable(pagination))
+        return PageResponse.from(pacienteRepository.findAllByTutorId(tutorId, PaginationUtils.byId(pagination))
                 .map(PacienteResponse::from));
-    }
-
-    private PageRequest pageable(PaginationRequest pagination) {
-        return PageRequest.of(pagination.page(), pagination.size(), Sort.by("id").descending());
     }
 }

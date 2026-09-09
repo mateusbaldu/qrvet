@@ -10,8 +10,7 @@ import ipiranga.fatec.qrvet.exceptions.ResourceAlreadyExistsException;
 import ipiranga.fatec.qrvet.models.Tutor;
 import ipiranga.fatec.qrvet.repositories.TutorRepository;
 import ipiranga.fatec.qrvet.specifications.TutorSpecifications;
-import org.springframework.data.domain.PageRequest;
-import org.springframework.data.domain.Sort;
+import ipiranga.fatec.qrvet.utils.PaginationUtils;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -49,7 +48,7 @@ public class TutorService {
     @Transactional(readOnly = true)
     public PageResponse<TutorResponse> list(PaginationRequest pagination, TutorSearchFilter filter) {
         return PageResponse.from(repository.findAll(TutorSpecifications.matches(filter),
-                PageRequest.of(pagination.page(), pagination.size(), Sort.by("id").descending()))
+                PaginationUtils.byId(pagination))
                 .map(TutorResponse::from));
     }
 
