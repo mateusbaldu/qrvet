@@ -27,7 +27,13 @@ public class TutorService {
 
     @Transactional
     public TutorResponse create(TutorRequest request) {
-        String cpf = normalizeCpf(request.cpf());
+        String rawCpf = request.cpf();
+
+        if (rawCpf == null || rawCpf.isEmpty()) {
+            rawCpf = "";
+        }
+
+        String cpf = normalizeCpf(rawCpf);
         String email = request.email().trim().toLowerCase(Locale.ROOT);
         if (!isValidCpf(cpf)) throw new InvalidRequestException("Invalid CPF.");
         if (repository.findByCpf(cpf).isPresent())
