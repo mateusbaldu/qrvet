@@ -56,13 +56,14 @@ public class BootstrapService {
         if (users.findByEmailIgnoreCase(email).isPresent())
             throw new ResourceAlreadyExistsException("User with e-mail already exists.");
 
-        User newUser = new User();
-        newUser.setName(request.name().trim());
-        newUser.setEmail(email);
-        newUser.setRole(Role.ADMIN);
-        newUser.setActive(true);
-        newUser.setConfirmed(true);
-        newUser.setPassword(request.password(), passwordEncoder);
+        User newUser = User.builder()
+                .name(request.name().trim())
+                .email(email)
+                .role(Role.ADMIN)
+                .active(true)
+                .confirmed(true)
+                .passwordHash(passwordEncoder.encode(request.password()))
+                .build();
         users.save(newUser);
     }
 
