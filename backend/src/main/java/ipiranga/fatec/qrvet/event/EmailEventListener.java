@@ -1,7 +1,5 @@
-package ipiranga.fatec.qrvet.services;
+package ipiranga.fatec.qrvet.event;
 
-import ipiranga.fatec.qrvet.event.InvitationEmailRequested;
-import ipiranga.fatec.qrvet.event.PasswordRecoveryEmailRequested;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.event.EventListener;
 import org.springframework.mail.SimpleMailMessage;
