@@ -27,7 +27,7 @@ export function Login() {
     try {
       const user = await login(email.trim(), senha)
       const requestedPath = loginState?.from
-      navigate(requestedPath ?? (user.role === 'ADMIN' ? '/equipe' : '/meu-perfil'), { replace: true })
+      navigate(requestedPath ?? (['ADMIN', 'VETERINARIO', 'RECEPCIONISTA'].includes(user.role) ? '/internacoes' : user.role === 'AUXILIAR_TECNICO' ? '/cuidados' : '/meu-perfil'), { replace: true })
     } catch (error) {
       setErro(readableError(error))
       setSenha('')
