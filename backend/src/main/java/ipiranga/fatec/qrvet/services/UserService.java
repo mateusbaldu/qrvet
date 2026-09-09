@@ -10,11 +10,10 @@ import ipiranga.fatec.qrvet.event.InvitationEmailRequested;
 import ipiranga.fatec.qrvet.exceptions.*;
 import ipiranga.fatec.qrvet.repositories.UserRepository;
 import ipiranga.fatec.qrvet.specifications.UserSpecifications;
+import ipiranga.fatec.qrvet.utils.PaginationUtils;
 import org.springframework.context.ApplicationEventPublisher;
-import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.PageImpl;
 import org.springframework.data.domain.Pageable;
-import org.springframework.data.domain.Sort;
 import org.springframework.data.redis.core.StringRedisTemplate;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.crypto.password.PasswordEncoder;
@@ -152,7 +151,7 @@ public class UserService {
         if (page < 0 || size < 1 || size > MAX_PAGE_SIZE) {
             throw new InvalidRequestException("Invalid page size.");
         }
-        return PageRequest.of(page, size, Sort.by("id").descending());
+        return PaginationUtils.byId(page, size);
     }
 
 }
