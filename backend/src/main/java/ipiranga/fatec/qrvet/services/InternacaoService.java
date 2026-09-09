@@ -13,7 +13,6 @@ import ipiranga.fatec.qrvet.models.Internacao;
 import ipiranga.fatec.qrvet.models.Jejum;
 import ipiranga.fatec.qrvet.models.Paciente;
 import ipiranga.fatec.qrvet.models.User;
-import ipiranga.fatec.qrvet.models.enums.BaiaStatus;
 import ipiranga.fatec.qrvet.models.enums.InternacaoStatus;
 import ipiranga.fatec.qrvet.repositories.*;
 import ipiranga.fatec.qrvet.utils.PaginationUtils;
@@ -27,7 +26,7 @@ import java.util.List;
 public class InternacaoService {
     private final InternacaoRepository internacaoRepository;
     private final PacienteRepository pacienteRepository;
-    private final BaiaRepository baiaRepository;
+    private final BaiaService baiaService;
     private final UserRepository userRepository;
     private final JejumRepository jejumRepository;
     private final QrCodeService qrCodeService;
@@ -35,13 +34,13 @@ public class InternacaoService {
     public InternacaoService(
             InternacaoRepository internacaoRepository,
             PacienteRepository pacienteRepository,
-            BaiaRepository baiaRepository,
+            BaiaService baiaService,
             UserRepository userRepository,
             QrCodeService qrCodeService,
             JejumRepository jejumRepository) {
         this.internacaoRepository = internacaoRepository;
         this.pacienteRepository = pacienteRepository;
-        this.baiaRepository = baiaRepository;
+        this.baiaService = baiaService;
         this.userRepository = userRepository;
         this.qrCodeService = qrCodeService;
         this.jejumRepository = jejumRepository;
@@ -56,17 +55,12 @@ public class InternacaoService {
             throw new OperationConflictException("The patient already has an active hospitalization.");
         }
 
-        Baia baia = baiaRepository.findByIdForUpdate(request.baiaId())
-                .orElseThrow(() -> new ResourceNotFoundException("Bay not found."));
-        if (baia.getStatus() != BaiaStatus.DISPONIVEL) {
-            throw new InvalidRequestException("The bay is not available.");
-        }
+        Baia baia = baiaService.occupyAutomatically(request.baiaId());
 
         User veterinario = userRepository.findByIdAndRoleAndActiveTrue(
                         request.veterinarioId(), ipiranga.fatec.qrvet.models.enums.Role.VETERINARIO)
                 .orElseThrow(() -> new ResourceNotFoundException("Active veterinarian not found."));
 
-        baia.occupyAutomatically();
         String observacoes = "";
         if (request.observacoes() != null && !request.observacoes().isBlank()) {
             observacoes = request.observacoes().trim();
@@ -120,11 +114,9 @@ public class InternacaoService {
         if (internacao.getStatus() != InternacaoStatus.ATIVA) {
             throw new OperationConflictException("The hospitalization has already been closed.");
         }
-        Baia baia = baiaRepository.findByIdForUpdate(internacao.getBaia().getId())
-                .orElseThrow(() -> new ResourceNotFoundException("Bay not found."));
         try {
             internacao.close(InternacaoStatus.valueOf(request.statusEncerramento().name()));
-            baia.releaseAutomatically();
+            baiaService.releaseAutomatically(internacao.getBaia().getId());
             jejumRepository.findActiveForUpdate(internacao.getId()).ifPresent(Jejum::end);
         } catch (IllegalStateException exception) {
             throw new OperationConflictException(exception.getMessage());

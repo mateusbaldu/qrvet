@@ -107,13 +107,14 @@ public class BaiaService {
     }
 
     @Transactional
-    public void occupyAutomatically(Long id) {
+    public Baia occupyAutomatically(Long id) {
         Baia baia = findForUpdate(id);
         try {
             baia.occupyAutomatically();
         } catch (IllegalStateException exception) {
             throw new OperationConflictException(exception.getMessage());
         }
+        return baia;
     }
 
     @Transactional
