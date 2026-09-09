@@ -62,13 +62,14 @@ public class UserService {
         if (repository.findByEmailIgnoreCase(email).isPresent())
             throw new ResourceAlreadyExistsException("User with this email already exists.");
 
-        User newUser = new User();
-        newUser.setName(userRequest.name().trim());
-        newUser.setEmail(email);
-        newUser.setRole(userRequest.role());
-        newUser.setActive(false);
-        newUser.setConfirmed(false);
-        newUser.setPassword(UUID.randomUUID().toString(), encoder);
+        User newUser = User.builder()
+                .name(userRequest.name().trim())
+                .email(email)
+                .role(userRequest.role())
+                .active(false)
+                .confirmed(false)
+                .passwordHash(encoder.encode(UUID.randomUUID().toString()))
+                .build();
 
         repository.saveAndFlush(newUser);
         sendInvitationToUserById(newUser.getId());

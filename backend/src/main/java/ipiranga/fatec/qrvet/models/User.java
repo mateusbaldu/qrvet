@@ -10,6 +10,32 @@ import java.time.Instant;
 @Entity
 @Table(name = "usuario")
 public class User {
+    public static Builder builder() {
+        return new Builder();
+    }
+
+    public static final class Builder {
+        private String name;
+        private String email;
+        private String passwordHash;
+        private Role role;
+        private boolean active;
+        private long authenticationVersion;
+        private boolean confirmed = true;
+
+        public Builder name(String name) { this.name = name; return this; }
+        public Builder email(String email) { this.email = email; return this; }
+        public Builder passwordHash(String passwordHash) { this.passwordHash = passwordHash; return this; }
+        public Builder role(Role role) { this.role = role; return this; }
+        public Builder active(boolean active) { this.active = active; return this; }
+        public Builder authenticationVersion(long version) { this.authenticationVersion = version; return this; }
+        public Builder confirmed(boolean confirmed) { this.confirmed = confirmed; return this; }
+
+        public User build() {
+            return new User(null, name, email, passwordHash, role, active, authenticationVersion, confirmed);
+        }
+    }
+
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;

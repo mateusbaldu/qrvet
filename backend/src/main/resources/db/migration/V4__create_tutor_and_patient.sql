@@ -1,0 +1,25 @@
+CREATE TABLE tutor (
+    id BIGINT NOT NULL AUTO_INCREMENT PRIMARY KEY,
+    nome VARCHAR(150) NOT NULL,
+    cpf VARCHAR(11) NOT NULL,
+    telefone VARCHAR(20) NOT NULL,
+    email VARCHAR(150) NOT NULL,
+    endereco VARCHAR(255) NOT NULL,
+    data_cadastro TIMESTAMP(6) NOT NULL DEFAULT CURRENT_TIMESTAMP(6),
+    CONSTRAINT uk_tutor_cpf UNIQUE (cpf),
+    CONSTRAINT uk_tutor_email UNIQUE (email)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+CREATE TABLE paciente (
+    id BIGINT NOT NULL AUTO_INCREMENT PRIMARY KEY,
+    tutor_id BIGINT NOT NULL,
+    nome VARCHAR(100) NOT NULL,
+    especie VARCHAR(50) NOT NULL,
+    raca VARCHAR(50) NOT NULL,
+    sexo VARCHAR(20) NOT NULL,
+    data_nascimento DATE NOT NULL,
+    peso DECIMAL(6,2) NOT NULL,
+    observacoes TEXT,
+    data_cadastro TIMESTAMP(6) NOT NULL DEFAULT CURRENT_TIMESTAMP(6),
+    CONSTRAINT fk_paciente_tutor FOREIGN KEY (tutor_id) REFERENCES tutor(id) ON DELETE RESTRICT
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
