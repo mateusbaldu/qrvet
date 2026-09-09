@@ -4,6 +4,8 @@ import ipiranga.fatec.qrvet.models.enums.InternacaoStatus;
 import jakarta.persistence.*;
 import java.time.Instant;
 import java.util.UUID;
+import org.hibernate.annotations.JdbcTypeCode;
+import org.hibernate.type.SqlTypes;
 
 @Entity
 @Table(name = "internacao")
@@ -22,7 +24,8 @@ public class Internacao {
     @ManyToOne(fetch = FetchType.LAZY, optional = false)
     @JoinColumn(name = "veterinario_id", nullable = false)
     private User veterinario;
-
+  
+    @JdbcTypeCode(SqlTypes.VARCHAR)
     @Column(name = "uuid_token", nullable = false, unique = true, length = 36, updatable = false)
     private UUID uuidToken;
 
