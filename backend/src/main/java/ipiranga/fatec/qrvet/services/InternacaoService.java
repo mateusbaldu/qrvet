@@ -25,6 +25,7 @@ public class InternacaoService {
     private final PacienteRepository pacienteRepository;
     private final BaiaRepository baiaRepository;
     private final UserRepository userRepository;
+    private final JejumRepository jejumRepository;
     private final QrCodeService qrCodeService;
 
     public InternacaoService(
@@ -32,12 +33,14 @@ public class InternacaoService {
             PacienteRepository pacienteRepository,
             BaiaRepository baiaRepository,
             UserRepository userRepository,
-            QrCodeService qrCodeService) {
+            QrCodeService qrCodeService,
+            JejumRepository jejumRepository) {
         this.internacaoRepository = internacaoRepository;
         this.pacienteRepository = pacienteRepository;
         this.baiaRepository = baiaRepository;
         this.userRepository = userRepository;
         this.qrCodeService = qrCodeService;
+        this.jejumRepository = jejumRepository;
     }
 
     @Transactional
@@ -95,6 +98,14 @@ public class InternacaoService {
         Internacao internacao = find(id);
         String url = qrCodeService.url(internacao.getUuidToken());
         return new InternacaoQrCodeResponse(internacao.getUuidToken().toString(), url, qrCodeService.base64(url));
+    }
+
+    @Transactional(readOnly = true)
+    public InternacaoPublicResponse publicDetails(java.util.UUID uuidToken) {
+        Internacao internacao = internacaoRepository.findByUuidToken(uuidToken)
+                .orElseThrow(() -> new ResourceNotFoundException("Hospitalization not found."));
+        boolean jejumAtivo = jejumRepository.existsByInternacaoIdAndAtivoTrue(internacao.getId());
+        return InternacaoPublicResponse.from(internacao, jejumAtivo);
     }
 
     @Transactional

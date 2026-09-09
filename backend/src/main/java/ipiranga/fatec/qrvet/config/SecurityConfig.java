@@ -40,7 +40,8 @@ public class SecurityConfig {
                     "/v1/auth/forgot-password",
                     "/v1/auth/reset-password",
                     "/v1/auth/confirm-invitation",
-                    "/v1/bootstrap/admin");
+                    "/v1/bootstrap/admin",
+                    "/v1/public/internacoes/qr/**");
 
     private final CustomJwtAuthenticationConverter jwtConverter;
     private final CorsConfigurationSource corsConfigurationSource;
