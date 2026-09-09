@@ -6,6 +6,93 @@ import java.time.Instant;
 @Entity
 @Table(name = "registro_alimentacao")
 public class RegistroAlimentacao {
+    @Id
+    @GeneratedValue(strategy = GenerationType.IDENTITY)
+    private Long id;
+
+    @ManyToOne(fetch = FetchType.LAZY, optional = false)
+    @JoinColumn(name = "internacao_id", nullable = false, updatable = false)
+    private Internacao internacao;
+
+    @ManyToOne(fetch = FetchType.LAZY, optional = false)
+    @JoinColumn(name = "usuario_id", nullable = false, updatable = false)
+    private User usuario;
+
+    @Column(name = "alimento", nullable = false, length = 100, updatable = false)
+    private String alimento;
+
+    @Column(name = "quantidade", nullable = false, length = 50, updatable = false)
+    private String quantidade;
+
+    @Column(name = "aceitacao_observacao", columnDefinition = "TEXT", updatable = false)
+    private String aceitacaoObservacao;
+
+    @Column(name = "data_hora_registro", nullable = false, updatable = false, columnDefinition = "TIMESTAMP(6)")
+    private Instant dataHoraRegistro;
+
+    protected RegistroAlimentacao() {}
+
+    @PrePersist
+    void initializeTimestamp() {
+        dataHoraRegistro = Instant.now();
+    }
+
+    public Long getId() {
+        return id;
+    }
+
+    public void setId(Long id) {
+        this.id = id;
+    }
+
+    public Internacao getInternacao() {
+        return internacao;
+    }
+
+    public void setInternacao(Internacao internacao) {
+        this.internacao = internacao;
+    }
+
+    public User getUsuario() {
+        return usuario;
+    }
+
+    public void setUsuario(User usuario) {
+        this.usuario = usuario;
+    }
+
+    public String getAlimento() {
+        return alimento;
+    }
+
+    public void setAlimento(String alimento) {
+        this.alimento = alimento;
+    }
+
+    public String getQuantidade() {
+        return quantidade;
+    }
+
+    public void setQuantidade(String quantidade) {
+        this.quantidade = quantidade;
+    }
+
+    public String getAceitacaoObservacao() {
+        return aceitacaoObservacao;
+    }
+
+    public void setAceitacaoObservacao(String aceitacaoObservacao) {
+        this.aceitacaoObservacao = aceitacaoObservacao;
+    }
+
+    public Instant getDataHoraRegistro() {
+        return dataHoraRegistro;
+    }
+
+    public void setDataHoraRegistro(Instant dataHoraRegistro) {
+        this.dataHoraRegistro = dataHoraRegistro;
+    }
+
     public static Builder builder() {
         return new Builder();
     }
@@ -52,43 +139,4 @@ public class RegistroAlimentacao {
             return registro;
         }
     }
-
-    @Id
-    @GeneratedValue(strategy = GenerationType.IDENTITY)
-    private Long id;
-
-    @ManyToOne(fetch = FetchType.LAZY, optional = false)
-    @JoinColumn(name = "internacao_id", nullable = false, updatable = false)
-    private Internacao internacao;
-
-    @ManyToOne(fetch = FetchType.LAZY, optional = false)
-    @JoinColumn(name = "usuario_id", nullable = false, updatable = false)
-    private User usuario;
-
-    @Column(name = "alimento", nullable = false, length = 100, updatable = false)
-    private String alimento;
-
-    @Column(name = "quantidade", nullable = false, length = 50, updatable = false)
-    private String quantidade;
-
-    @Column(name = "aceitacao_observacao", columnDefinition = "TEXT", updatable = false)
-    private String aceitacaoObservacao;
-
-    @Column(name = "data_hora_registro", nullable = false, updatable = false, columnDefinition = "TIMESTAMP(6)")
-    private Instant dataHoraRegistro;
-
-    protected RegistroAlimentacao() {}
-
-    @PrePersist
-    void initializeTimestamp() {
-        dataHoraRegistro = Instant.now();
-    }
-
-    public Long getId() { return id; }
-    public Internacao getInternacao() { return internacao; }
-    public User getUsuario() { return usuario; }
-    public String getAlimento() { return alimento; }
-    public String getQuantidade() { return quantidade; }
-    public String getAceitacaoObservacao() { return aceitacaoObservacao; }
-    public Instant getDataHoraRegistro() { return dataHoraRegistro; }
 }

@@ -15,6 +15,7 @@ import ipiranga.fatec.qrvet.models.enums.BaiaStatus;
 import ipiranga.fatec.qrvet.models.enums.InternacaoStatus;
 import ipiranga.fatec.qrvet.repositories.*;
 import ipiranga.fatec.qrvet.utils.PaginationUtils;
+import ipiranga.fatec.qrvet.utils.QrCodeService;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -48,10 +49,10 @@ public class InternacaoService {
     public InternacaoResponse open(InternacaoRequest request) {
         Paciente paciente = pacienteRepository.findByIdForUpdate(request.pacienteId())
                 .orElseThrow(() -> new ResourceNotFoundException("Patient not found."));
+
         if (internacaoRepository.existsByPacienteIdAndStatus(paciente.getId(), InternacaoStatus.ATIVA)) {
             throw new OperationConflictException("The patient already has an active hospitalization.");
         }
-
         Baia baia = baiaRepository.findByIdForUpdate(request.baiaId())
                 .orElseThrow(() -> new ResourceNotFoundException("Bay not found."));
         if (baia.getStatus() != BaiaStatus.DISPONIVEL) {

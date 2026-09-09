@@ -1,4 +1,4 @@
-package ipiranga.fatec.qrvet.services;
+package ipiranga.fatec.qrvet.utils;
 
 import com.google.zxing.BarcodeFormat;
 import com.google.zxing.WriterException;

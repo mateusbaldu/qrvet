@@ -29,7 +29,10 @@ public class JejumService {
     @PreAuthorize("@qrvetSecurity.hasAnyRole('ADMIN', 'VETERINARIO', 'AUXILIAR_TECNICO')")
     public JejumResponse start(Long internacaoId, JejumRequest request) {
         Internacao internacao = findForUpdate(internacaoId);
-        ensureActive(internacao);
+
+        if (internacao.getStatus() != InternacaoStatus.ATIVA) {
+            throw new InvalidRequestException("Fasting can only be changed for an active hospitalization.");
+        }
         if (jejumRepository.existsByInternacaoIdAndAtivoTrue(internacaoId)) {
             throw new OperationConflictException("The hospitalization already has an active fasting period.");
         }
@@ -45,7 +48,9 @@ public class JejumService {
     @PreAuthorize("@qrvetSecurity.hasAnyRole('ADMIN', 'VETERINARIO', 'AUXILIAR_TECNICO')")
     public JejumResponse end(Long internacaoId) {
         Internacao internacao = findForUpdate(internacaoId);
-        ensureActive(internacao);
+        if (internacao.getStatus() != InternacaoStatus.ATIVA) {
+            throw new InvalidRequestException("Fasting can only be changed for an active hospitalization.");
+        }
         Jejum jejum = jejumRepository.findActiveForUpdate(internacaoId)
                 .orElseThrow(() -> new ResourceNotFoundException("Active fasting period not found."));
         jejum.end();
@@ -66,11 +71,5 @@ public class JejumService {
     private Internacao findForUpdate(Long internacaoId) {
         return internacaoRepository.findByIdForUpdate(internacaoId)
                 .orElseThrow(() -> new ResourceNotFoundException("Hospitalization not found."));
-    }
-
-    private void ensureActive(Internacao internacao) {
-        if (internacao.getStatus() != InternacaoStatus.ATIVA) {
-            throw new InvalidRequestException("Fasting can only be changed for an active hospitalization.");
-        }
     }
 }

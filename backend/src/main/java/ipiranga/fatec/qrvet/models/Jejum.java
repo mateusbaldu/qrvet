@@ -6,32 +6,6 @@ import java.time.Instant;
 @Entity
 @Table(name = "jejum")
 public class Jejum {
-    public static Builder builder() {
-        return new Builder();
-    }
-
-    public static final class Builder {
-        private Internacao internacao;
-        private String motivo;
-
-        public Builder internacao(Internacao internacao) {
-            this.internacao = internacao;
-            return this;
-        }
-
-        public Builder motivo(String motivo) {
-            this.motivo = motivo;
-            return this;
-        }
-
-        public Jejum build() {
-            Jejum jejum = new Jejum();
-            jejum.internacao = internacao;
-            jejum.motivo = motivo;
-            return jejum;
-        }
-    }
-
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
@@ -89,5 +63,31 @@ public class Jejum {
 
     public boolean isAtivo() {
         return ativo;
+    }
+
+    public static Builder builder() {
+        return new Builder();
+    }
+
+    public static final class Builder {
+        private Internacao internacao;
+        private String motivo;
+
+        public Builder internacao(Internacao internacao) {
+            this.internacao = internacao;
+            return this;
+        }
+
+        public Builder motivo(String motivo) {
+            this.motivo = motivo;
+            return this;
+        }
+
+        public Jejum build() {
+            Jejum jejum = new Jejum();
+            jejum.internacao = internacao;
+            jejum.motivo = motivo;
+            return jejum;
+        }
     }
 }
