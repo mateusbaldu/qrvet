@@ -1,4 +1,4 @@
-package ipiranga.fatec.qrvet.services;
+package ipiranga.fatec.qrvet.security;
 
 import org.springframework.data.redis.core.StringRedisTemplate;
 import org.springframework.stereotype.Service;

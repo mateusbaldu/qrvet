@@ -40,7 +40,9 @@ public class RegistroAlimentacaoService {
     @PreAuthorize("@qrvetSecurity.hasAnyRole('ADMIN', 'VETERINARIO', 'AUXILIAR_TECNICO')")
     public RegistroAlimentacaoResponse create(Long internacaoId, RegistroAlimentacaoRequest request) {
         Internacao internacao = findForUpdate(internacaoId);
-        ensureActive(internacao);
+        if (internacao.getStatus() != InternacaoStatus.ATIVA) {
+            throw new InvalidRequestException("Food can only be recorded for an active hospitalization.");
+        }
         if (jejumRepository.existsByInternacaoIdAndAtivoTrue(internacaoId)) {
             throw new InvalidRequestException("Food cannot be recorded while the hospitalization has active fasting.");
         }
@@ -79,9 +81,4 @@ public class RegistroAlimentacaoService {
                 .orElseThrow(() -> new ResourceNotFoundException("Hospitalization not found."));
     }
 
-    private void ensureActive(Internacao internacao) {
-        if (internacao.getStatus() != InternacaoStatus.ATIVA) {
-            throw new InvalidRequestException("Food can only be recorded for an active hospitalization.");
-        }
-    }
 }

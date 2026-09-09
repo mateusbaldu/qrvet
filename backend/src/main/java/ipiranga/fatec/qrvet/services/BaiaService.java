@@ -15,6 +15,7 @@ import ipiranga.fatec.qrvet.repositories.BaiaRepository;
 import ipiranga.fatec.qrvet.utils.PaginationUtils;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.dao.DataIntegrityViolationException;
+import org.springframework.data.domain.Sort;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -30,12 +31,15 @@ public class BaiaService {
     @Transactional
     @PreAuthorize("@qrvetSecurity.hasAnyRole('ADMIN')")
     public BaiaResponse create(BaiaRequest request) {
-        String identificacao = normalizedIdentification(request.identificacao());
+        String identificacao = request.identificacao().trim();
         if (repository.existsByIdentificacaoIgnoreCase(identificacao)) {
             throw new ResourceAlreadyExistsException("A bay with this identification already exists.");
         }
 
-        BaiaStatus status = request.status() == null ? BaiaStatus.DISPONIVEL : request.status();
+        BaiaStatus status = request.status();
+        if (request.status() == null) {
+            status = BaiaStatus.DISPONIVEL;
+        }
         if (status == BaiaStatus.OCUPADA) {
             throw new OperationConflictException("A bay cannot be created as occupied.");
         }
@@ -59,7 +63,7 @@ public class BaiaService {
     @Transactional(readOnly = true)
     @PreAuthorize("@qrvetSecurity.hasAnyRole('ADMIN', 'VETERINARIO', 'RECEPCIONISTA')")
     public PageResponse<BaiaResponse> list(PaginationRequest pagination, BaiaStatus status) {
-        PageRequest pageable = PaginationUtils.byId(pagination, org.springframework.data.domain.Sort.Direction.ASC);
+        PageRequest pageable = PaginationUtils.byId(pagination, Sort.Direction.ASC);
         if (status == null) {
             return PageResponse.from(repository.findAll(pageable).map(BaiaResponse::from));
         }
@@ -76,16 +80,18 @@ public class BaiaService {
     @PreAuthorize("@qrvetSecurity.hasAnyRole('ADMIN')")
     public BaiaResponse update(Long id, BaiaDetailsRequest request) {
         Baia baia = find(id);
-        String identificacao = normalizedIdentification(request.identificacao());
+        String identificacao = request.identificacao().trim();
         repository.findByIdentificacaoIgnoreCase(identificacao)
                 .filter(existing -> !existing.getId().equals(id))
                 .ifPresent(existing -> {
                     throw new ResourceAlreadyExistsException("A bay with this identification already exists.");
                 });
+
         String observacao = null;
         if (request.observacao() != null && !request.observacao().isBlank()) {
             observacao = request.observacao().trim();
         }
+
         baia.updateDetails(identificacao, observacao);
         try {
             return BaiaResponse.from(repository.saveAndFlush(baia));
@@ -136,8 +142,5 @@ public class BaiaService {
                 .orElseThrow(() -> new ResourceNotFoundException("Bay not found."));
     }
 
-    private String normalizedIdentification(String value) {
-        return value.trim();
-    }
 
 }
