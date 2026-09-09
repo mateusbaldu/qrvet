@@ -2,6 +2,7 @@ package ipiranga.fatec.qrvet.services;
 
 import ipiranga.fatec.qrvet.dtos.request.EncerramentoInternacaoRequest;
 import ipiranga.fatec.qrvet.dtos.request.InternacaoRequest;
+import ipiranga.fatec.qrvet.dtos.request.JejumRequest;
 import ipiranga.fatec.qrvet.dtos.request.PaginationRequest;
 import ipiranga.fatec.qrvet.dtos.response.*;
 import ipiranga.fatec.qrvet.exceptions.InvalidRequestException;
@@ -9,6 +10,7 @@ import ipiranga.fatec.qrvet.exceptions.OperationConflictException;
 import ipiranga.fatec.qrvet.exceptions.ResourceNotFoundException;
 import ipiranga.fatec.qrvet.models.Baia;
 import ipiranga.fatec.qrvet.models.Internacao;
+import ipiranga.fatec.qrvet.models.Jejum;
 import ipiranga.fatec.qrvet.models.Paciente;
 import ipiranga.fatec.qrvet.models.User;
 import ipiranga.fatec.qrvet.models.enums.BaiaStatus;
@@ -18,6 +20,8 @@ import ipiranga.fatec.qrvet.utils.PaginationUtils;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+
+import java.util.List;
 
 @Service
 public class InternacaoService {
@@ -121,14 +125,63 @@ public class InternacaoService {
         try {
             internacao.close(InternacaoStatus.valueOf(request.statusEncerramento().name()));
             baia.releaseAutomatically();
+            jejumRepository.findActiveForUpdate(internacao.getId()).ifPresent(Jejum::end);
         } catch (IllegalStateException exception) {
             throw new OperationConflictException(exception.getMessage());
         }
         return InternacaoResponse.from(internacao);
     }
 
+    @Transactional
+    @PreAuthorize("@qrvetSecurity.hasAnyRole('ADMIN', 'VETERINARIO', 'AUXILIAR_TECNICO')")
+    public JejumResponse startFasting(Long internacaoId, JejumRequest request) {
+        Internacao internacao = findForUpdate(internacaoId);
+        ensureActive(internacao);
+        if (jejumRepository.existsByInternacaoIdAndAtivoTrue(internacaoId)) {
+            throw new OperationConflictException("The hospitalization already has an active fasting period.");
+        }
+
+        Jejum jejum = Jejum.builder()
+                .internacao(internacao)
+                .motivo(request.motivo().trim())
+                .build();
+        return JejumResponse.from(jejumRepository.saveAndFlush(jejum));
+    }
+
+    @Transactional
+    @PreAuthorize("@qrvetSecurity.hasAnyRole('ADMIN', 'VETERINARIO', 'AUXILIAR_TECNICO')")
+    public JejumResponse endFasting(Long internacaoId) {
+        Internacao internacao = findForUpdate(internacaoId);
+        ensureActive(internacao);
+        Jejum jejum = jejumRepository.findActiveForUpdate(internacaoId)
+                .orElseThrow(() -> new ResourceNotFoundException("Active fasting period not found."));
+        jejum.end();
+        return JejumResponse.from(jejum);
+    }
+
+    @Transactional(readOnly = true)
+    @PreAuthorize("@qrvetSecurity.hasAnyRole('ADMIN', 'VETERINARIO', 'AUXILIAR_TECNICO')")
+    public List<JejumResponse> fastingHistory(Long internacaoId) {
+        Internacao internacao = find(internacaoId);
+        return jejumRepository.findAllByInternacaoIdOrderByDataHoraInicioDesc(internacao.getId())
+                .stream()
+                .map(JejumResponse::from)
+                .toList();
+    }
+
     private Internacao find(Long id) {
         return internacaoRepository.findById(id)
                 .orElseThrow(() -> new ResourceNotFoundException("Hospitalization not found."));
+    }
+
+    private Internacao findForUpdate(Long id) {
+        return internacaoRepository.findByIdForUpdate(id)
+                .orElseThrow(() -> new ResourceNotFoundException("Hospitalization not found."));
+    }
+
+    private void ensureActive(Internacao internacao) {
+        if (internacao.getStatus() != InternacaoStatus.ATIVA) {
+            throw new InvalidRequestException("Fasting can only be changed for an active hospitalization.");
+        }
     }
 }
