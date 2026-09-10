@@ -9,12 +9,12 @@ import ipiranga.fatec.qrvet.models.User;
 import ipiranga.fatec.qrvet.event.InvitationEmailRequested;
 import ipiranga.fatec.qrvet.exceptions.*;
 import ipiranga.fatec.qrvet.repositories.UserRepository;
+import ipiranga.fatec.qrvet.security.SessionService;
 import ipiranga.fatec.qrvet.specifications.UserSpecifications;
+import ipiranga.fatec.qrvet.utils.PaginationUtils;
 import org.springframework.context.ApplicationEventPublisher;
-import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.PageImpl;
 import org.springframework.data.domain.Pageable;
-import org.springframework.data.domain.Sort;
 import org.springframework.data.redis.core.StringRedisTemplate;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.crypto.password.PasswordEncoder;
@@ -26,6 +26,8 @@ import java.time.Duration;
 import java.util.List;
 import java.util.Locale;
 import java.util.UUID;
+
+import static java.lang.Boolean.TRUE;
 
 @Service
 @PreAuthorize("hasRole('ADMIN')")
@@ -62,13 +64,14 @@ public class UserService {
         if (repository.findByEmailIgnoreCase(email).isPresent())
             throw new ResourceAlreadyExistsException("User with this email already exists.");
 
-        User newUser = new User();
-        newUser.setName(userRequest.name().trim());
-        newUser.setEmail(email);
-        newUser.setRole(userRequest.role());
-        newUser.setActive(false);
-        newUser.setConfirmed(false);
-        newUser.setPassword(UUID.randomUUID().toString(), encoder);
+        User newUser = User.builder()
+                .name(userRequest.name().trim())
+                .email(email)
+                .role(userRequest.role())
+                .active(false)
+                .confirmed(false)
+                .passwordHash(encoder.encode(UUID.randomUUID().toString()))
+                .build();
 
         repository.saveAndFlush(newUser);
         sendInvitationToUserById(newUser.getId());
@@ -78,14 +81,14 @@ public class UserService {
 
 
     public void sendInvitationToUserById(Long id) {
-        User u = repository.findUserByIdWithLock(id)
+        User dbUser = repository.findUserByIdWithLock(id)
                 .orElseThrow(() -> new ResourceNotFoundException("User not found."));
-        if (u.isConfirmed()) {
+        if (dbUser.isConfirmed()) {
             throw new OperationConflictException("Sign up already confirmed.");
         }
 
         String resendKey = "invitation:reenviado:" + id;
-        if (!Boolean.TRUE.equals(
+        if (!TRUE.equals(
                 redis.opsForValue().setIfAbsent(resendKey, "1", Duration.ofMinutes(1)))) {
             throw new OperationConflictException("Wait one minute before resending the invitation.");
         }
@@ -93,7 +96,7 @@ public class UserService {
         String token = UUID.randomUUID().toString();
         redis.opsForValue().set("invitation:" + token, id.toString(), Duration.ofHours(24));
         try {
-            events.publishEvent(new InvitationEmailRequested(u.getEmail(), u.getName(), token));
+            events.publishEvent(new InvitationEmailRequested(dbUser.getEmail(), dbUser.getName(), token));
         } catch (org.springframework.mail.MailException e) {
             throw new OperationConflictException(
                     "The invitation could not be sent. Check the email service and try again.");
@@ -110,15 +113,15 @@ public class UserService {
         if (value == null) {
             throw new InvalidRequestException("Invite already used or expired.");
         }
-        User u = repository.findUserByIdWithLock(Long.valueOf(value))
+        User dbUser = repository.findUserByIdWithLock(Long.valueOf(value))
                 .orElseThrow(() -> new InvalidRequestException("Invite already used or expired."));
-        if (u.isConfirmed()) {
+        if (dbUser.isConfirmed()) {
             throw new InvalidRequestException("Invite already used or expired.");
         }
-        u.setPassword(request.newPassword(), encoder);
-        u.setConfirmed(true);
-        u.setActive(true);
-        u.setAuthenticationVersion(u.getAuthenticationVersion() + 1);
+        dbUser.setPassword(request.newPassword(), encoder);
+        dbUser.setConfirmed(true);
+        dbUser.setActive(true);
+        dbUser.setAuthenticationVersion(dbUser.getAuthenticationVersion() + 1);
     }
 
 
@@ -130,6 +133,7 @@ public class UserService {
                 .map(s -> new ActiveSessionResponse(s.jti(), s.createdAt(), s.expiresAt()))
                 .sorted((left, right) -> right.createdAt().compareTo(left.createdAt()))
                 .toList();
+
         return PageResponse.from(new PageImpl<>(
                 sessionItems.stream()
                         .skip(pageable.getOffset())
@@ -151,7 +155,7 @@ public class UserService {
         if (page < 0 || size < 1 || size > MAX_PAGE_SIZE) {
             throw new InvalidRequestException("Invalid page size.");
         }
-        return PageRequest.of(page, size, Sort.by("id").descending());
+        return PaginationUtils.byId(page, size);
     }
 
 }
