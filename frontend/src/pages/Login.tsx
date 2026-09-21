@@ -27,7 +27,7 @@ export function Login() {
     try {
       const user = await login(email.trim(), senha)
       const requestedPath = loginState?.from
-      navigate(requestedPath ?? (['ADMIN', 'VETERINARIO', 'RECEPCIONISTA'].includes(user.role) ? '/internacoes' : user.role === 'AUXILIAR_TECNICO' ? '/cuidados' : '/meu-perfil'), { replace: true })
+      navigate(requestedPath?.startsWith('/') && !requestedPath.startsWith('//') ? requestedPath : (['ADMIN', 'VETERINARIO', 'RECEPCIONISTA'].includes(user.role) ? '/inicio' : user.role === 'AUXILIAR_TECNICO' ? '/cuidados' : '/consultar-qr'), { replace: true })
     } catch (error) {
       setErro(readableError(error))
       setSenha('')
@@ -39,7 +39,7 @@ export function Login() {
 
   return (
     <LoginCard>
-      <h2>Os pacientes estão a espera.  </h2>
+      <h2>Os pacientes estão à sua espera.</h2>
       <p className="auth-description">Entre com sua conta para acessar</p>
 
       <form onSubmit={enviar}>

@@ -12,7 +12,7 @@ const titulos: Record<string, string> = {
 
 const roleLabels: Record<Role, string> = { ADMIN: 'Administrador(a)', VETERINARIO: 'Veterinário(a)', RECEPCIONISTA: 'Recepcionista', AUXILIAR_TECNICO: 'Auxiliar técnico(a)', TUTOR: 'Tutor(a)' }
 const initials = (name: string) => name.trim().split(/\s+/).slice(0, 2).map((part) => part[0]?.toUpperCase()).join('') || '—'
-const navIcons = { '/internacoes': HeartPulse, '/pacientes': PawPrint, '/tutores': Users, '/baias': House, '/cuidados': Stethoscope, '/sessoes': ShieldCheck, '/consultar-qr': QrCode }
+const navIcons = { '/inicio': House, '/internacoes': HeartPulse, '/pacientes': PawPrint, '/tutores': Users, '/baias': House, '/cuidados': Stethoscope, '/sessoes': ShieldCheck, '/consultar-qr': QrCode }
 
 export function AppLayout() {
   const [menuAberto, setMenuAberto] = useState(false)
@@ -20,22 +20,23 @@ export function AppLayout() {
   const location = useLocation()
   const navigate = useNavigate()
   const { user, logout } = useAuth()
-  const tituloAtual = ({ '/tutores': 'Tutores', '/pacientes': 'Pacientes', '/baias': 'Baias', '/internacoes': 'Internações', '/cuidados': 'Cuidados', '/sessoes': 'Sessões', '/consultar-qr': 'Consultar QR Code', ...titulos } as Record<string, string>)[location.pathname] ?? 'Internação'
+  const tituloAtual = ({ '/inicio': 'Início', '/tutores': 'Tutores', '/pacientes': 'Pacientes', '/baias': 'Baias', '/internacoes': 'Internações', '/cuidados': 'Cuidados', '/sessoes': 'Sessões', '/consultar-qr': 'Consultar QR Code', ...titulos } as Record<string, string>)['/' + location.pathname.split('/')[1]] ?? 'QRVet'
 
   if (!user) return null
 
   async function sair() {
     if (!user) return
     const email = user.email
-    await logout()
+    try { await logout() } catch { /* A sessão local também é encerrada se o servidor estiver indisponível. */ }
     navigate('/login', { replace: true, state: { email } })
   }
 
   return (
     <div className="app-shell">
+      <a className="skip-link" href="#conteudo">Pular para o conteúdo</a>
       <aside className={`app-sidebar ${menuAberto ? 'open' : ''} ${menuRecolhido ? 'collapsed' : ''}`} aria-label="Menu principal">
         <div className="sidebar-heading">
-          <Link to={user.role === 'ADMIN' ? '/equipe' : '/meu-perfil'} className="sidebar-brand">
+          <Link to="/" className="sidebar-brand">
             <span className="sidebar-logo"><PawPrint size={25} /></span>
             <span><strong>QRVet</strong><small>Gestão veterinária</small></span>
           </Link>
@@ -57,6 +58,7 @@ export function AppLayout() {
         <nav className="sidebar-nav">
           <span className="sidebar-section-label">CLÍNICA</span>
           {[
+            { path: '/inicio', label: 'Início', roles: ['ADMIN', 'VETERINARIO', 'RECEPCIONISTA'] },
             { path: '/internacoes', label: 'Internações', roles: ['ADMIN', 'VETERINARIO', 'RECEPCIONISTA'] },
             { path: '/pacientes', label: 'Pacientes', roles: ['ADMIN', 'VETERINARIO', 'RECEPCIONISTA'] },
             { path: '/tutores', label: 'Tutores', roles: ['ADMIN', 'VETERINARIO', 'RECEPCIONISTA'] },
@@ -94,13 +96,13 @@ export function AppLayout() {
             <div><small>QRVet</small><strong>{tituloAtual}</strong></div>
           </div>
 
-          <Link to="/meu-perfil" className="header-profile" aria-label="Abrir meu perfil">
+          <div className="header-actions"><Link to="/consultar-qr" className="header-qr"><QrCode size={17} /><span>Consultar por QR</span></Link><Link to="/meu-perfil" className="header-profile" aria-label="Abrir meu perfil">
             <span className="header-profile-text"><strong>{user.name}</strong><small>{roleLabels[user.role]}</small></span>
             <span className="header-avatar">{initials(user.name)}</span>
-          </Link>
+          </Link></div>
         </header>
 
-        <div className="app-content"><Outlet /></div>
+        <div className="app-content" id="conteudo" tabIndex={-1}><Outlet /></div>
       </div>
     </div>
   )

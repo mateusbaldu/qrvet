@@ -80,6 +80,7 @@ public class UserService {
     }
 
 
+    @Transactional
     public void sendInvitationToUserById(Long id) {
         User dbUser = repository.findUserByIdWithLock(id)
                 .orElseThrow(() -> new ResourceNotFoundException("User not found."));
@@ -104,6 +105,7 @@ public class UserService {
     }
 
     @Transactional
+    @PreAuthorize("permitAll()")
     public void confirmUserInvitation(ResetPasswordRequest request) {
         if (request.newPassword().getBytes(StandardCharsets.UTF_8).length > 72) {
             throw new InvalidRequestException("Password must have a max of 72 characters.");

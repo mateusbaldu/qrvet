@@ -4,6 +4,13 @@
   flex-direction: column; padding: 1.4rem 1rem; color: #d9e8e4; background: var(--green-950);
   transition: width 180ms ease, flex-basis 180ms ease, padding 180ms ease;
 }
+.app-sidebar { width: 15.5rem; flex-basis: 15.5rem; height: 100dvh; }
+.sidebar-nav { overflow-y: auto; min-height: 0; padding-bottom: 1rem; }
+.sidebar-heading, .sidebar-user { flex-shrink: 0; }
+.header-actions { display: flex; align-items: center; gap: 1.5rem; }
+.header-qr { display: inline-flex; align-items: center; gap: .6rem; padding: .6rem .85rem; border: 1px solid var(--border); border-radius: .5rem; color: var(--green-700); text-decoration: none; font-size: .75rem; font-weight: 600; }
+.skip-link { position: fixed; left: 1rem; top: -5rem; z-index: 500; padding: .75rem 1rem; background: white; border: 2px solid var(--green-700); color: var(--green-950); }
+.skip-link:focus { top: 1rem; }
 .sidebar-heading { display: flex; align-items: center; justify-content: space-between; padding: .25rem .35rem 1.8rem; }
 .sidebar-brand { display: flex; align-items: center; gap: .75rem; color: #fff; text-decoration: none; }
 .sidebar-logo { display: grid; width: 2.8rem; height: 2.8rem; place-items: center; color: var(--green-950); background: var(--green-200); border-radius: .85rem; }
@@ -26,6 +33,8 @@
 }
 .sidebar-nav a:hover { color: #fff; background: rgb(255 255 255 / 7%); }
 .sidebar-nav a.active { color: var(--green-950); background: var(--green-200); font-weight: 700; }
+.sidebar-nav a.active { color: white; background: #235c53; }
+.sidebar-nav a.active svg { color: var(--green-200); }
 .sidebar-user { display: grid; grid-template-columns: auto 1fr auto; align-items: center; gap: .65rem; padding: .85rem .75rem; border-top: 1px solid rgb(255 255 255 / 10%); }
 .sidebar-avatar, .header-avatar { display: grid; place-items: center; border-radius: 50%; font-size: .72rem; font-weight: 700; }
 .sidebar-avatar { width: 2.2rem; height: 2.2rem; color: var(--green-950); background: var(--green-200); }
@@ -73,6 +82,8 @@
 }
 
 @media (max-width: 575.98px) {
+  .header-qr span { display: none; }
+  .header-actions { gap: .7rem; }
   .header-profile-text { display: none; }
   .app-header { min-height: 4.2rem; }
 }

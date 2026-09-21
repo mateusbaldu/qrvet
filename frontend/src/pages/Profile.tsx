@@ -56,13 +56,12 @@ export function Profile() {
       <aside className="col-12 col-lg-4"><section className="profile-card profile-identity-card">
         <div className="profile-photo"><span>{initials(user.name)}</span></div>
         <h2>{user.name}</h2><p>{user.email}</p><span className="profile-role"><ShieldCheck size={14} /> {roleLabels[user.role]}</span>
-        <small className="mt-4">O backend atual ainda não disponibiliza upload de foto.</small>
       </section></aside>
 
       <div className="col-12 col-lg-8 d-grid gap-4">
         <section className="profile-card"><div className="profile-section-heading"><span className="profile-section-icon"><UserRound size={19} /></span><div><h2>Dados pessoais</h2><p>Informações cadastradas para sua conta.</p></div></div>
           <div className="row g-3"><div className="col-12 col-md-6"><label className="form-label auth-label" htmlFor="nome-perfil">Nome completo</label><input className="form-control profile-input" id="nome-perfil" value={user.name} readOnly /></div><div className="col-12 col-md-6"><label className="form-label auth-label" htmlFor="email-perfil">E-mail</label><input className="form-control profile-input" id="email-perfil" type="email" value={user.email} readOnly /></div></div>
-          <p className="profile-api-note">A edição desses campos ainda precisa de um endpoint no backend.</p>
+          <p className="profile-api-note">Para atualizar seus dados cadastrais, entre em contato com a administração da clínica.</p>
         </section>
 
         <section className="profile-card"><div className="profile-section-heading"><span className="profile-section-icon"><KeyRound size={19} /></span><div><h2>Alterar senha</h2><p>Ao alterar, sua sessão será encerrada por segurança.</p></div></div>
