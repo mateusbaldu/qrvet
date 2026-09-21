@@ -16,4 +16,6 @@ public interface UserRepository
     Optional<User> findByEmailIgnoreCase(String email);
 
     long countByRole(Role role);
+
+    Optional<User> findByIdAndRoleAndActiveTrue(Long id, Role role);
 }

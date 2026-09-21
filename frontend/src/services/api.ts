@@ -115,7 +115,7 @@ async function refreshAccessToken() {
   return refreshInProgress
 }
 
-async function request<T>(path: string, options: RequestOptions = {}): Promise<T> {
+export async function request<T>(path: string, options: RequestOptions = {}): Promise<T> {
   try {
     return await rawRequest<T>(path, options)
   } catch (error) {

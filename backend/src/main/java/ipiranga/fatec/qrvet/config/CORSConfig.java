@@ -11,7 +11,6 @@ import java.util.List;
 
 @Configuration
 public class CORSConfig {
-
     @Bean
     CorsConfigurationSource corsConfigurationSource(
             @Value("${qrvet.frontend-url}") String frontendOrigin) {

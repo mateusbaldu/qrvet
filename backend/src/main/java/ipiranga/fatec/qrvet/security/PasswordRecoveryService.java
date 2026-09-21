@@ -1,4 +1,4 @@
-package ipiranga.fatec.qrvet.services;
+package ipiranga.fatec.qrvet.security;
 
 import ipiranga.fatec.qrvet.dtos.RecoveryData;
 import org.springframework.data.redis.core.StringRedisTemplate;
@@ -6,6 +6,8 @@ import org.springframework.stereotype.Service;
 
 import java.time.Duration;
 import java.util.Optional;
+
+import static java.lang.Boolean.TRUE;
 
 @Service
 public class PasswordRecoveryService {
@@ -21,7 +23,7 @@ public class PasswordRecoveryService {
     }
 
     public boolean canCreate(Long userId) {
-        return Boolean.TRUE.equals(
+        return TRUE.equals(
                 redis.opsForValue().setIfAbsent(COOLDOWN_PREFIX + userId, "1", COOLDOWN_TTL));
     }
 

@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { ChevronLeft, ChevronRight, LogOut, Menu, PawPrint, UserRound, Users, X } from 'lucide-react'
+import { ChevronLeft, ChevronRight, LogOut, Menu, PawPrint, UserRound, Users, X, HeartPulse, House, QrCode, ShieldCheck, Stethoscope } from 'lucide-react'
 import { Link, NavLink, Outlet, useLocation, useNavigate } from 'react-router-dom'
 import { useAuth } from '../auth/useAuth'
 import type { Role } from '../services/api'
@@ -12,6 +12,7 @@ const titulos: Record<string, string> = {
 
 const roleLabels: Record<Role, string> = { ADMIN: 'Administrador(a)', VETERINARIO: 'Veterinário(a)', RECEPCIONISTA: 'Recepcionista', AUXILIAR_TECNICO: 'Auxiliar técnico(a)', TUTOR: 'Tutor(a)' }
 const initials = (name: string) => name.trim().split(/\s+/).slice(0, 2).map((part) => part[0]?.toUpperCase()).join('') || '—'
+const navIcons = { '/internacoes': HeartPulse, '/pacientes': PawPrint, '/tutores': Users, '/baias': House, '/cuidados': Stethoscope, '/sessoes': ShieldCheck, '/consultar-qr': QrCode }
 
 export function AppLayout() {
   const [menuAberto, setMenuAberto] = useState(false)
@@ -19,7 +20,7 @@ export function AppLayout() {
   const location = useLocation()
   const navigate = useNavigate()
   const { user, logout } = useAuth()
-  const tituloAtual = titulos[location.pathname] ?? 'QRVet'
+  const tituloAtual = ({ '/tutores': 'Tutores', '/pacientes': 'Pacientes', '/baias': 'Baias', '/internacoes': 'Internações', '/cuidados': 'Cuidados', '/sessoes': 'Sessões', '/consultar-qr': 'Consultar QR Code', ...titulos } as Record<string, string>)[location.pathname] ?? 'Internação'
 
   if (!user) return null
 
@@ -55,6 +56,18 @@ export function AppLayout() {
 
         <nav className="sidebar-nav">
           <span className="sidebar-section-label">CLÍNICA</span>
+          {[
+            { path: '/internacoes', label: 'Internações', roles: ['ADMIN', 'VETERINARIO', 'RECEPCIONISTA'] },
+            { path: '/pacientes', label: 'Pacientes', roles: ['ADMIN', 'VETERINARIO', 'RECEPCIONISTA'] },
+            { path: '/tutores', label: 'Tutores', roles: ['ADMIN', 'VETERINARIO', 'RECEPCIONISTA'] },
+            { path: '/baias', label: 'Baias', roles: ['ADMIN', 'VETERINARIO', 'RECEPCIONISTA'] },
+            { path: '/cuidados', label: 'Cuidados', roles: ['ADMIN', 'VETERINARIO', 'AUXILIAR_TECNICO'] },
+            { path: '/sessoes', label: 'Sessões', roles: ['ADMIN'] },
+            { path: '/consultar-qr', label: 'Consultar QR Code', roles: ['ADMIN', 'VETERINARIO', 'RECEPCIONISTA', 'AUXILIAR_TECNICO', 'TUTOR'] },
+          ].filter(item => item.roles.includes(user.role)).map(item => {
+            const Icon = navIcons[item.path as keyof typeof navIcons]
+            return <NavLink key={item.path} to={item.path} title={item.label} onClick={() => setMenuAberto(false)} className={({ isActive }) => isActive ? 'active' : ''}><Icon size={19} /><span className="sidebar-link-text">{item.label}</span></NavLink>
+          })}
           {user.role === 'ADMIN' && <NavLink to="/equipe" onClick={() => setMenuAberto(false)} title={menuRecolhido ? 'Equipe' : undefined} className={({ isActive }) => isActive ? 'active' : ''}>
             <Users size={19} /> <span className="sidebar-link-text">Equipe</span>
           </NavLink>}

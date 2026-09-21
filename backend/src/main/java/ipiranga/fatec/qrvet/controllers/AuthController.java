@@ -3,7 +3,7 @@ package ipiranga.fatec.qrvet.controllers;
 import ipiranga.fatec.qrvet.dtos.request.*;
 import ipiranga.fatec.qrvet.dtos.response.*;
 import ipiranga.fatec.qrvet.dtos.*;
-import ipiranga.fatec.qrvet.services.AuthService;
+import ipiranga.fatec.qrvet.security.AuthService;
 import jakarta.validation.Valid;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.HttpHeaders;

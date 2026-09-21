@@ -1,4 +1,4 @@
-package ipiranga.fatec.qrvet.services;
+package ipiranga.fatec.qrvet.security;
 
 import ipiranga.fatec.qrvet.dtos.RefreshToken;
 import ipiranga.fatec.qrvet.models.User;
