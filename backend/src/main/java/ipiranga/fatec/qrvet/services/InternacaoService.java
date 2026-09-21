@@ -55,12 +55,9 @@ public class InternacaoService {
         }
         Baia baia = baiaRepository.findByIdForUpdate(request.baiaId())
                 .orElseThrow(() -> new ResourceNotFoundException("Bay not found."));
-        if (baia.getStatus() != BaiaStatus.DISPONIVEL) {
-            throw new InvalidRequestException("The bay is not available.");
-        }
 
         User veterinario = userRepository.findByIdAndRoleAndActiveTrue(
-                        request.veterinarioId(), ipiranga.fatec.qrvet.models.enums.Role.VETERINARIO)
+                request.veterinarioId(), ipiranga.fatec.qrvet.models.enums.Role.VETERINARIO)
                 .orElseThrow(() -> new ResourceNotFoundException("Active veterinarian not found."));
 
         baia.occupyAutomatically();
