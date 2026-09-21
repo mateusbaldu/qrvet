@@ -88,13 +88,7 @@ public class UserService {
 
         String token = UUID.randomUUID().toString();
         invitations.save(token, id);
-        try {
-            events.publishEvent(new InvitationEmailRequested(dbUser.getEmail(), dbUser.getName(), token));
-        } catch (org.springframework.mail.MailException e) {
-            invitations.delete(token);
-            throw new OperationConflictException(
-                    "The invitation could not be sent. Check the email service and try again.");
-        }
+        events.publishEvent(new InvitationEmailRequested(dbUser.getEmail(), dbUser.getName(), token));
     }
 
     @Transactional
