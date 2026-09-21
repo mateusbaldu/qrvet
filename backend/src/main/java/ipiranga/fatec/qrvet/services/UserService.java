@@ -80,9 +80,7 @@ public class UserService {
     public void sendInvitationToUserById(Long id) {
         User dbUser = repository.findUserByIdWithLock(id)
                 .orElseThrow(() -> new ResourceNotFoundException("User not found."));
-        if (dbUser.isConfirmed()) {
-            throw new OperationConflictException("Sign up already confirmed.");
-        }
+        dbUser.validateConfirmed();
 
         if (!invitations.canSend(id)) {
             throw new OperationConflictException("Wait one minute before resending the invitation.");
