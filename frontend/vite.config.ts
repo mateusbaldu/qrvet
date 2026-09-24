@@ -10,7 +10,7 @@ export default defineConfig({
   ],
   server: {
     proxy: {
-      '/qrvet/api': 'http://localhost:8080',
+      '/qrvet/api': process.env.API_PROXY_TARGET || 'http://localhost:8080',
     },
   },
 })
