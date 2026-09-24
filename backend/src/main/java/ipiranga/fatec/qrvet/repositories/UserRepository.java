@@ -17,5 +17,7 @@ public interface UserRepository
 
     long countByRole(Role role);
 
+    List<User> findAllByRoleAndActiveTrueAndConfirmedTrueOrderByNameAsc(Role role);
+
     Optional<User> findByIdAndRoleAndActiveTrue(Long id, Role role);
 }

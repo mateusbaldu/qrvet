@@ -55,12 +55,9 @@ public class InternacaoService {
         }
         Baia baia = baiaRepository.findByIdForUpdate(request.baiaId())
                 .orElseThrow(() -> new ResourceNotFoundException("Bay not found."));
-        if (baia.getStatus() != BaiaStatus.DISPONIVEL) {
-            throw new InvalidRequestException("The bay is not available.");
-        }
 
         User veterinario = userRepository.findByIdAndRoleAndActiveTrue(
-                        request.veterinarioId(), ipiranga.fatec.qrvet.models.enums.Role.VETERINARIO)
+                request.veterinarioId(), ipiranga.fatec.qrvet.models.enums.Role.VETERINARIO)
                 .orElseThrow(() -> new ResourceNotFoundException("Active veterinarian not found."));
 
         baia.occupyAutomatically();
@@ -77,6 +74,34 @@ public class InternacaoService {
                 .observacoes(observacoes)
                 .build();
         return InternacaoResponse.from(internacaoRepository.saveAndFlush(internacao));
+    }
+
+    @Transactional(readOnly = true)
+    @PreAuthorize("@qrvetSecurity.hasAnyRole('ADMIN', 'VETERINARIO', 'RECEPCIONISTA')")
+    public PageResponse<InternacaoResponse> list(PaginationRequest pagination, Long pacienteId, InternacaoStatus status) {
+        return PageResponse.from(internacaoRepository.search(pacienteId, status, PaginationUtils.byId(pagination))
+                .map(InternacaoResponse::from));
+    }
+
+    @Transactional(readOnly = true)
+    @PreAuthorize("@qrvetSecurity.hasAnyRole('ADMIN', 'VETERINARIO', 'RECEPCIONISTA')")
+    public java.util.List<VeterinarioResponse> veterinarios() {
+        return userRepository.findAllByRoleAndActiveTrueAndConfirmedTrueOrderByNameAsc(
+                        ipiranga.fatec.qrvet.models.enums.Role.VETERINARIO).stream()
+                .map(user -> new VeterinarioResponse(user.getId(), user.getName())).toList();
+    }
+
+    @Transactional(readOnly = true)
+    @PreAuthorize("@qrvetSecurity.hasAnyRole('ADMIN', 'VETERINARIO', 'AUXILIAR_TECNICO')")
+    public PageResponse<CuidadoResponse> careList(PaginationRequest pagination) {
+        return PageResponse.from(internacaoRepository.findAllByStatus(
+                InternacaoStatus.ATIVA, PaginationUtils.byId(pagination)).map(CuidadoResponse::from));
+    }
+
+    @Transactional(readOnly = true)
+    @PreAuthorize("@qrvetSecurity.hasAnyRole('ADMIN', 'VETERINARIO', 'AUXILIAR_TECNICO')")
+    public CuidadoResponse careDetails(Long id) {
+        return CuidadoResponse.from(find(id));
     }
 
     @Transactional(readOnly = true)
@@ -121,6 +146,7 @@ public class InternacaoService {
                 .orElseThrow(() -> new ResourceNotFoundException("Bay not found."));
         try {
             internacao.close(InternacaoStatus.valueOf(request.statusEncerramento().name()));
+            jejumRepository.findActiveForUpdate(id).ifPresent(jejum -> jejum.end());
             baia.releaseAutomatically();
         } catch (IllegalStateException exception) {
             throw new OperationConflictException(exception.getMessage());

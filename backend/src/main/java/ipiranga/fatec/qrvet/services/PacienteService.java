@@ -42,6 +42,12 @@ public class PacienteService {
     }
 
     @Transactional(readOnly = true)
+    public PacienteResponse findById(Long id) {
+        return PacienteResponse.from(pacienteRepository.findById(id)
+                .orElseThrow(() -> new ResourceNotFoundException("Patient not found.")));
+    }
+
+    @Transactional(readOnly = true)
     public PageResponse<PacienteResponse> list(PaginationRequest pagination) {
         return PageResponse.from(pacienteRepository.findAll(PaginationUtils.byId(pagination))
                 .map(PacienteResponse::from));

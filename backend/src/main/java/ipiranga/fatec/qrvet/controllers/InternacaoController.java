@@ -46,6 +46,30 @@ public class InternacaoController {
         return service.listActive(pagination);
     }
 
+    @GetMapping
+    public PageResponse<InternacaoResponse> list(
+            @Valid @ModelAttribute PaginationRequest pagination,
+            @RequestParam(required = false) Long pacienteId,
+            @RequestParam(required = false) ipiranga.fatec.qrvet.models.enums.InternacaoStatus status) {
+        return service.list(pagination, pacienteId, status);
+    }
+
+    @GetMapping("/veterinarios")
+    public List<ipiranga.fatec.qrvet.dtos.response.VeterinarioResponse> veterinarios() {
+        return service.veterinarios();
+    }
+
+    @GetMapping("/cuidados")
+    public PageResponse<ipiranga.fatec.qrvet.dtos.response.CuidadoResponse> careList(
+            @Valid @ModelAttribute PaginationRequest pagination) {
+        return service.careList(pagination);
+    }
+
+    @GetMapping("/{id}/cuidados")
+    public ipiranga.fatec.qrvet.dtos.response.CuidadoResponse careDetails(@PathVariable Long id) {
+        return service.careDetails(id);
+    }
+
     @GetMapping("/{id}")
     public InternacaoResponse findById(@PathVariable Long id) {
         return service.findById(id);

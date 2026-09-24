@@ -7,6 +7,12 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [loading, setLoading] = useState(true)
 
   useEffect(() => {
+    const expired = () => setUser(null)
+    window.addEventListener('qrvet:session-expired', expired)
+    return () => window.removeEventListener('qrvet:session-expired', expired)
+  }, [])
+
+  useEffect(() => {
     let active = true
     authApi.restore()
       .then((restoredUser) => { if (active) setUser(restoredUser) })
@@ -40,8 +46,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       return authenticatedUser
     },
     async logout() {
-      await authApi.logout()
-      setUser(null)
+      try { await authApi.logout() } finally { setUser(null) }
     },
     clearSession() {
       authApi.clearLocalSession()
