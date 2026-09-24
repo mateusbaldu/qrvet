@@ -1,0 +1,98 @@
+name: qrvet-dev
+
+services:
+  redis:
+    image: redis:8.2-alpine
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+
+  mailpit:
+    image: axllent/mailpit:v1.27.4
+    ports:
+      - "127.0.0.1:8025:8025"
+
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile.dev
+    init: true
+    ports:
+      - "127.0.0.1:8080:8080"
+    environment:
+      TZ: America/Sao_Paulo
+      SPRING_PROFILES_ACTIVE: dev
+      TIDB_HOST: ${TIDB_HOST:?Configure TIDB_HOST em .env.dev}
+      TIDB_PORT: ${TIDB_PORT:-4000}
+      TIDB_DATABASE: ${TIDB_DATABASE:?Configure TIDB_DATABASE em .env.dev}
+      TIDB_USERNAME: ${TIDB_USERNAME:?Configure TIDB_USERNAME em .env.dev}
+      TIDB_PASSWORD: ${TIDB_PASSWORD:?Configure TIDB_PASSWORD em .env.dev}
+      SPRING_DATA_REDIS_HOST: redis
+      SPRING_DATA_REDIS_PORT: "6379"
+      SPRING_MAIL_HOST: mailpit
+      SPRING_MAIL_PORT: "1025"
+      SPRING_MAIL_USERNAME: ""
+      SPRING_MAIL_PASSWORD: ""
+      SPRING_MAIL_PROPERTIES_MAIL_SMTP_AUTH: "false"
+      SPRING_MAIL_PROPERTIES_MAIL_SMTP_STARTTLS_ENABLE: "false"
+      SPRING_MAIL_PROPERTIES_MAIL_SMTP_STARTTLS_REQUIRED: "false"
+      SPRING_MAIL_PROPERTIES_MAIL_SMTP_SSL_ENABLE: "false"
+      QRVET_MAIL_FROM: no-reply@qrvet.local
+      QRVET_JWT_SECRET: ${QRVET_JWT_SECRET:?Configure QRVET_JWT_SECRET em .env.dev}
+      QRVET_BOOTSTRAP_SECRET: ${QRVET_BOOTSTRAP_SECRET:?Configure QRVET_BOOTSTRAP_SECRET em .env.dev}
+      QRVET_FRONTEND_URL: http://localhost:5173
+      QRVET_PUBLIC_URL: http://localhost:5173
+      QRVET_COOKIE_SECURE: "false"
+      QRVET_BOOTSTRAP_ADMIN_ENABLED: "false"
+    depends_on:
+      redis:
+        condition: service_healthy
+      mailpit:
+        condition: service_started
+    develop:
+      watch:
+        - action: sync+restart
+          path: ./backend/src
+          target: /opt/app/src
+          ignore:
+            - main/resources/secrets.properties
+        - action: rebuild
+          path: ./backend/pom.xml
+        - action: rebuild
+          path: ./backend/.mvn
+        - action: rebuild
+          path: ./backend/mvnw
+        - action: rebuild
+          path: ./backend/Dockerfile.dev
+
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile.dev
+    init: true
+    ports:
+      - "127.0.0.1:5173:5173"
+    environment:
+      API_PROXY_TARGET: http://backend:8080
+    depends_on:
+      - backend
+    develop:
+      watch:
+        - action: sync
+          path: ./frontend
+          target: /app
+          ignore:
+            - node_modules/
+            - dist/
+            - .env*
+            - package.json
+            - package-lock.json
+            - Dockerfile*
+        - action: rebuild
+          path: ./frontend/package.json
+        - action: rebuild
+          path: ./frontend/package-lock.json
+        - action: rebuild
+          path: ./frontend/Dockerfile.dev
