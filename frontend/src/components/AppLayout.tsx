@@ -12,7 +12,7 @@ const titulos: Record<string, string> = {
 
 const roleLabels: Record<Role, string> = { ADMIN: 'Administrador(a)', VETERINARIO: 'Veterinário(a)', RECEPCIONISTA: 'Recepcionista', AUXILIAR_TECNICO: 'Auxiliar técnico(a)', TUTOR: 'Tutor(a)' }
 const initials = (name: string) => name.trim().split(/\s+/).slice(0, 2).map((part) => part[0]?.toUpperCase()).join('') || '—'
-const navIcons = { '/inicio': House, '/internacoes': HeartPulse, '/pacientes': PawPrint, '/tutores': Users, '/baias': House, '/cuidados': Stethoscope, '/sessoes': ShieldCheck, '/consultar-qr': QrCode }
+const navIcons = { '/inicio': House, '/internacoes': HeartPulse, '/pacientes': PawPrint, '/tutores': Users, '/baias': House, '/alimentacao': Stethoscope, '/cuidados': Stethoscope, '/sessoes': ShieldCheck, '/consultar-qr': QrCode }
 
 export function AppLayout() {
   const [menuAberto, setMenuAberto] = useState(false)
@@ -20,7 +20,7 @@ export function AppLayout() {
   const location = useLocation()
   const navigate = useNavigate()
   const { user, logout } = useAuth()
-  const tituloAtual = ({ '/inicio': 'Início', '/tutores': 'Tutores', '/pacientes': 'Pacientes', '/baias': 'Baias', '/internacoes': 'Internações', '/cuidados': 'Cuidados', '/sessoes': 'Sessões', '/consultar-qr': 'Consultar QR Code', ...titulos } as Record<string, string>)['/' + location.pathname.split('/')[1]] ?? 'QRVet'
+  const tituloAtual = ({ '/inicio': 'Início', '/tutores': 'Tutores', '/pacientes': 'Pacientes', '/baias': 'Baias', '/internacoes': 'Internações', '/alimentacao': 'Alimentação', '/cuidados': 'Cuidados', '/sessoes': 'Sessões', '/consultar-qr': 'Consultar QR Code', ...titulos } as Record<string, string>)['/' + location.pathname.split('/')[1]] ?? 'QRVet'
 
   if (!user) return null
 
@@ -63,6 +63,7 @@ export function AppLayout() {
             { path: '/pacientes', label: 'Pacientes', roles: ['ADMIN', 'VETERINARIO', 'RECEPCIONISTA'] },
             { path: '/tutores', label: 'Tutores', roles: ['ADMIN', 'VETERINARIO', 'RECEPCIONISTA'] },
             { path: '/baias', label: 'Baias', roles: ['ADMIN', 'VETERINARIO', 'RECEPCIONISTA'] },
+            { path: '/alimentacao', label: 'Alimentação', roles: ['ADMIN', 'VETERINARIO', 'AUXILIAR_TECNICO'] },
             { path: '/cuidados', label: 'Cuidados', roles: ['ADMIN', 'VETERINARIO', 'AUXILIAR_TECNICO'] },
             { path: '/sessoes', label: 'Sessões', roles: ['ADMIN'] },
             { path: '/consultar-qr', label: 'Consultar QR Code', roles: ['ADMIN', 'VETERINARIO', 'RECEPCIONISTA', 'AUXILIAR_TECNICO', 'TUTOR'] },

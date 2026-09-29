@@ -1,6 +1,13 @@
 import { request, type PageResponse } from './api'
 export type Tutor = { id: number; nome: string; cpf: string; telefone: string; email: string; endereco: string }
-export type Paciente = { id: number; tutorId: number; nome: string; especie: string; raca: string; sexo: string; dataNascimento: string; peso: number; observacoes: string }
+export type Paciente = { id: number; tutorId: number; nome: string; especie: string; raca: string; sexo: string; dataNascimento: string; peso: number; observacoes: string; fotoVersao: string | null }
+export type AgendaAlimentacao = { id: number; internacaoId: number; pacienteNome: string; baiaIdentificacao: string; internacaoStatus: string; alimento: string; quantidade: string; horario: string; status: 'PENDENTE' | 'CONCLUIDA' | 'CANCELADA'; jejumAtivo: boolean; concluidaEm: string | null; responsavelNome: string | null; observacao: string | null; motivoCancelamento: string | null }
+export const localDate = (date = new Date()) => new Date(date.getTime() - date.getTimezoneOffset() * 60000).toISOString().slice(0, 10)
+export function agendaPath(date: string, admissionId?: string) {
+  const start = new Date(date + 'T00:00:00')
+  const end = new Date(start); end.setDate(end.getDate() + 1)
+  return '/alimentacao/agenda?' + new URLSearchParams({ inicio: start.toISOString(), fim: end.toISOString(), ...(admissionId ? { internacaoId: admissionId } : {}) })
+}
 export type Baia = { id: number; identificacao: string; status: 'DISPONIVEL' | 'OCUPADA' | 'MANUTENCAO'; observacao: string }
 export type Internacao = { id: number; pacienteId: number; pacienteNome: string; baiaId: number; baiaIdentificacao: string; veterinarioId: number; veterinarioNome: string; uuidToken: string; entradaInternacao: string; saidaInternacao: string | null; motivo: string; diagnosticoInicial: string; status: 'ATIVA' | 'ALTA' | 'OBITO'; observacoes: string }
 export type Veterinario = { id: number; name: string }
@@ -8,7 +15,7 @@ export type Cuidado = Pick<Internacao, 'id' | 'pacienteNome' | 'baiaIdentificaca
 export type Jejum = { id: number; motivo: string; dataHoraInicio: string; dataHoraFim: string | null; ativo: boolean }
 export type Alimentacao = { id: number; alimento: string; quantidade: string; aceitacaoObservacao: string; dataHoraRegistro: string; usuarioId: number }
 export type PublicInternacao = { pacienteNome: string; especie: string; raca: string; sexo: string; baiaIdentificacao: string; motivo: string; status: string; jejumAtivo: boolean; entradaInternacao: string }
-export type QrCode = { uuidToken: string; url: string; base64: string }
+export type QrCode = { uuidToken: string; url: string; base64: string; tutorUrl: string; tutorEmail: string }
 export type Session = { jti: string; createdAt: string; expiresAt: string }
 export async function allPages<T>(path: string): Promise<T[]> {
   const items: T[] = []

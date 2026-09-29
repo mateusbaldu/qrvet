@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { useCallback, useEffect, useState } from 'react'
 import { readableError } from '../services/api'
 
 export function useResource<T>(loader: () => Promise<T>, key: string | number) {
@@ -14,6 +14,7 @@ export function useResource<T>(loader: () => Promise<T>, key: string | number) {
     // The key includes every input used by the loader.
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [key, revision])
-  return { data, error, loading, reload: () => setRevision(value => value + 1) }
+  const reload = useCallback(() => setRevision(value => value + 1), [])
+  return { data, error, loading, reload }
 }
 

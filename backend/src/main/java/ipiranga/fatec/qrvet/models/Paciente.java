@@ -37,6 +37,12 @@ public class Paciente {
     @Column(name = "observacoes")
     private String observacoes;
 
+    @Column(name = "foto_arquivo", length = 80)
+    private String fotoArquivo;
+
+    public String getFotoArquivo() { return fotoArquivo; }
+    public void setFotoArquivo(String fotoArquivo) { this.fotoArquivo = fotoArquivo; }
+
     @Column(name = "data_cadastro", nullable = false, updatable = false, columnDefinition = "TIMESTAMP(6)")
     private Instant dataCadastro;
 

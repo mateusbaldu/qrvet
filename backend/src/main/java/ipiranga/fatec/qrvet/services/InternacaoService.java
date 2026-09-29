@@ -16,6 +16,9 @@ import ipiranga.fatec.qrvet.models.enums.InternacaoStatus;
 import ipiranga.fatec.qrvet.repositories.*;
 import ipiranga.fatec.qrvet.utils.PaginationUtils;
 import ipiranga.fatec.qrvet.utils.QrCodeService;
+import org.springframework.beans.factory.annotation.Value;
+import org.springframework.mail.SimpleMailMessage;
+import org.springframework.mail.javamail.JavaMailSender;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -28,6 +31,9 @@ public class InternacaoService {
     private final UserRepository userRepository;
     private final JejumRepository jejumRepository;
     private final QrCodeService qrCodeService;
+    private final AlimentacaoAgendadaRepository agenda;
+    private final JavaMailSender mail;
+    private final String mailFrom;
 
     public InternacaoService(
             InternacaoRepository internacaoRepository,
@@ -35,13 +41,17 @@ public class InternacaoService {
             BaiaRepository baiaRepository,
             UserRepository userRepository,
             QrCodeService qrCodeService,
-            JejumRepository jejumRepository) {
+            JejumRepository jejumRepository, AlimentacaoAgendadaRepository agenda,
+            JavaMailSender mail, @Value("${qrvet.mail-from}") String mailFrom) {
         this.internacaoRepository = internacaoRepository;
         this.pacienteRepository = pacienteRepository;
         this.baiaRepository = baiaRepository;
         this.userRepository = userRepository;
         this.qrCodeService = qrCodeService;
         this.jejumRepository = jejumRepository;
+        this.agenda = agenda;
+        this.mail = mail;
+        this.mailFrom = mailFrom;
     }
 
     @Transactional
@@ -122,8 +132,28 @@ public class InternacaoService {
     @PreAuthorize("@qrvetSecurity.hasAnyRole('ADMIN', 'VETERINARIO', 'RECEPCIONISTA')")
     public InternacaoQrCodeResponse qrCode(Long id) {
         Internacao internacao = find(id);
-        String url = qrCodeService.url(internacao.getUuidToken());
-        return new InternacaoQrCodeResponse(internacao.getUuidToken().toString(), url, qrCodeService.base64(url));
+        String url = qrCodeService.hospitalizationUrl(internacao.getId());
+        return new InternacaoQrCodeResponse(internacao.getUuidToken().toString(), url, qrCodeService.base64(url),
+                qrCodeService.url(internacao.getUuidToken()), internacao.getPaciente().getTutor().getEmail());
+    }
+
+    @Transactional(readOnly = true)
+    @PreAuthorize("@qrvetSecurity.hasAnyRole('ADMIN', 'VETERINARIO', 'RECEPCIONISTA')")
+    public MessageResponse emailTutor(Long id) {
+        Internacao internacao = find(id);
+        Paciente paciente = internacao.getPaciente();
+        var tutor = paciente.getTutor();
+        SimpleMailMessage message = new SimpleMailMessage();
+        message.setFrom(mailFrom);
+        message.setTo(tutor.getEmail());
+        message.setSubject("QRVet - Acompanhamento da internação de " + paciente.getNome());
+        message.setText("Olá, " + tutor.getNome() + "!\n\n"
+                + "Acompanhe a internação de " + paciente.getNome() + " pelo link:\n\n"
+                + qrCodeService.url(internacao.getUuidToken())
+                + "\n\nNão é necessário fazer login. Guarde este link para consultar as informações atualizadas."
+                + "\nPara mais informações, entre em contato com a equipe da clínica.");
+        mail.send(message);
+        return new MessageResponse("Link de acompanhamento enviado para " + tutor.getEmail() + ".");
     }
 
     @Transactional(readOnly = true)
@@ -146,6 +176,8 @@ public class InternacaoService {
                 .orElseThrow(() -> new ResourceNotFoundException("Bay not found."));
         try {
             internacao.close(InternacaoStatus.valueOf(request.statusEncerramento().name()));
+            agenda.findAllByInternacaoIdAndStatus(id, ipiranga.fatec.qrvet.models.AlimentacaoAgendada.Status.PENDENTE)
+                    .forEach(a -> a.cancel("Internação encerrada"));
             jejumRepository.findActiveForUpdate(id).ifPresent(jejum -> jejum.end());
             baia.releaseAutomatically();
         } catch (IllegalStateException exception) {

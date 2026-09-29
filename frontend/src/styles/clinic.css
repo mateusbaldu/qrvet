@@ -66,9 +66,51 @@
 .clinic-details dt { color: var(--muted); font-size: .66rem; text-transform: uppercase; letter-spacing: .04em; font-weight: 500; }
 .clinic-details dd { margin: .35rem 0 0; font-size: .86rem; overflow-wrap: anywhere; white-space: pre-wrap; }
 .clinic-prewrap { white-space: pre-wrap; }
+.clinic-avatar { overflow: hidden; }
+.clinic-avatar img { width: 100%; height: 100%; object-fit: cover; }
+.clinic-form-section { padding: 1rem 0; margin-bottom: 1rem; border-bottom: 1px solid var(--border); }
+.clinic-form-section h3 { font-size: .95rem; margin: 0 0 1rem; }
+.clinic-form-section p { font-size: .82rem; color: var(--muted); margin-top: .8rem; }
+.clinic-form-section > label { margin: .9rem 0; }
+.clinic-mode-switch { display: flex; gap: .5rem; flex-wrap: wrap; }
+.clinic-mode-switch button[aria-pressed="true"] { background: #e9f5ea; border-color: var(--green-700); }
+.clinic-photo-input { margin-top: 1.25rem; }
+.clinic-photo-input img { width: 96px; height: 96px; object-fit: cover; margin: .75rem 0; border-radius: .75rem; }
+.clinic-modal .clinic-checkbox { flex-direction: row; align-items: center; margin-top: 1rem; gap: .75rem; }
+.clinic-checkbox input[type="checkbox"] { width: 18px; height: 18px; min-height: 18px; accent-color: var(--green-700); }
+.clinic-time-inputs { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: .75rem; margin-bottom: 1rem; }
+.clinic-time-inputs label span { display: flex; gap: .35rem; }
+.clinic-feeding h2 { display: flex; align-items: center; gap: .6rem; }
+.clinic-feeding .clinic-section-heading .clinic-actions { margin: 0; }
+.clinic-agenda-summary { display: flex; flex-wrap: wrap; gap: .65rem; }
+.clinic-agenda-summary > span { background: #f0f5f2; padding: .75rem 1rem; border-radius: .6rem; color: #4f6860; font-size: .8rem; }
+.clinic-agenda-summary strong { font-size: 1.1rem; margin-right: .2rem; }
+.clinic-agenda-summary .agenda-late { background: #fff1e4; color: #945617; }
+.clinic-feeding .clinic-filters { padding: 0 0 1rem; }
+.clinic-feeding-list { list-style: none; padding: 0; margin: 0 0 1rem; }
+.clinic-feeding-list > li { display: grid; grid-template-columns: 80px minmax(0, 1fr) auto; gap: 1rem; padding: 1.1rem .25rem; border-top: 1px solid var(--border); }
+.feeding-time { display: flex; align-items: center; gap: .45rem; align-self: start; font-size: .95rem; font-weight: 700; }
+.feeding-patient { display: flex; flex-direction: column; gap: .2rem; min-width: 0; overflow-wrap: anywhere; }
+.feeding-patient small { font-size: .72rem; color: var(--muted); }
+.feeding-patient p { margin: .25rem 0; }
+.feeding-result { display: flex; gap: .5rem; align-items: center; justify-content: flex-end; flex-wrap: wrap; max-width: 270px; }
+.feeding-result .feeding-check { background: #edf7e9; }
+.feeding-result .feeding-cancel { padding: .4rem; font-size: .7rem; border-color: transparent; }
+.status-concluida { background: #dff3d4; color: #205736; }
+.status-atrasada, .status-jejum { background: #fff0cc; color: #895e10; }
+.clinic-feeding-summary { display: flex; gap: 1rem; align-items: center; justify-content: space-between; }
+.clinic-feeding-summary h2 { margin-bottom: .5rem; }
+.clinic-feeding-summary p { margin-bottom: 0; }
+@media (max-width: 700px) {
+  .clinic-feeding .clinic-section-heading, .clinic-feeding-summary { flex-direction: column; align-items: stretch; }
+  .clinic-feeding-list > li { grid-template-columns: 65px minmax(0, 1fr); gap: .7rem; }
+  .feeding-result { grid-column: 2; justify-content: flex-start; max-width: none; }
+  .clinic-agenda-summary > span { flex: 1 1 40%; }
+  .clinic-time-inputs { grid-template-columns: 1fr; }
+}
 .clinic-muted { color: var(--muted); font-size: .75rem !important; }
 .clinic-table-panel { padding: .6rem 1.3rem; }
-.clinic-table-scroll { overflow-x: auto; }
+.clinic-table-scroll { overflow-x: auto; position: relative; }
 .clinic-table { width: 100%; border-collapse: collapse; text-align: left; font-size: .8rem; }
 .clinic-table th { color: var(--muted); font-size: .63rem; text-transform: uppercase; letter-spacing: .035em; padding: 1.25rem .7rem; font-weight: 600; }
 .clinic-table td { padding: 1.2rem .7rem; border-top: 1px solid #e8eeea; }

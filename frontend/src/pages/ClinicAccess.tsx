@@ -29,12 +29,15 @@ export function QrLookup() {
     <div className="clinic-lookup-grid"><form className="clinic-panel clinic-lookup-card" onSubmit={e => {
       e.preventDefault()
       const raw = String(new FormData(e.currentTarget).get('token')).trim()
-      let token = raw
-      try { token = new URL(raw).pathname.replace(/\/$/, '').split('/').pop() ?? '' } catch { /* Também aceita o UUID sem endereço. */ }
+      let path = raw
+      try { path = new URL(raw).pathname } catch { /* Também aceita o código sem endereço. */ }
+      const admissionId = path.match(/^\/internacoes\/([1-9]\d*)\/?$/)?.[1] ?? (/^[1-9]\d*$/.test(raw) ? raw : '')
+      if (admissionId) { navigate('/internacoes/' + admissionId); return }
+      const token = path.replace(/^\/public\/internacoes\/qr\//, '').replace(/\/$/, '')
       if (!/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(token)) { setError('Informe um código ou endereço de QR Code válido.'); return }
       navigate('/public/internacoes/qr/' + token)
-    }}><span className="clinic-lookup-icon"><QrIcon size={48} strokeWidth={1.5} /></span><h2>Encontre a internação</h2><p>Cole o link compartilhado pela clínica ou digite o código completo do QR Code.</p><label>Endereço ou código do QR Code<input name="token" required placeholder="Cole o link ou o código aqui" autoComplete="off" onChange={() => setError('')} /></label>{error && <p role="alert" className="clinic-error">{error}</p>}<button className="clinic-primary">Consultar internação<ArrowRight size={17} /></button></form>
-    <aside className="clinic-panel clinic-lookup-help"><h2>Como acessar pelo celular</h2><ol><li>Abra a câmera do seu celular.</li><li>Aponte para o QR Code fornecido pela clínica.</li><li>Toque no link para acompanhar a internação.</li></ol><p><ShieldCheck size={18} />O acompanhamento pelo link não exige login.</p></aside></div>
+    }}><span className="clinic-lookup-icon"><QrIcon size={48} strokeWidth={1.5} /></span><h2>Encontre a internação</h2><p>Cole o link do QR Code no vidro da clínica ou digite o número da internação.</p><label>Endereço ou código do QR Code<input name="token" required placeholder="Cole o link ou o código aqui" autoComplete="off" onChange={() => setError('')} /></label>{error && <p role="alert" className="clinic-error">{error}</p>}<button className="clinic-primary">Consultar internação<ArrowRight size={17} /></button></form>
+    <aside className="clinic-panel clinic-lookup-help"><h2>Como acessar pelo celular</h2><ol><li>Abra a câmera do seu celular.</li><li>Aponte para o QR Code no vidro da clínica.</li><li>Toque no link para abrir a internação do animal.</li></ol><p><ShieldCheck size={18} />A equipe acessa com sua conta. O tutor recebe por e-mail um link de acompanhamento sem login.</p></aside></div>
   </Page>
 }
 

@@ -29,6 +29,7 @@ type RequestOptions = Omit<RequestInit, 'body'> & {
   body?: unknown
   retryAuthentication?: boolean
   authenticated?: boolean
+  responseType?: 'blob'
 }
 
 const API_URL = (import.meta.env.VITE_API_URL ?? '/qrvet/api/v1').replace(/\/$/, '')
@@ -116,7 +117,7 @@ async function rawRequest<T>(path: string, options: RequestOptions = {}): Promis
   const method = (options.method ?? 'GET').toUpperCase()
   const headers = new Headers(options.headers)
 
-  if (options.body !== undefined) headers.set('Content-Type', 'application/json')
+  if (options.body !== undefined && !(options.body instanceof FormData)) headers.set('Content-Type', 'application/json')
   if (accessToken && options.authenticated !== false) headers.set('Authorization', `Bearer ${accessToken}`)
 
   if (MUTATING_METHODS.has(method)) {
@@ -129,11 +130,12 @@ async function rawRequest<T>(path: string, options: RequestOptions = {}): Promis
     method,
     headers,
     credentials: 'include',
-    body: options.body === undefined ? undefined : JSON.stringify(options.body),
+    body: options.body instanceof FormData ? options.body : options.body === undefined ? undefined : JSON.stringify(options.body),
   })
 
   if (!response.ok) throw await responseError(response)
   if (response.status === 204) return undefined as T
+  if (options.responseType === 'blob') return await response.blob() as T
   const text = await response.text()
   return text ? JSON.parse(text) as T : undefined as T
 }

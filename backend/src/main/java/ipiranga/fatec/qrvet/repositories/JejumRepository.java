@@ -10,6 +10,8 @@ import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 
 public interface JejumRepository extends JpaRepository<Jejum, Long> {
+    @Query("select j.internacao.id from Jejum j where j.ativo = true")
+    List<Long> activeAdmissionIds();
     boolean existsByInternacaoIdAndAtivoTrue(Long internacaoId);
 
     List<Jejum> findAllByInternacaoIdOrderByDataHoraInicioDesc(Long internacaoId);

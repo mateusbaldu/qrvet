@@ -18,6 +18,7 @@ let sessionActive = true
 let failure = ''
 let expireNextRead = false
 let invalidRefresh = false
+let emailFails = false
 const writes = []
 const token = '12345678-1234-4123-8123-123456789012'
 const patient = { id: 1, tutorId: 1, nome: 'Luna', especie: 'Felina', raca: 'SRD', sexo: 'Fêmea', peso: 4.5, dataNascimento: '2021-04-12', observacoes: 'Sensível a ruídos.' }
@@ -69,6 +70,9 @@ await page.route('**/qrvet/api/v1/**', async route => {
     if (path === '/users') { const saved = { ...body, id: 200, active: false, confirmed: false, createdAt: '2026-09-21T12:00:00Z' }; members.push(saved); return send(saved, 201) }
     if (path.endsWith('/invitation')) return send(null, 204)
     if (path === '/internacoes') { created = true; bay.status = 'OCUPADA'; return send(admission(), 201) }
+    if (path === '/internacoes/1/tutor/email') return emailFails
+      ? send({ message: 'Não foi possível enviar o e-mail. Confira a configuração de e-mail da clínica e tente novamente.' }, 502)
+      : send({ message: 'Link de acompanhamento enviado para ' + tutor.email + '.' })
     if (path === '/internacoes/1/jejum') { fasting = true; const item = { id: fasts.length + 1, motivo: body.motivo, ativo: true, dataHoraInicio: '2026-09-21T14:00:00Z', dataHoraFim: null }; fasts.unshift(item); return send(item, 201) }
     if (path === '/internacoes/1/jejum/encerrar') { fasting = false; fasts[0].ativo = false; fasts[0].dataHoraFim = '2026-09-21T14:30:00Z'; return send(fasts[0]) }
     if (path === '/internacoes/1/alimentacao') { const item = { ...body, id: foods.length + 1, dataHoraRegistro: '2026-09-21T15:00:00Z', usuarioId: 2 }; foods.unshift(item); return send(item, 201) }
@@ -80,6 +84,7 @@ await page.route('**/qrvet/api/v1/**', async route => {
     if (path === '/auth/me') return loggedIn ? send(user()) : send({}, 401)
     if (path === '/users') return send(paged(members, url))
     if (path.includes('/sessions')) return send(paged(sessionActive ? [{ jti: 'session-1', createdAt: '2026-09-21T12:00:00Z', expiresAt: '2026-09-26T12:00:00Z' }] : [], url))
+    if (path === '/alimentacao/agenda') return send([])
     if (path === '/tutores') return send(paged(tutors, url))
     if (path === '/pacientes') return send(paged(patients, url))
     if (/^\/pacientes\/\d+$/.test(path)) return send(patients.find(p => p.id === Number(path.split('/').pop())) ?? {}, patients.some(p => p.id === Number(path.split('/').pop())) ? 200 : 404)
@@ -90,7 +95,7 @@ await page.route('**/qrvet/api/v1/**', async route => {
     if (path === '/internacoes/1/cuidados') return send(summary())
     if (path === '/internacoes/ativas') return send(paged(created && status === 'ATIVA' ? [admission()] : [], url))
     if (path === '/internacoes') return send(paged(created && (!url.searchParams.has('pacienteId') || url.searchParams.get('pacienteId') === '1') ? [admission()] : [], url))
-    if (path.endsWith('/qrcode')) return send({ uuidToken: token, url: 'http://localhost:5173/public/internacoes/qr/' + token, base64: 'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNk+A8AAQUBAScY42YAAAAASUVORK5CYII=' })
+    if (path.endsWith('/qrcode')) return send({ uuidToken: token, url: 'http://localhost:5173/internacoes/1', tutorUrl: 'http://localhost:5173/public/internacoes/qr/' + token, tutorEmail: tutor.email, base64: 'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNk+A8AAQUBAScY42YAAAAASUVORK5CYII=' })
     if (path.endsWith('/jejum')) return send(fasts)
     if (path.endsWith('/alimentacao')) return send(foods)
     if (path.includes('/public/')) {
@@ -141,6 +146,22 @@ try {
   await save('Abrir internação')
   await page.waitForURL('**/internacoes/1')
   assert(writes.some(w => w.path === '/internacoes' && w.body.pacienteId === 1))
+  await page.getByRole('heading', { name: 'QR Code da internação', exact: true }).waitFor()
+  await page.getByRole('button', { name: 'Enviar link por e-mail', exact: true }).waitFor()
+  assert.equal(await page.getByLabel('Link da internação (equipe)').inputValue(), 'http://localhost:5173/internacoes/1')
+  assert.equal(await page.getByLabel('Link de acompanhamento do tutor').inputValue(), 'http://localhost:5173/public/internacoes/qr/' + token)
+  assert.equal(await page.locator('.clinic-print-label img').count(), 1)
+  await page.emulateMedia({ media: 'print' })
+  assert.equal(await page.locator('.clinic-print-label').evaluate(el => getComputedStyle(el).visibility), 'visible')
+  assert.equal(await page.locator('button').filter({ hasText: 'Enviar link por e-mail' }).evaluate(el => getComputedStyle(el).visibility), 'hidden')
+  await page.emulateMedia({ media: 'screen' })
+  emailFails = true
+  await page.getByRole('button', { name: 'Enviar link por e-mail', exact: true }).click()
+  await page.getByRole('alert').filter({ hasText: 'Não foi possível enviar o e-mail.' }).waitFor()
+  emailFails = false
+  await page.getByRole('button', { name: 'Enviar link por e-mail', exact: true }).click()
+  await page.getByText('Link de acompanhamento enviado para ana@example.com.').waitFor()
+  assert(writes.some(w => w.path === '/internacoes/1/tutor/email' && w.method === 'POST' && !w.body))
   await page.getByRole('button', { name: 'Iniciar jejum', exact: true }).click()
   await fill({ motivo: 'Exame' })
   await save()
@@ -200,6 +221,9 @@ try {
   await visit('/sessoes')
   await page.waitForURL('**/meu-perfil')
   role = 'AUXILIAR_TECNICO'
+  await visit('/internacoes/1')
+  await page.waitForURL('**/cuidados?internacao=1')
+  await page.getByText('Internação encerrada. Histórico disponível para consulta.').waitFor()
   await visit('/cuidados')
   await page.getByText('Consultar histórico pelo código').click()
   await page.getByLabel('Código da internação').fill('1')
@@ -218,6 +242,11 @@ try {
   assert(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth))
   await shot('public-mobile')
   role = 'ADMIN'
+  await visit('/consultar-qr')
+  await page.locator('[name="token"]').fill('https://clinic.example/internacoes/1?origem=qr#paciente')
+  await page.getByRole('button', { name: 'Consultar internação' }).click()
+  await page.waitForURL('**/internacoes/1')
+  await page.getByRole('heading', { name: 'Luna', exact: true }).waitFor()
   for (const path of ['/inicio', '/pacientes', '/equipe', '/internacoes/1', '/meu-perfil']) {
     await visit(path)
     await page.locator('.clinic-state').waitFor({ state: 'detached' })
@@ -247,7 +276,8 @@ try {
   await page.getByText('E-mail ou senha inválidos.').waitFor()
   await page.getByLabel('Sua senha', { exact: true }).fill('Valid-123!')
   await page.getByRole('button', { name: 'Entrar na minha conta' }).click()
-  await page.waitForURL('**/inicio')
+  // After session expiry, login returns to the page the user was accessing.
+  await page.waitForURL('**/pacientes')
   await visit('/meu-perfil')
   await page.getByLabel('Senha atual', { exact: true }).fill('wrong')
   await page.getByLabel('Nova senha', { exact: true }).fill('NewValid-123!')
@@ -258,9 +288,23 @@ try {
   await page.getByLabel('Senha atual', { exact: true }).fill('Valid-123!')
   await page.getByRole('button', { name: 'Alterar senha', exact: true }).click()
   await page.waitForURL('**/login')
+  // A scan while signed out returns to this admission after login.
+  await visit('/internacoes/1')
+  await page.waitForURL('**/login')
+  await page.getByLabel('Seu e-mail').fill('marina@example.com')
+  await page.getByLabel('Sua senha', { exact: true }).fill('Valid-123!')
+  await page.getByRole('button', { name: 'Entrar na minha conta' }).click()
+  await page.waitForURL('**/internacoes/1')
+  await page.getByRole('heading', { name: 'Luna', exact: true }).waitFor()
+  role = 'TUTOR'
+  await visit('/internacoes/1')
+  await page.waitForURL('**/meu-perfil')
+  loggedIn = false
+  await visit('/public/internacoes/qr/' + token)
+  await page.getByRole('heading', { name: 'Luna', exact: true }).waitFor()
   assert.deepEqual(unexpected, [])
   assert.deepEqual(errors, [])
-  console.log('PASS: dashboard, patient/tutor creation and validation, admission, fasting, feeding, discharge, public QR, search, >100 team members, invitation/resend, session revocation, all role guards, mobile overflow, auth refresh/expiry, password change; no uncaught browser errors.')
+  console.log('PASS: dashboard, patient/tutor creation and validation, admission, fasting, feeding, discharge, staff QR and login return, print label, tutor email success/failure, public tutor link, search, >100 team members, invitation/resend, session revocation, all role guards, mobile overflow, auth refresh/expiry, password change; no uncaught browser errors.')
 } catch (error) {
   await shot('failure')
   console.error('Page:', page.url(), '\nUnexpected requests:', unexpected, '\nBrowser errors:', errors)

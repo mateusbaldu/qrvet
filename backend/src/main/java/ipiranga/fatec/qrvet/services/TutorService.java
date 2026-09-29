@@ -52,4 +52,23 @@ public class TutorService {
                 PaginationUtils.byId(pagination))
                 .map(TutorResponse::from));
     }
+
+    @Transactional
+    public TutorResponse update(Long id, TutorRequest request) {
+        var tutor = repository.findById(id).orElseThrow(() ->
+                new ipiranga.fatec.qrvet.exceptions.ResourceNotFoundException("Tutor not found."));
+        String cpf = Cpf.normalize(request.cpf());
+        String email = request.email().trim().toLowerCase(Locale.ROOT);
+        if (!Cpf.isValid(cpf)) throw new InvalidRequestException("Invalid CPF.");
+        if (repository.findByCpf(cpf).filter(t -> !t.getId().equals(id)).isPresent())
+            throw new ResourceAlreadyExistsException("A tutor with this CPF already exists.");
+        if (repository.findByEmailIgnoreCase(email).filter(t -> !t.getId().equals(id)).isPresent())
+            throw new ResourceAlreadyExistsException("A tutor with this email already exists.");
+        tutor.setNome(request.nome().trim());
+        tutor.setCpf(cpf);
+        tutor.setEmail(email);
+        tutor.setTelefone(request.telefone().trim());
+        tutor.setEndereco(request.endereco().trim());
+        return TutorResponse.from(repository.saveAndFlush(tutor));
+    }
 }

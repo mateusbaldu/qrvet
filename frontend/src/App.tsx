@@ -1,4 +1,4 @@
-import { BrowserRouter, Navigate, Route, Routes } from 'react-router-dom'
+import { BrowserRouter, Navigate, Route, Routes, useParams } from 'react-router-dom'
 import { useAuth } from './auth/useAuth'
 import { ForgotPassword } from './pages/ForgotPassword'
 import { Login } from './pages/Login'
@@ -8,6 +8,7 @@ import { Profile } from './pages/Profile'
 import { AppLayout } from './components/AppLayout'
 import { AdminRoute, ProtectedRoute, RoleRoute } from './auth/RouteGuards'
 import { Registry, PatientDetail } from './pages/Registry'
+import { Feeding } from './pages/Feeding'
 import { Dashboard } from './pages/Dashboard'
 import { Hospitalizations, HospitalizationDetail, CareLookup } from './pages/Hospitalizations'
 import { PublicHospitalization, QrLookup, Sessions, Bootstrap } from './pages/ClinicAccess'
@@ -37,9 +38,12 @@ export default function App() {
               <Route path="/pacientes/:id" element={<PatientDetail />} />
               <Route path="/baias" element={<Registry key="baias" kind="baias" />} />
               <Route path="/internacoes" element={<Hospitalizations />} />
-              <Route path="/internacoes/:id" element={<HospitalizationDetail />} />
+            </Route>
+            <Route element={<RoleRoute roles={['ADMIN', 'VETERINARIO', 'RECEPCIONISTA', 'AUXILIAR_TECNICO']} />}>
+              <Route path="/internacoes/:id" element={<HospitalizationAccess />} />
             </Route>
             <Route element={<RoleRoute roles={['ADMIN', 'VETERINARIO', 'AUXILIAR_TECNICO']} />}>
+              <Route path="/alimentacao" element={<Feeding />} />
               <Route path="/cuidados" element={<CareLookup />} />
             </Route>
             <Route path="/consultar-qr" element={<QrLookup />} />
@@ -50,6 +54,14 @@ export default function App() {
       </Routes>
     </BrowserRouter>
   )
+}
+
+function HospitalizationAccess() {
+  const { user } = useAuth()
+  const { id = '' } = useParams()
+  return user?.role === 'AUXILIAR_TECNICO'
+    ? <Navigate to={'/cuidados?internacao=' + encodeURIComponent(id)} replace />
+    : <HospitalizationDetail />
 }
 
 function HomeRedirect() {

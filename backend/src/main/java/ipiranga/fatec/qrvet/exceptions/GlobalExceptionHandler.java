@@ -12,6 +12,22 @@ import java.util.UUID;
 
 @RestControllerAdvice
 public class GlobalExceptionHandler {
+    @ExceptionHandler(org.springframework.web.bind.MethodArgumentNotValidException.class)
+    ResponseEntity<ErrorResponse> validation(org.springframework.web.bind.MethodArgumentNotValidException e) {
+        var fields = new java.util.LinkedHashMap<String, String>();
+        e.getBindingResult().getFieldErrors().forEach(f -> fields.put(f.getField(), f.getDefaultMessage()));
+        return errorResponse(HttpStatus.BAD_REQUEST, "Confira os campos informados.", fields);
+    }
+
+    @ExceptionHandler(org.springframework.web.multipart.MaxUploadSizeExceededException.class)
+    ResponseEntity<ErrorResponse> uploadTooLarge() {
+        return errorResponse(HttpStatus.PAYLOAD_TOO_LARGE, "Escolha uma foto de até 5 MB.", Map.of());
+    }
+
+    @ExceptionHandler(org.springframework.dao.DataIntegrityViolationException.class)
+    ResponseEntity<ErrorResponse> duplicate() {
+        return errorResponse(HttpStatus.CONFLICT, "Um cadastro com esses dados já existe. Atualize a página e confira os dados.", Map.of());
+    }
     private ResponseEntity<ErrorResponse> errorResponse(
             HttpStatus status, String message, Map<String, String> fields) {
         return ResponseEntity.status(status)

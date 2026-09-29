@@ -6,28 +6,35 @@ Execute `npm ci` e `npm run dev` nesta pasta. O Vite atende em http://localhost:
 
 - Autenticação, convite, recuperação de senha e perfil.
 - Equipe e gestão de sessões (administrador).
-- Tutores: cadastro, busca por nome e pacientes vinculados.
-- Pacientes: cadastro com tutor, listagem e abertura de internação.
-- Baias: listagem por situação; criação, edição e manutenção pelo administrador. Ocupação e liberação são feitas pelo backend durante a internação.
-- Internações: abertura, listagem das ativas, consulta por código, detalhes, alta/óbito e QR Code para baixar.
-- Cuidados: registro e histórico de alimentação, início/fim e histórico de jejum. Alimentação fica bloqueada enquanto o jejum estiver ativo.
-- Consulta pública: `/public/internacoes/qr/:token`, sem login; também é possível colar o código/endereço em `/consultar-qr`.
-- Configuração inicial: `/configuracao-inicial`, com a chave de bootstrap exigida pelo backend.
+- Painel inicial com ocupação das baias, internações e resumo das refeições de hoje.
+- Cadastro conjunto de paciente e tutor, busca de tutor existente, edição de ambos e atalho para abrir internação.
+- Fotos locais: prévia, upload autenticado, troca e remoção. Falhas de upload preservam o cadastro salvo.
+- Baias: cadastro, edição e manutenção; ocupação e liberação automáticas durante a internação.
+- Internações: abertura com seleção de paciente/baia/veterinário, filtros, histórico, encerramento, QR Code para o vidro da clínica e envio do link de acompanhamento ao tutor por e-mail.
+- Alimentação: agenda por data e horários, repetição diária limitada a 31 dias, checklist geral com filtros, conclusão com observação, cancelamento e indicação de pacientes sem horários.
+- Cuidados: agenda individual, histórico de alimentação e início/fim de jejum. O auxiliar escolhe um paciente no diretório de cuidados, sem acessar dados privados do tutor.
+- Consulta pública: `/public/internacoes/qr/:token`, sem login.
 
 ## Permissões e integração
 
-As permissões das telas seguem os serviços Java. Administradores, veterinários e recepcionistas acessam cadastros e internações. Alimentação e jejum são disponíveis para administradores, veterinários e auxiliares técnicos.
+Administradores, veterinários e recepcionistas acessam cadastros e internações. Alimentação e jejum são disponíveis para administradores, veterinários e auxiliares técnicos. A API valida as mesmas permissões das telas e bloqueia alimentação durante jejum ou depois do encerramento.
 
-A API atual não permite que auxiliares listem internações ou consultem seus detalhes. Por isso, `/cuidados` recebe o código da internação informado pela equipe. O backend rejeita registros em internações encerradas.
+As fotos ficam no disco do backend, e não no armazenamento do navegador. O frontend carrega as imagens usando a sessão autenticada e libera os URLs temporários ao trocar de paciente/tela. Consulte o README da raiz para configurar o diretório e os volumes.
 
-Somente administradores podem listar usuários. No formulário de internação, o administrador seleciona o veterinário; os outros perfis informam seu código (preenchido com o próprio código para veterinários).
+Os horários são apresentados no fuso do dispositivo e enviados à API como instantes UTC. O checklist é atualizado a cada minuto e ao voltar à janela. A conclusão cria o registro clínico no servidor.
 
-Configure `QRVET_PUBLIC_URL` no backend com a origem pública do frontend para que o QR Code gerado abra o site correto. Recursos como medicação, edição de pacientes e histórico geral de internações não têm endpoints nesta versão do backend e não foram adicionados como ações fictícias.
+Configure `QRVET_PUBLIC_URL` no backend com a origem do frontend acessível pelos celulares da equipe e pelo tutor. O QR Code abre `/internacoes/:id` com login; auxiliares são direcionados aos cuidados daquela internação. O botão “Enviar link por e-mail” usa o SMTP do backend para enviar `/public/internacoes/qr/:token` ao e-mail cadastrado do tutor. A impressão contém apenas a etiqueta do animal e seu QR Code.
 
 ## Verificação
 
-- `npm run build`
-- `npm run lint`
-- Com Vite em execução, rode `node tests/clinic-smoke.mjs`. O teste requer Playwright e Microsoft Edge; `PLAYWRIGHT_MODULE` pode apontar para uma instalação externa do Playwright.
+```powershell
+npm run build
+npm run lint
+# Em outro terminal, mantenha npm run dev em execução.
+$env:PLAYWRIGHT_CHANNEL='msedge'
+npm run test:e2e
+```
 
-O teste de navegador usa respostas simuladas da API e verifica cadastro, abertura e encerramento de internação, jejum/alimentação, situação de baia, revogação de sessão, permissões e layout público móvel. Não valida banco de dados, entrega de e-mails ou integração real com o backend.
+Sem Edge, instale o Chromium com `npx playwright install chromium` e omita `PLAYWRIGHT_CHANNEL`. A suíte inclui `clinic-smoke.mjs` (fluxos anteriores e permissões) e `mvp-smoke.mjs` (cadastro conjunto, fotos, edição, agenda e checklist). Capturas ficam em `tests/artifacts/`.
+
+Os testes de navegador usam respostas simuladas da API. A integração dos serviços com banco e autorização é verificada pelos testes Java; banco MySQL, volumes Docker e entrega de e-mails precisam de verificação no ambiente de execução.

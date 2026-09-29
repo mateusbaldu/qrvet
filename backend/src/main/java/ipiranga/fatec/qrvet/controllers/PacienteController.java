@@ -14,7 +14,30 @@ import org.springframework.web.bind.annotation.*;
 @RequestMapping("/v1/pacientes")
 public class PacienteController {
     private final PacienteService service;
-    public PacienteController(PacienteService service) { this.service = service; }
+    private final ipiranga.fatec.qrvet.services.PacienteFotoService photos;
+    public PacienteController(PacienteService service, ipiranga.fatec.qrvet.services.PacienteFotoService photos) {
+        this.service = service;
+        this.photos = photos;
+    }
+
+    @PutMapping("/{id}")
+    public PacienteResponse update(@PathVariable Long id, @Valid @RequestBody PacienteRequest request) {
+        return service.update(id, request);
+    }
+
+    @PostMapping(value = "/{id}/foto", consumes = "multipart/form-data")
+    public PacienteResponse upload(@PathVariable Long id, @RequestParam("foto") org.springframework.web.multipart.MultipartFile foto) {
+        return photos.upload(id, foto);
+    }
+
+    @GetMapping(value = "/{id}/foto", produces = "image/jpeg")
+    public ResponseEntity<byte[]> photo(@PathVariable Long id) {
+        return ResponseEntity.ok().cacheControl(org.springframework.http.CacheControl.noStore()).body(photos.read(id));
+    }
+
+    @DeleteMapping("/{id}/foto")
+    @ResponseStatus(HttpStatus.NO_CONTENT)
+    public void removePhoto(@PathVariable Long id) { photos.remove(id); }
 
     @PostMapping
     public ResponseEntity<PacienteResponse> create(@Valid @RequestBody PacienteRequest request) {
