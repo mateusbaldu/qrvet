@@ -15,7 +15,7 @@ import { PublicHospitalization, QrLookup, Sessions, Bootstrap } from './pages/Cl
 
 export default function App() {
   return (
-    <BrowserRouter> 
+    <BrowserRouter>
       <Routes>
         <Route path="/public/internacoes/qr/:token" element={<PublicHospitalization />} />
         <Route path="/configuracao-inicial" element={<Bootstrap />} />
@@ -39,7 +39,11 @@ export default function App() {
               <Route path="/baias" element={<Registry key="baias" kind="baias" />} />
               <Route path="/internacoes" element={<Hospitalizations />} />
             </Route>
-            <Route element={<RoleRoute roles={['ADMIN', 'VETERINARIO', 'RECEPCIONISTA', 'AUXILIAR_TECNICO']} />}>
+            <Route
+              element={
+                <RoleRoute roles={['ADMIN', 'VETERINARIO', 'RECEPCIONISTA', 'AUXILIAR_TECNICO']} />
+              }
+            >
               <Route path="/internacoes/:id" element={<HospitalizationAccess />} />
             </Route>
             <Route element={<RoleRoute roles={['ADMIN', 'VETERINARIO', 'AUXILIAR_TECNICO']} />}>
@@ -59,12 +63,25 @@ export default function App() {
 function HospitalizationAccess() {
   const { user } = useAuth()
   const { id = '' } = useParams()
-  return user?.role === 'AUXILIAR_TECNICO'
-    ? <Navigate to={'/cuidados?internacao=' + encodeURIComponent(id)} replace />
-    : <HospitalizationDetail />
+  return user?.role === 'AUXILIAR_TECNICO' ? (
+    <Navigate to={'/cuidados?internacao=' + encodeURIComponent(id)} replace />
+  ) : (
+    <HospitalizationDetail />
+  )
 }
 
 function HomeRedirect() {
   const { user } = useAuth()
-  return <Navigate to={user && ['ADMIN', 'VETERINARIO', 'RECEPCIONISTA'].includes(user.role) ? '/inicio' : user?.role === 'AUXILIAR_TECNICO' ? '/cuidados' : '/consultar-qr'} replace />
+  return (
+    <Navigate
+      to={
+        user && ['ADMIN', 'VETERINARIO', 'RECEPCIONISTA'].includes(user.role)
+          ? '/inicio'
+          : user?.role === 'AUXILIAR_TECNICO'
+            ? '/cuidados'
+            : '/consultar-qr'
+      }
+      replace
+    />
+  )
 }

@@ -27,7 +27,16 @@ export function Login() {
     try {
       const user = await login(email.trim(), senha)
       const requestedPath = loginState?.from
-      navigate(requestedPath?.startsWith('/') && !requestedPath.startsWith('//') ? requestedPath : (['ADMIN', 'VETERINARIO', 'RECEPCIONISTA'].includes(user.role) ? '/inicio' : user.role === 'AUXILIAR_TECNICO' ? '/cuidados' : '/consultar-qr'), { replace: true })
+      navigate(
+        requestedPath?.startsWith('/') && !requestedPath.startsWith('//')
+          ? requestedPath
+          : ['ADMIN', 'VETERINARIO', 'RECEPCIONISTA'].includes(user.role)
+            ? '/inicio'
+            : user.role === 'AUXILIAR_TECNICO'
+              ? '/cuidados'
+              : '/consultar-qr',
+        { replace: true }
+      )
     } catch (error) {
       setErro(readableError(error))
       setSenha('')
@@ -49,37 +58,71 @@ export function Login() {
           </p>
         )}
         <div className="mb-4">
-          <label className="form-label auth-label" htmlFor="email">Seu e-mail</label>
-          <input className="form-control auth-input" id="email" name="email" type="email"
-            placeholder="seuemail@exemplo.com" autoComplete="username" autoCapitalize="none"
-            spellCheck={false} value={email} onChange={(event) => setEmail(event.target.value)} required />
+          <label className="form-label auth-label" htmlFor="email">
+            Seu e-mail
+          </label>
+          <input
+            className="form-control auth-input"
+            id="email"
+            name="email"
+            type="email"
+            placeholder="seuemail@exemplo.com"
+            autoComplete="username"
+            autoCapitalize="none"
+            spellCheck={false}
+            value={email}
+            onChange={event => setEmail(event.target.value)}
+            required
+          />
         </div>
 
         <div className="mb-3">
-          <label className="form-label auth-label" htmlFor="senha">Sua senha</label>
+          <label className="form-label auth-label" htmlFor="senha">
+            Sua senha
+          </label>
           <div className="auth-password-field">
-            <input className="form-control auth-input" id="senha" name="senha"
-              type={mostrarSenha ? 'text' : 'password'} autoComplete="current-password"
-              value={senha} onChange={(event) => setSenha(event.target.value)} required />
-            <button type="button" className="password-toggle"
-              onClick={() => setMostrarSenha((atual) => !atual)}
-              aria-label={mostrarSenha ? 'Ocultar senha' : 'Mostrar senha'} aria-pressed={mostrarSenha}>
+            <input
+              className="form-control auth-input"
+              id="senha"
+              name="senha"
+              type={mostrarSenha ? 'text' : 'password'}
+              autoComplete="current-password"
+              value={senha}
+              onChange={event => setSenha(event.target.value)}
+              required
+            />
+            <button
+              type="button"
+              className="password-toggle"
+              onClick={() => setMostrarSenha(atual => !atual)}
+              aria-label={mostrarSenha ? 'Ocultar senha' : 'Mostrar senha'}
+              aria-pressed={mostrarSenha}
+            >
               {mostrarSenha ? <EyeOff size={20} /> : <Eye size={20} />}
             </button>
           </div>
         </div>
 
         <div className="text-end auth-forgot-row">
-          <Link className="auth-link" to="/esqueci-senha">Esqueci minha senha</Link>
+          <Link className="auth-link" to="/esqueci-senha">
+            Esqueci minha senha
+          </Link>
         </div>
-        <button className="btn auth-submit w-100 d-flex align-items-center justify-content-center gap-3" type="submit" disabled={enviando}>
-          {enviando ? 'Entrando...' : 'Entrar na minha conta'} {!enviando && <ArrowRight size={20} />}
+        <button
+          className="btn auth-submit w-100 d-flex align-items-center justify-content-center gap-3"
+          type="submit"
+          disabled={enviando}
+        >
+          {enviando ? 'Entrando...' : 'Entrar na minha conta'}{' '}
+          {!enviando && <ArrowRight size={20} />}
         </button>
       </form>
 
       <hr className="auth-divider" />
       <p className="auth-register mb-2">Primeiro acesso ? </p>
-      <p className="auth-invitation mb-0">Use o convite enviado ao seu e-mail pelo administrador.</p>
+      <p className="auth-invitation mb-0">
+        Use o convite enviado ao seu e-mail pelo administrador.
+      </p>
     </LoginCard>
   )
 }

@@ -57,17 +57,23 @@ const translations: Record<string, string> = {
   'The bay is not available.': 'Esta baia não está mais disponível. Atualize a lista.',
   'The patient already has an active hospitalization.': 'Este paciente já está internado.',
   'The hospitalization has already been closed.': 'Esta internação já foi encerrada.',
-  'Food cannot be recorded while the hospitalization has active fasting.': 'Paciente em jejum. Encerre o jejum antes de registrar alimentação.',
-  'Food can only be recorded for an active hospitalization.': 'A internação foi encerrada. Não é possível registrar alimentação.',
-  'Fasting can only be changed for an active hospitalization.': 'A internação foi encerrada. Não é possível alterar o jejum.',
+  'Food cannot be recorded while the hospitalization has active fasting.':
+    'Paciente em jejum. Encerre o jejum antes de registrar alimentação.',
+  'Food can only be recorded for an active hospitalization.':
+    'A internação foi encerrada. Não é possível registrar alimentação.',
+  'Fasting can only be changed for an active hospitalization.':
+    'A internação foi encerrada. Não é possível alterar o jejum.',
   'The hospitalization already has an active fasting period.': 'Este paciente já está em jejum.',
   'Active fasting period not found.': 'Não há jejum ativo para encerrar.',
   'User with this email already exists.': 'Já existe um usuário com este e-mail.',
   'Sign up already confirmed.': 'Este convite já foi aceito.',
   'Wait one minute before resending the invitation.': 'Aguarde um minuto para reenviar o convite.',
-  'Invite already used or expired.': 'Convite já utilizado ou expirado. Solicite um novo ao administrador.',
-  'The invitation could not be sent. Check the email service and try again.': 'Não foi possível enviar o convite. Tente novamente mais tarde.',
-  'Password recovery link is invalid or expired. Request a new password recovery.': 'Link inválido ou expirado. Solicite uma nova recuperação de senha.',
+  'Invite already used or expired.':
+    'Convite já utilizado ou expirado. Solicite um novo ao administrador.',
+  'The invitation could not be sent. Check the email service and try again.':
+    'Não foi possível enviar o convite. Tente novamente mais tarde.',
+  'Password recovery link is invalid or expired. Request a new password recovery.':
+    'Link inválido ou expirado. Solicite uma nova recuperação de senha.',
 }
 
 export class ApiError extends Error {
@@ -85,31 +91,39 @@ export class ApiError extends Error {
 async function responseError(response: Response) {
   let payload: ErrorPayload = {}
   try {
-    payload = await response.json() as ErrorPayload
+    payload = (await response.json()) as ErrorPayload
   } catch {
     // Algumas respostas do Spring não possuem corpo JSON.
   }
 
   const fieldMessage = Object.values(payload.fields ?? {})[0]
-  const fallback = response.status === 401
-    ? 'E-mail ou senha inválidos.'
-    : response.status === 403
-      ? 'Você não tem permissão para realizar esta ação.'
-      : 'Não foi possível concluir a solicitação.'
+  const fallback =
+    response.status === 401
+      ? 'E-mail ou senha inválidos.'
+      : response.status === 403
+        ? 'Você não tem permissão para realizar esta ação.'
+        : 'Não foi possível concluir a solicitação.'
 
   const message = payload.message ?? ''
-  return new ApiError(response.status, translations[message] ?? fieldMessage ?? (message || fallback), payload.fields)
+  return new ApiError(
+    response.status,
+    translations[message] ?? fieldMessage ?? (message || fallback),
+    payload.fields
+  )
 }
 
 async function ensureCsrf() {
   if (csrf) return csrf
 
-  if (!csrfInProgress) csrfInProgress = (async () => {
-    const response = await fetch(`${API_URL}/auth/csrf`, { credentials: 'include' })
-    if (!response.ok) throw await responseError(response)
-    csrf = await response.json() as { token: string; headerName: string }
-    return csrf
-  })().finally(() => { csrfInProgress = null })
+  if (!csrfInProgress)
+    csrfInProgress = (async () => {
+      const response = await fetch(`${API_URL}/auth/csrf`, { credentials: 'include' })
+      if (!response.ok) throw await responseError(response)
+      csrf = (await response.json()) as { token: string; headerName: string }
+      return csrf
+    })().finally(() => {
+      csrfInProgress = null
+    })
   return csrfInProgress
 }
 
@@ -117,8 +131,10 @@ async function rawRequest<T>(path: string, options: RequestOptions = {}): Promis
   const method = (options.method ?? 'GET').toUpperCase()
   const headers = new Headers(options.headers)
 
-  if (options.body !== undefined && !(options.body instanceof FormData)) headers.set('Content-Type', 'application/json')
-  if (accessToken && options.authenticated !== false) headers.set('Authorization', `Bearer ${accessToken}`)
+  if (options.body !== undefined && !(options.body instanceof FormData))
+    headers.set('Content-Type', 'application/json')
+  if (accessToken && options.authenticated !== false)
+    headers.set('Authorization', `Bearer ${accessToken}`)
 
   if (MUTATING_METHODS.has(method)) {
     const csrfData = await ensureCsrf()
@@ -130,14 +146,19 @@ async function rawRequest<T>(path: string, options: RequestOptions = {}): Promis
     method,
     headers,
     credentials: 'include',
-    body: options.body instanceof FormData ? options.body : options.body === undefined ? undefined : JSON.stringify(options.body),
+    body:
+      options.body instanceof FormData
+        ? options.body
+        : options.body === undefined
+          ? undefined
+          : JSON.stringify(options.body),
   })
 
   if (!response.ok) throw await responseError(response)
   if (response.status === 204) return undefined as T
-  if (options.responseType === 'blob') return await response.blob() as T
+  if (options.responseType === 'blob') return (await response.blob()) as T
   const text = await response.text()
-  return text ? JSON.parse(text) as T : undefined as T
+  return text ? (JSON.parse(text) as T) : (undefined as T)
 }
 
 async function refreshAccessToken() {
@@ -146,11 +167,13 @@ async function refreshAccessToken() {
       method: 'POST',
       retryAuthentication: false,
       authenticated: false,
-    }).then(({ accessToken: token }) => {
-      accessToken = token
-    }).finally(() => {
-      refreshInProgress = null
     })
+      .then(({ accessToken: token }) => {
+        accessToken = token
+      })
+      .finally(() => {
+        refreshInProgress = null
+      })
   }
   return refreshInProgress
 }
@@ -159,8 +182,14 @@ export async function request<T>(path: string, options: RequestOptions = {}): Pr
   try {
     return await rawRequest<T>(path, options)
   } catch (error) {
-    if (error instanceof ApiError && error.status === 401 && options.retryAuthentication !== false) {
-      try { await refreshAccessToken() } catch (refreshError) {
+    if (
+      error instanceof ApiError &&
+      error.status === 401 &&
+      options.retryAuthentication !== false
+    ) {
+      try {
+        await refreshAccessToken()
+      } catch (refreshError) {
         if (refreshError instanceof ApiError && refreshError.status === 401) {
           accessToken = null
           window.dispatchEvent(new Event('qrvet:session-expired'))
@@ -197,32 +226,56 @@ export const authApi = {
   me: () => request<User>('/auth/me'),
   async logout() {
     try {
-      await rawRequest<void>('/auth/logout', { method: 'POST', retryAuthentication: false, authenticated: false })
+      await rawRequest<void>('/auth/logout', {
+        method: 'POST',
+        retryAuthentication: false,
+        authenticated: false,
+      })
     } finally {
       accessToken = null
       csrf = null
     }
   },
-  forgotPassword: (email: string) => rawRequest<{ message: string }>('/auth/forgot-password', {
-    method: 'POST', body: { email }, retryAuthentication: false, authenticated: false,
-  }),
-  resetPassword: (token: string, newPassword: string) => rawRequest<void>('/auth/reset-password', {
-    method: 'POST', body: { token, newPassword }, retryAuthentication: false, authenticated: false,
-  }),
-  confirmInvitation: (token: string, newPassword: string) => rawRequest<void>('/auth/confirm-invitation', {
-    method: 'POST', body: { token, newPassword }, retryAuthentication: false, authenticated: false,
-  }),
-  changePassword: (currentPassword: string, newPassword: string) => request<void>('/auth/password', {
-    method: 'PUT', body: { currentPassword, newPassword }, retryAuthentication: false,
-  }),
+  forgotPassword: (email: string) =>
+    rawRequest<{ message: string }>('/auth/forgot-password', {
+      method: 'POST',
+      body: { email },
+      retryAuthentication: false,
+      authenticated: false,
+    }),
+  resetPassword: (token: string, newPassword: string) =>
+    rawRequest<void>('/auth/reset-password', {
+      method: 'POST',
+      body: { token, newPassword },
+      retryAuthentication: false,
+      authenticated: false,
+    }),
+  confirmInvitation: (token: string, newPassword: string) =>
+    rawRequest<void>('/auth/confirm-invitation', {
+      method: 'POST',
+      body: { token, newPassword },
+      retryAuthentication: false,
+      authenticated: false,
+    }),
+  changePassword: (currentPassword: string, newPassword: string) =>
+    request<void>('/auth/password', {
+      method: 'PUT',
+      body: { currentPassword, newPassword },
+      retryAuthentication: false,
+    }),
   heartbeat: () => request<void>('/auth/heartbeat', { method: 'POST' }),
-  clearLocalSession: () => { accessToken = null; csrf = null },
+  clearLocalSession: () => {
+    accessToken = null
+    csrf = null
+  },
 }
 
 export const usersApi = {
   list: () => request<PageResponse<User>>('/users?page=0&size=100'),
-  create: (data: { name: string; email: string; role: Role }) => request<User>('/users', {
-    method: 'POST', body: data,
-  }),
+  create: (data: { name: string; email: string; role: Role }) =>
+    request<User>('/users', {
+      method: 'POST',
+      body: data,
+    }),
   resendInvitation: (id: number) => request<void>(`/users/${id}/invitation`, { method: 'POST' }),
 }
