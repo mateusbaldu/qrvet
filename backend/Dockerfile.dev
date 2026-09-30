@@ -1,0 +1,11 @@
+FROM eclipse-temurin:21-jdk-jammy
+
+WORKDIR /opt/app
+COPY .mvn/ .mvn/
+COPY mvnw pom.xml ./
+RUN sed -i 's/\r$//' mvnw && chmod +x mvnw
+RUN ./mvnw -B -ntp dependency:go-offline
+COPY src/ src/
+
+EXPOSE 8080
+CMD ["./mvnw", "-B", "-ntp", "-Dmaven.test.skip=true", "clean", "spring-boot:run"]

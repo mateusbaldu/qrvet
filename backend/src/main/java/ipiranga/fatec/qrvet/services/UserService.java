@@ -10,24 +10,21 @@ import ipiranga.fatec.qrvet.event.InvitationEmailRequested;
 import ipiranga.fatec.qrvet.exceptions.*;
 import ipiranga.fatec.qrvet.repositories.UserRepository;
 import ipiranga.fatec.qrvet.security.SessionService;
+import ipiranga.fatec.qrvet.security.UserInvitationService;
 import ipiranga.fatec.qrvet.specifications.UserSpecifications;
 import ipiranga.fatec.qrvet.utils.PaginationUtils;
 import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.data.domain.PageImpl;
 import org.springframework.data.domain.Pageable;
-import org.springframework.data.redis.core.StringRedisTemplate;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.nio.charset.StandardCharsets;
-import java.time.Duration;
 import java.util.List;
 import java.util.Locale;
 import java.util.UUID;
-
-import static java.lang.Boolean.TRUE;
 
 @Service
 @PreAuthorize("hasRole('ADMIN')")
@@ -37,14 +34,14 @@ public class UserService {
     private final PasswordEncoder encoder;
     private final SessionService sessions;
     private final ApplicationEventPublisher events;
-    private final StringRedisTemplate redis;
+    private final UserInvitationService invitations;
 
-    public UserService(UserRepository repository, PasswordEncoder encoder, SessionService sessions, ApplicationEventPublisher events, StringRedisTemplate redis) {
+    public UserService(UserRepository repository, PasswordEncoder encoder, SessionService sessions, ApplicationEventPublisher events, UserInvitationService invitations) {
         this.repository = repository;
         this.encoder = encoder;
         this.sessions = sessions;
         this.events = events;
-        this.redis = redis;
+        this.invitations = invitations;
     }
 
     @Transactional(readOnly = true)
@@ -80,40 +77,31 @@ public class UserService {
     }
 
 
+    @Transactional
     public void sendInvitationToUserById(Long id) {
         User dbUser = repository.findUserByIdWithLock(id)
                 .orElseThrow(() -> new ResourceNotFoundException("User not found."));
-        if (dbUser.isConfirmed()) {
-            throw new OperationConflictException("Sign up already confirmed.");
-        }
+        dbUser.validateConfirmed();
 
-        String resendKey = "invitation:reenviado:" + id;
-        if (!TRUE.equals(
-                redis.opsForValue().setIfAbsent(resendKey, "1", Duration.ofMinutes(1)))) {
+        if (!invitations.canSend(id)) {
             throw new OperationConflictException("Wait one minute before resending the invitation.");
         }
 
         String token = UUID.randomUUID().toString();
-        redis.opsForValue().set("invitation:" + token, id.toString(), Duration.ofHours(24));
-        try {
-            events.publishEvent(new InvitationEmailRequested(dbUser.getEmail(), dbUser.getName(), token));
-        } catch (org.springframework.mail.MailException e) {
-            throw new OperationConflictException(
-                    "The invitation could not be sent. Check the email service and try again.");
-        }
+        invitations.save(token, id);
+        events.publishEvent(new InvitationEmailRequested(dbUser.getEmail(), dbUser.getName(), token));
     }
 
     @Transactional
+    @PreAuthorize("permitAll()")
     public void confirmUserInvitation(ResetPasswordRequest request) {
         if (request.newPassword().getBytes(StandardCharsets.UTF_8).length > 72) {
             throw new InvalidRequestException("Password must have a max of 72 characters.");
         }
-        String value = redis.opsForValue().getAndDelete("invitation:" + request.token());
+        Long userId = invitations.consume(request.token())
+                .orElseThrow(() -> new InvalidRequestException("Invite already used or expired."));
 
-        if (value == null) {
-            throw new InvalidRequestException("Invite already used or expired.");
-        }
-        User dbUser = repository.findUserByIdWithLock(Long.valueOf(value))
+        User dbUser = repository.findUserByIdWithLock(userId)
                 .orElseThrow(() -> new InvalidRequestException("Invite already used or expired."));
         if (dbUser.isConfirmed()) {
             throw new InvalidRequestException("Invite already used or expired.");

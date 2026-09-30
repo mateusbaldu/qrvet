@@ -3,73 +3,21 @@ services:
     image: mysql:8.4.11
     container_name: qrvet_database
     ports:
-        - "3306:3306"
+      - "3306:3306"
     networks:
       - qrvet_network
     environment:
-      MYSQL_DATABASE: ${DB_NAME}
-      MYSQL_USER: ${DB_USER}
-      MYSQL_PASSWORD: ${DB_PASSWORD}
-      MYSQL_ROOT_PASSWORD: ${DB_ROOT_PASSWORD}
+      MYSQL_DATABASE: qrvet
+      MYSQL_USER: qrvet
+      MYSQL_PASSWORD: "teste@123"
+      MYSQL_ROOT_PASSWORD: "teste@123"
     volumes:
       - database_data:/var/lib/mysql
     healthcheck:
-      test: [ "CMD-SHELL", "MYSQL_PWD=$$MYSQL_PASSWORD mysql -h 127.0.0.1 -u $$MYSQL_USER -D $$MYSQL_DATABASE -e 'SELECT 1'" ]
+      test: ["CMD-SHELL", "MYSQL_PWD=$$MYSQL_PASSWORD mysql -h 127.0.0.1 -u $$MYSQL_USER -D $$MYSQL_DATABASE -e 'SELECT 1'"]
       interval: 5s
       timeout: 5s
       retries: 30
-
-  backend:
-    build:
-      context: ./backend
-      dockerfile: Dockerfile
-    container_name: qrvet_backend
-    ports:
-      - "8080:8080"
-    networks:
-      - qrvet_network
-    environment:
-      TZ: ${TZ}
-      SPRING_DATASOURCE_URL: jdbc:mysql://database:3306/${DB_NAME}
-      SPRING_DATASOURCE_USERNAME: ${DB_USER}
-      SPRING_DATASOURCE_PASSWORD: ${DB_PASSWORD}
-      SPRING_PROFILES_ACTIVE: ${SPRING_PROFILE:-prod}
-      SPRING_DATA_REDIS_HOST: redis
-      SPRING_DATA_REDIS_PORT: 6379
-      SPRING_MAIL_HOST: ${MAIL_HOST:-mailpit}
-      SPRING_MAIL_PORT: ${MAIL_PORT:-1025}
-      SPRING_MAIL_USERNAME: ${MAIL_USERNAME:-}
-      SPRING_MAIL_PASSWORD: ${MAIL_PASSWORD:-}
-      SPRING_MAIL_PROPERTIES_MAIL_SMTP_AUTH: ${MAIL_AUTH:-false}
-      SPRING_MAIL_PROPERTIES_MAIL_SMTP_STARTTLS_ENABLE: ${MAIL_STARTTLS:-false}
-      SPRING_MAIL_PROPERTIES_MAIL_SMTP_STARTTLS_REQUIRED: ${MAIL_STARTTLS:-false}
-      SPRING_MAIL_PROPERTIES_MAIL_SMTP_SSL_ENABLE: ${MAIL_SSL:-false}
-      QRVET_JWT_SECRET: ${JWT_SECRET}
-      QRVET_FRONTEND_URL: ${FRONTEND_URL:-http://localhost:3000}
-      QRVET_COOKIE_SECURE: ${COOKIE_SECURE:-false}
-      QRVET_BOOTSTRAP_SECRET: ${BOOTSTRAP_SECRET:?Defina BOOTSTRAP_SECRET no arquivo .env}
-      QRVET_BOOTSTRAP_ADMIN_ENABLED: ${BOOTSTRAP_ADMIN_ENABLED:-true}
-      QRVET_BOOTSTRAP_ADMIN_NAME: ${BOOTSTRAP_ADMIN_NAME:-Administrador QRVet}
-      QRVET_BOOTSTRAP_ADMIN_EMAIL: ${BOOTSTRAP_ADMIN_EMAIL:?Defina BOOTSTRAP_ADMIN_EMAIL no arquivo .env}
-      QRVET_BOOTSTRAP_ADMIN_PASSWORD: ${BOOTSTRAP_ADMIN_PASSWORD:?Defina BOOTSTRAP_ADMIN_PASSWORD no arquivo .env}
-      QRVET_MAIL_FROM: ${MAIL_FROM:-no-reply@qrvet.local}
-    depends_on:
-      database:
-        condition: service_healthy
-      redis:
-        condition: service_healthy
-
-  frontend:
-      build:
-        context: ./frontend
-        dockerfile: Dockerfile
-      container_name: qrvet_frontend
-      ports:
-        - "3000:80"
-      networks:
-        - qrvet_network
-      depends_on:
-        - backend
 
   redis:
     image: redis:8.2-alpine
@@ -79,11 +27,64 @@ services:
     networks:
       - qrvet_network
     healthcheck:
-      test: [ "CMD", "redis-cli", "ping" ]
+      test: ["CMD", "redis-cli", "ping"]
       interval: 5s
       timeout: 5s
       retries: 30
 
+  backend:
+    image: kazicas/qrvet-backend:latest
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: qrvet_backend
+    ports:
+      - "8080:8080"
+    networks:
+      - qrvet_network
+    environment:
+      TZ: America/Sao_Paulo
+      SPRING_DATASOURCE_URL: jdbc:mysql://database:3306/qrvet
+      SPRING_DATASOURCE_USERNAME: qrvet
+      SPRING_DATASOURCE_PASSWORD: "teste@123"
+      SPRING_PROFILES_ACTIVE: prod
+      SPRING_DATA_REDIS_HOST: redis
+      SPRING_DATA_REDIS_PORT: "6379"
+      SPRING_MAIL_HOST: smtp.gmail.com
+      SPRING_MAIL_PORT: "587"
+      SPRING_MAIL_USERNAME: naorespondaqrvet@gmail.com
+      SPRING_MAIL_PASSWORD: cdqqktzgbgxvhmab
+      SPRING_MAIL_PROPERTIES_MAIL_SMTP_AUTH: "true"
+      SPRING_MAIL_PROPERTIES_MAIL_SMTP_STARTTLS_ENABLE: "true"
+      SPRING_MAIL_PROPERTIES_MAIL_SMTP_STARTTLS_REQUIRED: "true"
+      SPRING_MAIL_PROPERTIES_MAIL_SMTP_SSL_ENABLE: "false"
+      QRVET_JWT_SECRET: "V5TXeKrrA6OLy6KcT6uUQ0vWQhCwKuoG0bAayAplmDs="
+      QRVET_FRONTEND_URL: http://localhost:3000
+      QRVET_COOKIE_SECURE: "false"
+      QRVET_BOOTSTRAP_SECRET: "teste@123"
+      QRVET_BOOTSTRAP_ADMIN_ENABLED: "true"
+      QRVET_BOOTSTRAP_ADMIN_NAME: Administrador QRVet
+      QRVET_BOOTSTRAP_ADMIN_EMAIL: admin@qrvet.com
+      QRVET_BOOTSTRAP_ADMIN_PASSWORD: "teste@123"
+      QRVET_MAIL_FROM: naoresponda@qrvet.com
+    depends_on:
+      database:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+
+  frontend:
+    image: kazicas/qrvet-frontend:latest
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+    container_name: qrvet_frontend
+    ports:
+      - "3000:80"
+    networks:
+      - qrvet_network
+    depends_on:
+      - backend
 
 networks:
   qrvet_network:

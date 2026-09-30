@@ -1,0 +1,7 @@
+.git
+.idea
+.vscode
+target
+*.log
+.env*
+**/secrets.properties

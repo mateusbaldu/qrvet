@@ -26,6 +26,11 @@ public class PacienteController {
         return service.list(pagination);
     }
 
+    @GetMapping("/{id}")
+    public PacienteResponse findById(@PathVariable Long id) {
+        return service.findById(id);
+    }
+
     @GetMapping("/tutor/{tutorId}")
     public PageResponse<PacienteResponse> listByTutor(@PathVariable Long tutorId,
                                                        @Valid @ModelAttribute PaginationRequest pagination) {

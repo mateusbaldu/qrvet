@@ -1,5 +1,6 @@
 package ipiranga.fatec.qrvet.models;
 
+import ipiranga.fatec.qrvet.exceptions.OperationConflictException;
 import ipiranga.fatec.qrvet.models.enums.Role;
 import jakarta.persistence.*;
 import org.springframework.security.crypto.password.PasswordEncoder;
@@ -63,6 +64,12 @@ public class User {
 
     public boolean passwordMatches(String password, PasswordEncoder encoder) {
         return encoder.matches(password, passwordHash);
+    }
+
+    public void validateConfirmed() {
+        if (this.confirmed) {
+            throw new OperationConflictException("Sign up already confirmed.");
+        }
     }
 
     public User() {}

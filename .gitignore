@@ -3,6 +3,7 @@
 .idea/.gitignore
 .env
 .env.local
+.env.dev
 **/node_modules/
 **/dist/
 **/build/

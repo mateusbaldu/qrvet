@@ -25,3 +25,4 @@ dist-ssr
 
 # Browser smoke-test screenshots
 tests/*.png
+tests/artifacts/

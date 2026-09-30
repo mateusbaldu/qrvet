@@ -21,6 +21,7 @@ import org.springframework.security.oauth2.server.resource.web.DefaultBearerToke
 import org.springframework.security.web.SecurityFilterChain;
 import org.springframework.security.web.csrf.CookieCsrfTokenRepository;
 import org.springframework.security.web.csrf.CsrfTokenRequestAttributeHandler;
+import org.springframework.security.web.authentication.session.NullAuthenticatedSessionStrategy;
 import org.springframework.web.cors.CorsConfigurationSource;
 
 import javax.crypto.SecretKey;
@@ -111,6 +112,9 @@ public class SecurityConfig {
     private void configureCsrf(HttpSecurity http) {
         http.csrf(csrf ->
                 csrf.csrfTokenRepository(csrfRepository())
+                        // Bearer authentication happens on every stateless request; keep the
+                        // double-submit token valid for subsequent browser requests.
+                        .sessionAuthenticationStrategy(new NullAuthenticatedSessionStrategy())
                         .csrfTokenRequestHandler(new CsrfTokenRequestAttributeHandler()));
     }
 
