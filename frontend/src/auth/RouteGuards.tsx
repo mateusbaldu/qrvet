@@ -1,10 +1,20 @@
 import { Navigate, Outlet, useLocation } from 'react-router-dom'
 import { useAuth } from './useAuth'
 import type { Role } from '../services/api'
+import { routeRoles } from '../routes'
 
-export function RoleRoute({ roles }: { roles: Role[] }) {
+export function RoleRoute({ roles }: { roles?: Role[] }) {
   const { user } = useAuth()
-  return user && roles.includes(user.role) ? <Outlet /> : <Navigate to="/meu-perfil" replace />
+
+  if (user && (roles ?? []).includes(user.role)) {
+    return <Outlet />
+  }
+
+  return <Navigate to="/meu-perfil" replace />
+}
+
+export function RouteAccess({ path }: { path: string }) {
+  return <RoleRoute roles={routeRoles(path)} />
 }
 
 function LoadingSession() {

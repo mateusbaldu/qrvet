@@ -190,12 +190,12 @@ export function FeedingChecklist({
   const [now, setNow] = useState(Date.now)
   const resource = useResource(
     () => request<AgendaAlimentacao[]>(agendaPath(date, admissionId)),
-    date + ':' + (admissionId ?? '') + ':' + active
+    [date, admissionId, active]
   )
   const directory = useResource(
     () =>
       admissionId ? Promise.resolve([] as Cuidado[]) : allPages<Cuidado>('/internacoes/cuidados'),
-    admissionId ?? 'directory'
+    [admissionId ?? 'directory']
   )
   const reload = resource.reload
   useEffect(() => {

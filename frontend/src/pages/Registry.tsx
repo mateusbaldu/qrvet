@@ -13,7 +13,7 @@ import {
   StatusBadge,
   type Field,
 } from '../components/ClinicUI'
-import { ApiError, request } from '../services/api'
+import { ApiError, request, type PageResponse } from '../services/api'
 import { PatientAvatar, PatientEditor, PhotoInput } from '../components/PatientEditor'
 import { tutorFields, uploadPhoto } from '../services/patientForm'
 import {
@@ -21,8 +21,6 @@ import {
   clinicApi,
   dateOnly,
   dateTime,
-  paginate,
-  searchText,
   type Baia,
   type Internacao,
   type Paciente,
@@ -42,17 +40,28 @@ export function Registry({ kind }: { kind: 'tutores' | 'pacientes' | 'baias' }) 
   )
   const [statusEdit, setStatusEdit] = useState<Baia | null>(null)
   const tutorId = params.get('tutor')
-  const resource = useResource(async () => {
-    const items = await allPages<Tutor | Paciente | Baia>('/' + kind)
+  type RegistryResource = PageResponse<Tutor | Paciente | Baia> & {
+    tutors: Tutor[]
+    admissions: Internacao[]
+  }
+  const resource = useResource<RegistryResource>(async () => {
+    const filters =
+      kind === 'tutores'
+        ? { nome: search.trim() || undefined }
+        : kind === 'pacientes'
+          ? {
+              q: search.trim() || undefined,
+              tutorId: tutorId ? Number(tutorId) : undefined,
+              active: filter === 'ATIVA' ? true : filter === 'SEM' ? false : undefined,
+            }
+          : { status: filter || undefined, q: search.trim() || undefined }
+    const pageResponse = await clinicApi.list<Tutor | Paciente | Baia>('/' + kind, page, filters)
     const [tutors, admissions] =
       kind === 'pacientes'
-        ? await Promise.all([
-            allPages<Tutor>('/tutores'),
-            allPages<Internacao>('/internacoes/ativas'),
-          ])
+        ? await Promise.all([allPages<Tutor>('/tutores'), allPages<Internacao>('/internacoes/ativas')])
         : [[], []]
-    return { items, tutors, admissions }
-  }, kind)
+    return { ...pageResponse, tutors, admissions }
+  }, [kind, page, search, filter, tutorId])
   const title = { tutores: 'Tutores', pacientes: 'Pacientes', baias: 'Baias' }[kind]
   const editable = kind !== 'baias' || user?.role === 'ADMIN'
   const fields: Field[] =
@@ -92,26 +101,7 @@ export function Registry({ kind }: { kind: 'tutores' | 'pacientes' | 'baias' }) 
               ]
             : []),
         ]
-  const filtered =
-    resource.data?.items.filter(item => {
-      const term = searchText(search.trim())
-      if ('identificacao' in item)
-        return (
-          (!filter || item.status === filter) &&
-          searchText(item.identificacao + ' ' + (item.observacao ?? '')).includes(term)
-        )
-      if ('especie' in item) {
-        const admitted = resource.data!.admissions.some(i => i.pacienteId === item.id)
-        const tutor = resource.data!.tutors.find(t => t.id === item.tutorId)
-        return (
-          (!tutorId || item.tutorId === Number(tutorId)) &&
-          (!filter || (filter === 'ATIVA' ? admitted : !admitted)) &&
-          searchText([item.nome, item.especie, item.raca, tutor?.nome].join(' ')).includes(term)
-        )
-      }
-      return searchText([item.nome, item.cpf, item.email, item.telefone].join(' ')).includes(term)
-    }) ?? []
-  const result = paginate(filtered, page)
+  const result = resource.data
   const canCreate = editable && !!resource.data
   return (
     <Page
@@ -261,7 +251,7 @@ export function Registry({ kind }: { kind: 'tutores' | 'pacientes' | 'baias' }) 
         {tutorId && <Link to="/pacientes">Ver todos os pacientes</Link>}
       </div>
       <ResourceState {...resource} />
-      {resource.data && (
+      {result && (
         <>
           {kind === 'pacientes' ? (
             <section className="clinic-table-panel">
@@ -296,7 +286,7 @@ export function Registry({ kind }: { kind: 'tutores' | 'pacientes' | 'baias' }) 
                             </Link>
                           </td>
                           <td>
-                            {resource.data!.tutors.find(t => t.id === p.tutorId)?.nome ?? '—'}
+                            {p.tutorNome || '—'}
                           </td>
                           <td>
                             <StatusBadge status={admission ? 'ATIVA' : 'NEUTRAL'}>
@@ -411,7 +401,7 @@ export function PatientDetail() {
       allPages<Internacao>('/internacoes?pacienteId=' + encodeURIComponent(id)),
     ])
     return { patient, tutors, tutor: tutors.find(t => t.id === patient.tutorId), history }
-  }, id)
+  }, [id])
   const data = resource.data
   const active = data?.history.find(i => i.status === 'ATIVA')
   return (

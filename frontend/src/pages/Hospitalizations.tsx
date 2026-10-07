@@ -31,8 +31,6 @@ import {
   clinicApi,
   dateTime,
   labels,
-  paginate,
-  searchText,
   type Alimentacao,
   type Baia,
   type Cuidado,
@@ -58,7 +56,7 @@ function AdmissionEditor({ patientId, onClose }: { patientId: string; onClose: (
       bays,
       vets,
     }
-  }, 'options')
+  }, ['options'])
   const fields: Field[] = [
     {
       name: 'pacienteId',
@@ -137,15 +135,15 @@ export function Hospitalizations() {
   const [search, setSearch] = useState('')
   const [status, setStatus] = useState('ATIVA')
   const navigate = useNavigate()
-  const resource = useResource(() => allPages<Internacao>('/internacoes'), 'admissions')
-  const filtered = (resource.data ?? []).filter(
-    i =>
-      (!status || i.status === status) &&
-      searchText([i.pacienteNome, i.baiaIdentificacao, i.veterinarioNome, i.id].join(' ')).includes(
-        searchText(search.trim())
-      )
+  const resource = useResource(
+    () =>
+      clinicApi.list<Internacao>('/internacoes', page, {
+        q: search.trim() || undefined,
+        status: status || undefined,
+      }),
+    [page, search, status]
   )
-  const result = paginate(filtered, page)
+  const result = resource.data
   const closeEditor = () => {
     setCreating(false)
     if (params.has('paciente') || params.has('nova')) setParams({}, { replace: true })
@@ -202,7 +200,7 @@ export function Hospitalizations() {
         </div>
       </div>
       <ResourceState {...resource} />
-      {resource.data && (
+      {result && (
         <>
           <div className="clinic-grid">
             {result.items.map(i => (
@@ -258,7 +256,7 @@ export function HospitalizationDetail() {
   const [success, setSuccess] = useState('')
   const resource = useResource(
     () => request<Internacao>('/internacoes/' + encodeURIComponent(id)),
-    id
+    [id]
   )
   const i = resource.data
   return (
@@ -361,7 +359,7 @@ export function HospitalizationDetail() {
 }
 
 export function QrPanel({ id, patientName }: { id: string; patientName: string }) {
-  const resource = useResource(() => request<QrCode>('/internacoes/' + id + '/qrcode'), id)
+  const resource = useResource(() => request<QrCode>('/internacoes/' + id + '/qrcode'), [id])
   const [message, setMessage] = useState('')
   const [sending, setSending] = useState(false)
   const [emailMessage, setEmailMessage] = useState('')
@@ -490,7 +488,7 @@ export function CarePanel({ id, admission }: { id: string; admission?: Internaca
       ])
       return { summary, fasts, foods }
     },
-    id + ':' + (admission?.status ?? '')
+    [id, admission?.status]
   )
   const fasting = resource.data?.fasts.some(f => f.ativo) ?? false
   const fields: Field[] =
@@ -686,7 +684,7 @@ export function CarePanel({ id, admission }: { id: string; admission?: Internaca
 export function CareLookup() {
   const [params] = useSearchParams()
   const [id, setId] = useState(params.get('internacao') ?? '')
-  const resource = useResource(() => allPages<Cuidado>('/internacoes/cuidados'), 'care')
+  const resource = useResource(() => allPages<Cuidado>('/internacoes/cuidados'), ['care'])
   return (
     <Page
       title="Cuidados"

@@ -1,11 +1,12 @@
 import { useCallback, useEffect, useState } from 'react'
 import { readableError } from '../services/api'
 
-export function useResource<T>(loader: () => Promise<T>, key: string | number) {
+export function useResource<T>(loader: () => Promise<T>, dependencies: readonly unknown[]) {
   const [data, setData] = useState<T>()
   const [error, setError] = useState('')
   const [loading, setLoading] = useState(true)
   const [revision, setRevision] = useState(0)
+  const dependencyKey = JSON.stringify(dependencies)
   useEffect(() => {
     let active = true
     setLoading(true)
@@ -24,9 +25,7 @@ export function useResource<T>(loader: () => Promise<T>, key: string | number) {
     return () => {
       active = false
     }
-    // The key includes every input used by the loader.
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [key, revision])
+  }, [dependencyKey, revision])
   const reload = useCallback(() => setRevision(value => value + 1), [])
   return { data, error, loading, reload }
 }

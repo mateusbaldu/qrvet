@@ -3,6 +3,7 @@ package ipiranga.fatec.qrvet.services;
 import ipiranga.fatec.qrvet.dtos.request.AgendaAlimentacaoRequest;
 import ipiranga.fatec.qrvet.dtos.request.RegistroAlimentacaoRequest;
 import ipiranga.fatec.qrvet.dtos.response.AgendaAlimentacaoResponse;
+import ipiranga.fatec.qrvet.dtos.response.RegistroAlimentacaoResponse;
 import ipiranga.fatec.qrvet.exceptions.*;
 import ipiranga.fatec.qrvet.models.*;
 import ipiranga.fatec.qrvet.models.enums.InternacaoStatus;
@@ -31,10 +32,10 @@ public class AgendaAlimentacaoService {
 
     @Transactional
     public List<AgendaAlimentacaoResponse> create(Long id, AgendaAlimentacaoRequest request) {
-        var admission = lockAdmission(id);
+        Internacao admission = lockAdmission(id);
         if (admission.getStatus() != InternacaoStatus.ATIVA) throw new InvalidRequestException("Só é possível agendar em uma internação ativa.");
         // Use second precision consistently with the checklist and database comparisons.
-        var times = request.horarios().stream().map(t -> t.truncatedTo(java.time.temporal.ChronoUnit.SECONDS)).sorted().toList();
+        List<Instant> times = request.horarios().stream().map(t -> t.truncatedTo(java.time.temporal.ChronoUnit.SECONDS)).sorted().toList();
         if (new HashSet<>(times).size() != times.size()) throw new InvalidRequestException("Há horários repetidos no agendamento.");
         if (Duration.between(times.getFirst(), times.getLast()).compareTo(Duration.ofDays(31)) > 0)
             throw new InvalidRequestException("Agende no máximo 31 dias por vez.");
@@ -44,7 +45,7 @@ public class AgendaAlimentacaoService {
             if (agenda.existsByInternacaoIdAndHorarioAndStatusNot(id, time, AlimentacaoAgendada.Status.CANCELADA))
                 throw new OperationConflictException("Já existe alimentação agendada nesse horário. Confira a agenda do paciente.");
         }
-        var user = current.getCurrent();
+        User user = current.getCurrent();
         boolean fasting = fasts.existsByInternacaoIdAndAtivoTrue(id);
         return agenda.saveAllAndFlush(times.stream().map(time -> new AlimentacaoAgendada(admission,
                         request.alimento().trim(), request.quantidade().trim(), time, user)).toList())
@@ -62,14 +63,14 @@ public class AgendaAlimentacaoService {
 
     @Transactional
     public AgendaAlimentacaoResponse complete(Long admissionId, Long id, String observacao) {
-        var admission = lockAdmission(admissionId);
-        var item = find(id, admissionId);
+        Internacao admission = lockAdmission(admissionId);
+        AlimentacaoAgendada item = find(id, admissionId);
         boolean fasting = fasts.existsByInternacaoIdAndAtivoTrue(admissionId);
         if (item.getStatus() == AlimentacaoAgendada.Status.CONCLUIDA) return AgendaAlimentacaoResponse.from(item, fasting);
         if (item.getStatus() != AlimentacaoAgendada.Status.PENDENTE) throw new OperationConflictException("Este agendamento foi cancelado.");
         if (admission.getStatus() != InternacaoStatus.ATIVA) throw new InvalidRequestException("A internação foi encerrada.");
         if (item.getHorario().isAfter(Instant.now())) throw new InvalidRequestException("Aguarde o horário agendado para concluir.");
-        var record = food.create(admissionId, new RegistroAlimentacaoRequest(item.getAlimento(), item.getQuantidade(), observacao));
+        RegistroAlimentacaoResponse record = food.create(admissionId, new RegistroAlimentacaoRequest(item.getAlimento(), item.getQuantidade(), observacao));
         item.complete(records.getReferenceById(record.id()));
         return AgendaAlimentacaoResponse.from(item, false);
     }
@@ -77,7 +78,7 @@ public class AgendaAlimentacaoService {
     @Transactional
     public AgendaAlimentacaoResponse cancel(Long admissionId, Long id, String reason) {
         lockAdmission(admissionId);
-        var item = find(id, admissionId);
+        AlimentacaoAgendada item = find(id, admissionId);
         if (item.getStatus() != AlimentacaoAgendada.Status.PENDENTE) throw new OperationConflictException("Somente agendamentos pendentes podem ser cancelados.");
         item.cancel(reason.trim());
         return AgendaAlimentacaoResponse.from(item, fasts.existsByInternacaoIdAndAtivoTrue(admissionId));

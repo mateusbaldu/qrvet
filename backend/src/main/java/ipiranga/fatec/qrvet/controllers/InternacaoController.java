@@ -51,8 +51,9 @@ public class InternacaoController {
     public PageResponse<InternacaoResponse> list(
             @Valid @ModelAttribute PaginationRequest pagination,
             @RequestParam(required = false) Long pacienteId,
-            @RequestParam(required = false) ipiranga.fatec.qrvet.models.enums.InternacaoStatus status) {
-        return service.list(pagination, pacienteId, status);
+            @RequestParam(required = false) ipiranga.fatec.qrvet.models.enums.InternacaoStatus status,
+            @RequestParam(required = false) String q) {
+        return service.list(pagination, pacienteId, status, q);
     }
 
     @GetMapping("/veterinarios")

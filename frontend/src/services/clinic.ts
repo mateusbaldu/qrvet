@@ -10,6 +10,7 @@ export type Tutor = {
 export type Paciente = {
   id: number
   tutorId: number
+  tutorNome: string
   nome: string
   especie: string
   raca: string
@@ -120,8 +121,13 @@ export async function allPages<T>(path: string): Promise<T[]> {
   }
 }
 export const clinicApi = {
-  list: <T>(path: string, page = 0, filters = '') =>
-    request<PageResponse<T>>(`${path}?page=${page}&size=12${filters}`),
+  list: <T>(path: string, page = 0, filters: Record<string, string | number | boolean | undefined> = {}) => {
+    const query = new URLSearchParams({ page: String(page), size: '12' })
+    Object.entries(filters).forEach(([key, value]) => {
+      if (value !== undefined && value !== '') query.set(key, String(value))
+    })
+    return request<PageResponse<T>>(`${path}?${query}`)
+  },
   save: <T>(path: string, body: unknown, method = 'POST') => request<T>(path, { method, body }),
   publicDetails: (token: string) =>
     request<PublicInternacao>(`/public/internacoes/qr/${encodeURIComponent(token)}`, {

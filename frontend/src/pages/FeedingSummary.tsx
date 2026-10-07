@@ -8,7 +8,7 @@ import { agendaPath, localDate, type AgendaAlimentacao } from '../services/clini
 export function FeedingSummary() {
   const [now, setNow] = useState(Date.now)
   const date = localDate(new Date(now))
-  const resource = useResource(() => request<AgendaAlimentacao[]>(agendaPath(date)), date)
+  const resource = useResource(() => request<AgendaAlimentacao[]>(agendaPath(date)), [date])
   const reload = resource.reload
   useEffect(() => {
     const timer = setInterval(() => {

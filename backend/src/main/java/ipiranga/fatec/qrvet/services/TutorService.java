@@ -55,7 +55,7 @@ public class TutorService {
 
     @Transactional
     public TutorResponse update(Long id, TutorRequest request) {
-        var tutor = repository.findById(id).orElseThrow(() ->
+        Tutor tutor = repository.findById(id).orElseThrow(() ->
                 new ipiranga.fatec.qrvet.exceptions.ResourceNotFoundException("Tutor not found."));
         String cpf = Cpf.normalize(request.cpf());
         String email = request.email().trim().toLowerCase(Locale.ROOT);

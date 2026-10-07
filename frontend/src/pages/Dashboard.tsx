@@ -4,19 +4,26 @@ import { Link } from 'react-router-dom'
 import { ArrowRight, HeartPulse, House, PawPrint, Plus, QrCode, Users } from 'lucide-react'
 import { Page, ResourceState, EmptyState, StatusBadge } from '../components/ClinicUI'
 import { useResource } from '../hooks/useResource'
-import { allPages, clinicApi, dateTime, type Baia, type Internacao } from '../services/clinic'
+import { clinicApi, dateTime, type Baia, type Internacao } from '../services/clinic'
 
 export function Dashboard() {
   const { user } = useAuth()
   const resource = useResource(async () => {
-    const [patients, tutors, bays, admissions] = await Promise.all([
+    const [patients, tutors, bays, availableBays, admissions] = await Promise.all([
       clinicApi.list('/pacientes'),
       clinicApi.list('/tutores'),
-      allPages<Baia>('/baias'),
-      allPages<Internacao>('/internacoes/ativas'),
+      clinicApi.list<Baia>('/baias', 0, { size: 100 }),
+      clinicApi.list<Baia>('/baias', 0, { status: 'DISPONIVEL' }),
+      clinicApi.list<Internacao>('/internacoes/ativas'),
     ])
-    return { patients: patients.total, tutors: tutors.total, bays, admissions }
-  }, 'dashboard')
+    return {
+      patients: patients.total,
+      tutors: tutors.total,
+      bays: bays.items,
+      availableBays: availableBays.total,
+      admissions: admissions.items,
+    }
+  }, ['dashboard'])
   const data = resource.data
   return (
     <Page
@@ -54,7 +61,7 @@ export function Dashboard() {
               },
               {
                 label: 'Baias disponíveis',
-                value: data.bays.filter(b => b.status === 'DISPONIVEL').length,
+                value: data.availableBays,
                 icon: House,
                 path: '/baias',
               },

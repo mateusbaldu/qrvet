@@ -10,6 +10,7 @@ import ipiranga.fatec.qrvet.exceptions.ResourceNotFoundException;
 import ipiranga.fatec.qrvet.models.Baia;
 import ipiranga.fatec.qrvet.models.Internacao;
 import ipiranga.fatec.qrvet.models.Paciente;
+import ipiranga.fatec.qrvet.models.Tutor;
 import ipiranga.fatec.qrvet.models.User;
 import ipiranga.fatec.qrvet.models.enums.BaiaStatus;
 import ipiranga.fatec.qrvet.models.enums.InternacaoStatus;
@@ -88,8 +89,9 @@ public class InternacaoService {
 
     @Transactional(readOnly = true)
     @PreAuthorize("@qrvetSecurity.hasAnyRole('ADMIN', 'VETERINARIO', 'RECEPCIONISTA')")
-    public PageResponse<InternacaoResponse> list(PaginationRequest pagination, Long pacienteId, InternacaoStatus status) {
-        return PageResponse.from(internacaoRepository.search(pacienteId, status, PaginationUtils.byId(pagination))
+    public PageResponse<InternacaoResponse> list(PaginationRequest pagination, Long pacienteId, InternacaoStatus status, String q) {
+        String query = q == null || q.isBlank() ? null : q.trim();
+        return PageResponse.from(internacaoRepository.search(pacienteId, status, query, PaginationUtils.byId(pagination))
                 .map(InternacaoResponse::from));
     }
 
@@ -142,7 +144,7 @@ public class InternacaoService {
     public MessageResponse emailTutor(Long id) {
         Internacao internacao = find(id);
         Paciente paciente = internacao.getPaciente();
-        var tutor = paciente.getTutor();
+        Tutor tutor = paciente.getTutor();
         SimpleMailMessage message = new SimpleMailMessage();
         message.setFrom(mailFrom);
         message.setTo(tutor.getEmail());

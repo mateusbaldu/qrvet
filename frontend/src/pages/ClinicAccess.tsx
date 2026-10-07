@@ -23,7 +23,7 @@ import { allPages, clinicApi, dateTime, type Session } from '../services/clinic'
 
 export function PublicHospitalization() {
   const { token = '' } = useParams()
-  const resource = useResource(() => clinicApi.publicDetails(token), token)
+  const resource = useResource(() => clinicApi.publicDetails(token), [token])
   const i = resource.data
   return (
     <main className="clinic-public">
@@ -197,13 +197,13 @@ export function Sessions() {
   const [page, setPage] = useState(0)
   const [revoke, setRevoke] = useState<Session | 'all' | null>(null)
   const [success, setSuccess] = useState('')
-  const users = useResource(() => allPages<User>('/users'), 'users')
+  const users = useResource(() => allPages<User>('/users'), ['users'])
   const resource = useResource(
     () =>
       userId
         ? clinicApi.list<Session>('/users/' + userId + '/sessions', page)
         : Promise.resolve({ items: [], page: 0, size: 12, total: 0, pages: 0 }),
-    userId + ':' + page
+    [userId, page]
   )
   return (
     <Page

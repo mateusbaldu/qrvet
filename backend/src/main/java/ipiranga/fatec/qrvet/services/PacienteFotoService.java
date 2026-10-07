@@ -4,6 +4,7 @@ import ipiranga.fatec.qrvet.dtos.response.PacienteResponse;
 import ipiranga.fatec.qrvet.exceptions.InvalidRequestException;
 import ipiranga.fatec.qrvet.exceptions.ResourceNotFoundException;
 import ipiranga.fatec.qrvet.repositories.PacienteRepository;
+import ipiranga.fatec.qrvet.models.Paciente;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.stereotype.Service;
@@ -34,14 +35,14 @@ public class PacienteFotoService {
 
     @Transactional
     public PacienteResponse upload(Long id, MultipartFile file) {
-        var patient = patients.findByIdForUpdate(id).orElseThrow(() -> new ResourceNotFoundException("Patient not found."));
+        Paciente patient = patients.findByIdForUpdate(id).orElseThrow(() -> new ResourceNotFoundException("Patient not found."));
         if (file.isEmpty() || file.getSize() > 5 * 1024 * 1024)
             throw new InvalidRequestException("Escolha uma foto JPG ou PNG de até 5 MB.");
         String name = UUID.randomUUID() + ".jpg";
-        try (var input = ImageIO.createImageInputStream(new java.io.ByteArrayInputStream(file.getBytes()))) {
-            var readers = ImageIO.getImageReaders(input);
+        try (javax.imageio.stream.ImageInputStream input = ImageIO.createImageInputStream(new java.io.ByteArrayInputStream(file.getBytes()))) {
+            java.util.Iterator<javax.imageio.ImageReader> readers = ImageIO.getImageReaders(input);
             if (!readers.hasNext()) throw invalidImage();
-            var reader = readers.next();
+            javax.imageio.ImageReader reader = readers.next();
             try {
                 reader.setInput(input);
                 String format = reader.getFormatName();
@@ -50,8 +51,8 @@ public class PacienteFotoService {
                         || (long) width * height > 16_000_000) throw invalidImage();
                 BufferedImage original = reader.read(0);
                 double scale = Math.min(1, 1280.0 / Math.max(width, height));
-                var resized = new BufferedImage(Math.max(1, (int) (width * scale)), Math.max(1, (int) (height * scale)), BufferedImage.TYPE_INT_RGB);
-                var graphics = resized.createGraphics();
+                BufferedImage resized = new BufferedImage(Math.max(1, (int) (width * scale)), Math.max(1, (int) (height * scale)), BufferedImage.TYPE_INT_RGB);
+                java.awt.Graphics2D graphics = resized.createGraphics();
                 try {
                     graphics.setColor(Color.WHITE);
                     graphics.fillRect(0, 0, resized.getWidth(), resized.getHeight());
@@ -70,7 +71,7 @@ public class PacienteFotoService {
 
     @Transactional(readOnly = true)
     public byte[] read(Long id) {
-        var patient = patients.findById(id).orElseThrow(() -> new ResourceNotFoundException("Patient not found."));
+        Paciente patient = patients.findById(id).orElseThrow(() -> new ResourceNotFoundException("Patient not found."));
         if (patient.getFotoArquivo() == null) throw new ResourceNotFoundException("Paciente sem foto.");
         try { return Files.readAllBytes(directory.resolve(patient.getFotoArquivo())); }
         catch (java.nio.file.NoSuchFileException e) { throw new ResourceNotFoundException("Foto não encontrada no armazenamento local."); }
@@ -79,7 +80,7 @@ public class PacienteFotoService {
 
     @Transactional
     public void remove(Long id) {
-        var patient = patients.findByIdForUpdate(id).orElseThrow(() -> new ResourceNotFoundException("Patient not found."));
+        Paciente patient = patients.findByIdForUpdate(id).orElseThrow(() -> new ResourceNotFoundException("Patient not found."));
         cleanupAfterTransaction(patient.getFotoArquivo(), null);
         patient.setFotoArquivo(null);
     }
@@ -91,9 +92,19 @@ public class PacienteFotoService {
     private void cleanupAfterTransaction(String previous, String uploaded) {
         TransactionSynchronizationManager.registerSynchronization(new TransactionSynchronization() {
             @Override public void afterCompletion(int status) {
-                String remove = status == STATUS_COMMITTED ? previous : uploaded;
-                if (remove != null) try { Files.deleteIfExists(directory.resolve(remove)); }
-                catch (IOException e) { org.slf4j.LoggerFactory.getLogger(PacienteFotoService.class).warn("Falha ao limpar foto substituída", e); }
+                String remove;
+                if (status == STATUS_COMMITTED) {
+                    remove = previous;
+                } else {
+                    remove = uploaded;
+                }
+                if (remove != null) {
+                    try {
+                        Files.deleteIfExists(directory.resolve(remove));
+                    } catch (IOException e) {
+                        org.slf4j.LoggerFactory.getLogger(PacienteFotoService.class).warn("Falha ao limpar foto substituída", e);
+                    }
+                }
             }
         });
     }

@@ -1,4 +1,4 @@
-import { useState } from 'react'
+﻿import { useState } from 'react'
 import {
   ChevronLeft,
   ChevronRight,
@@ -31,6 +31,7 @@ const roleLabels: Record<Role, string> = {
   AUXILIAR_TECNICO: 'Auxiliar técnico(a)',
   TUTOR: 'Tutor(a)',
 }
+
 const initials = (name: string) =>
   name
     .trim()
@@ -38,6 +39,7 @@ const initials = (name: string) =>
     .slice(0, 2)
     .map(part => part[0]?.toUpperCase())
     .join('') || '—'
+
 const navIcons = {
   '/inicio': House,
   '/internacoes': HeartPulse,
@@ -56,32 +58,65 @@ export function AppLayout() {
   const location = useLocation()
   const navigate = useNavigate()
   const { user, logout } = useAuth()
-  const tituloAtual =
-    (
-      {
-        '/inicio': 'Início',
-        '/tutores': 'Tutores',
-        '/pacientes': 'Pacientes',
-        '/baias': 'Baias',
-        '/internacoes': 'Internações',
-        '/alimentacao': 'Alimentação',
-        '/cuidados': 'Cuidados',
-        '/sessoes': 'Sessões',
-        '/consultar-qr': 'Consultar QR Code',
-        ...titulos,
-      } as Record<string, string>
-    )['/' + location.pathname.split('/')[1]] ?? 'QRVet'
+
+  const tituloAtual = (
+    {
+      '/inicio': 'Início',
+      '/tutores': 'Tutores',
+      '/pacientes': 'Pacientes',
+      '/baias': 'Baias',
+      '/internacoes': 'Internações',
+      '/alimentacao': 'Alimentação',
+      '/cuidados': 'Cuidados',
+      '/sessoes': 'Sessões',
+      '/consultar-qr': 'Consultar QR Code',
+      ...titulos,
+    } as Record<string, string>
+  )['/' + location.pathname.split('/')[1]] ?? 'QRVet'
+
+  let sidebarClassName = 'app-sidebar'
+  if (menuAberto) {
+    sidebarClassName += ' open'
+  }
+  if (menuRecolhido) {
+    sidebarClassName += ' collapsed'
+  }
+
+  let collapseLabel = 'Recolher menu lateral'
+  let collapseIcon = <ChevronLeft size={18} />
+  if (menuRecolhido) {
+    collapseLabel = 'Expandir menu lateral'
+    collapseIcon = <ChevronRight size={18} />
+  }
+
+  let equipeTitle: string | undefined
+  let perfilTitle: string | undefined
+
+  if (menuRecolhido) {
+    equipeTitle = 'Equipe'
+    perfilTitle = 'Meu perfil'
+  }
+
+  const navLinkClassName = ({ isActive }: { isActive: boolean }) => {
+    if (isActive) {
+      return 'active'
+    }
+    return ''
+  }
 
   if (!user) return null
 
   async function sair() {
     if (!user) return
+
     const email = user.email
+
     try {
       await logout()
     } catch {
       /* A sessão local também é encerrada se o servidor estiver indisponível. */
     }
+
     navigate('/login', { replace: true, state: { email } })
   }
 
@@ -90,10 +125,7 @@ export function AppLayout() {
       <a className="skip-link" href="#conteudo">
         Pular para o conteúdo
       </a>
-      <aside
-        className={`app-sidebar ${menuAberto ? 'open' : ''} ${menuRecolhido ? 'collapsed' : ''}`}
-        aria-label="Menu principal"
-      >
+      <aside className={sidebarClassName} aria-label="Menu principal">
         <div className="sidebar-heading">
           <Link to="/" className="sidebar-brand">
             <span className="sidebar-logo">
@@ -118,10 +150,10 @@ export function AppLayout() {
           className="sidebar-collapse d-none d-lg-grid"
           type="button"
           onClick={() => setMenuRecolhido(atual => !atual)}
-          aria-label={menuRecolhido ? 'Expandir menu lateral' : 'Recolher menu lateral'}
+          aria-label={collapseLabel}
           aria-expanded={!menuRecolhido}
         >
-          {menuRecolhido ? <ChevronRight size={18} /> : <ChevronLeft size={18} />}
+          {collapseIcon}
         </button>
 
         <nav className="sidebar-nav">
@@ -170,7 +202,7 @@ export function AppLayout() {
                   to={item.path}
                   title={item.label}
                   onClick={() => setMenuAberto(false)}
-                  className={({ isActive }) => (isActive ? 'active' : '')}
+                  className={navLinkClassName}
                 >
                   <Icon size={19} />
                   <span className="sidebar-link-text">{item.label}</span>
@@ -181,8 +213,8 @@ export function AppLayout() {
             <NavLink
               to="/equipe"
               onClick={() => setMenuAberto(false)}
-              title={menuRecolhido ? 'Equipe' : undefined}
-              className={({ isActive }) => (isActive ? 'active' : '')}
+              title={equipeTitle}
+              className={navLinkClassName}
             >
               <Users size={19} /> <span className="sidebar-link-text">Equipe</span>
             </NavLink>
@@ -190,8 +222,8 @@ export function AppLayout() {
           <NavLink
             to="/meu-perfil"
             onClick={() => setMenuAberto(false)}
-            title={menuRecolhido ? 'Meu perfil' : undefined}
-            className={({ isActive }) => (isActive ? 'active' : '')}
+            title={perfilTitle}
+            className={navLinkClassName}
           >
             <UserRound size={19} /> <span className="sidebar-link-text">Meu perfil</span>
           </NavLink>

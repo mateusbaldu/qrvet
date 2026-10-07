@@ -4,7 +4,7 @@ import { Mail, Search, Send, ShieldCheck, UserPlus, Users } from 'lucide-react'
 import { useResource } from '../hooks/useResource'
 import { Editor, EmptyState, Notice, Page, Pagination, ResourceState } from '../components/ClinicUI'
 import { usersApi, type Role, type User } from '../services/api'
-import { allPages, dateTime, paginate, searchText } from '../services/clinic'
+import { clinicApi, dateTime } from '../services/clinic'
 
 const roleLabels: Record<Role, string> = {
   ADMIN: 'Administrador',
@@ -31,20 +31,22 @@ const initials = (name: string) =>
     .join('')
 
 export function Team() {
-  const resource = useResource(() => allPages<User>('/users'), 'team')
   const [search, setSearch] = useState('')
   const [filter, setFilter] = useState('')
   const [page, setPage] = useState(0)
   const [invite, setInvite] = useState(false)
   const [resending, setResending] = useState<User | null>(null)
   const [success, setSuccess] = useState('')
-  const members = resource.data ?? []
-  const filtered = members.filter(
-    member =>
-      searchText(member.name + ' ' + member.email).includes(searchText(search.trim())) &&
-      (!filter || (filter === 'PENDING' ? !member.confirmed : member.role === filter))
+  const resource = useResource(
+    () =>
+      clinicApi.list<User>('/users', page, {
+        name: search.trim() || undefined,
+        role: filter && filter !== 'PENDING' ? filter : undefined,
+        confirmed: filter === 'PENDING' ? false : undefined,
+      }),
+    [page, search, filter]
   )
-  const result = paginate(filtered, page)
+  const result = resource.data
   return (
     <Page
       title="Equipe"
@@ -59,10 +61,7 @@ export function Team() {
       {success && <Notice>{success}</Notice>}
       <div className="clinic-stats team-summary">
         {[
-          ['Total de membros', members.length],
-          ['Veterinários', members.filter(m => m.role === 'VETERINARIO' && m.confirmed).length],
-          ['Contas ativas', members.filter(m => m.active && m.confirmed).length],
-          ['Convites pendentes', members.filter(m => !m.confirmed).length],
+          ['Total de membros', result?.total ?? 0],
         ].map(([label, value]) => (
           <div className="clinic-stat" key={label}>
             <span>
@@ -109,7 +108,7 @@ export function Team() {
         </button>
       </div>
       <ResourceState {...resource} />
-      {resource.data && (
+      {result && (
         <>
           <section className="clinic-table-panel">
             <div className="clinic-table-scroll">

@@ -14,7 +14,7 @@ import java.util.UUID;
 public class GlobalExceptionHandler {
     @ExceptionHandler(org.springframework.web.bind.MethodArgumentNotValidException.class)
     ResponseEntity<ErrorResponse> validation(org.springframework.web.bind.MethodArgumentNotValidException e) {
-        var fields = new java.util.LinkedHashMap<String, String>();
+        java.util.Map<String, String> fields = new java.util.LinkedHashMap<>();
         e.getBindingResult().getFieldErrors().forEach(f -> fields.put(f.getField(), f.getDefaultMessage()));
         return errorResponse(HttpStatus.BAD_REQUEST, "Confira os campos informados.", fields);
     }

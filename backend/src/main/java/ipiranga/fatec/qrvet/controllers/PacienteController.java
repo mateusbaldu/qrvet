@@ -2,6 +2,7 @@ package ipiranga.fatec.qrvet.controllers;
 
 import ipiranga.fatec.qrvet.dtos.request.PacienteRequest;
 import ipiranga.fatec.qrvet.dtos.request.PaginationRequest;
+import ipiranga.fatec.qrvet.dtos.filter.PacienteSearchFilter;
 import ipiranga.fatec.qrvet.dtos.response.PacienteResponse;
 import ipiranga.fatec.qrvet.dtos.response.PageResponse;
 import ipiranga.fatec.qrvet.services.PacienteService;
@@ -45,8 +46,9 @@ public class PacienteController {
     }
 
     @GetMapping
-    public PageResponse<PacienteResponse> list(@Valid @ModelAttribute PaginationRequest pagination) {
-        return service.list(pagination);
+    public PageResponse<PacienteResponse> list(@Valid @ModelAttribute PaginationRequest pagination,
+                                                @ModelAttribute PacienteSearchFilter filter) {
+        return service.list(pagination, filter);
     }
 
     @GetMapping("/{id}")
