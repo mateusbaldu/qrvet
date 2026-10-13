@@ -27,4 +27,9 @@ public class TutorController {
                                              @ModelAttribute TutorSearchFilter filter) {
         return service.list(pagination, filter);
     }
+
+    @PutMapping("/{id}")
+    public TutorResponse update(@PathVariable Long id, @Valid @RequestBody TutorRequest request) {
+        return service.update(id, request);
+    }
 }

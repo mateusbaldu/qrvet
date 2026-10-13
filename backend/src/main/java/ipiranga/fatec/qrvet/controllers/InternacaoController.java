@@ -8,6 +8,7 @@ import ipiranga.fatec.qrvet.dtos.request.RegistroAlimentacaoRequest;
 import ipiranga.fatec.qrvet.dtos.response.JejumResponse;
 import ipiranga.fatec.qrvet.dtos.response.InternacaoQrCodeResponse;
 import ipiranga.fatec.qrvet.dtos.response.InternacaoResponse;
+import ipiranga.fatec.qrvet.dtos.response.MessageResponse;
 import ipiranga.fatec.qrvet.dtos.response.PageResponse;
 import ipiranga.fatec.qrvet.dtos.response.RegistroAlimentacaoResponse;
 import ipiranga.fatec.qrvet.services.InternacaoService;
@@ -50,8 +51,9 @@ public class InternacaoController {
     public PageResponse<InternacaoResponse> list(
             @Valid @ModelAttribute PaginationRequest pagination,
             @RequestParam(required = false) Long pacienteId,
-            @RequestParam(required = false) ipiranga.fatec.qrvet.models.enums.InternacaoStatus status) {
-        return service.list(pagination, pacienteId, status);
+            @RequestParam(required = false) ipiranga.fatec.qrvet.models.enums.InternacaoStatus status,
+            @RequestParam(required = false) String q) {
+        return service.list(pagination, pacienteId, status, q);
     }
 
     @GetMapping("/veterinarios")
@@ -78,6 +80,16 @@ public class InternacaoController {
     @GetMapping("/{id}/qrcode")
     public InternacaoQrCodeResponse qrCode(@PathVariable Long id) {
         return service.qrCode(id);
+    }
+
+    @PostMapping("/{id}/tutor/email")
+    public ResponseEntity<MessageResponse> emailTutor(@PathVariable Long id) {
+        try {
+            return ResponseEntity.ok(service.emailTutor(id));
+        } catch (org.springframework.mail.MailException exception) {
+            return ResponseEntity.status(HttpStatus.BAD_GATEWAY).body(new MessageResponse(
+                    "Não foi possível enviar o e-mail. Confira a configuração de e-mail da clínica e tente novamente."));
+        }
     }
 
     @PutMapping("/{id}/encerrar")

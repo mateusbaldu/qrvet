@@ -14,10 +14,16 @@ public interface InternacaoRepository extends JpaRepository<Internacao, Long> {
     Page<Internacao> findAllByStatus(InternacaoStatus status, Pageable pageable);
     Optional<Internacao> findByUuidToken(java.util.UUID uuidToken);
 
-    @Query("select i from Internacao i where (:pacienteId is null or i.paciente.id = :pacienteId) "
-            + "and (:status is null or i.status = :status)")
+        @Query("select i from Internacao i where (:pacienteId is null or i.paciente.id = :pacienteId) "
+            + "and (:status is null or i.status = :status) "
+            + "and (:q is null or lower(i.paciente.nome) like lower(concat('%', :q, '%')) "
+            + "or lower(i.baia.identificacao) like lower(concat('%', :q, '%')) "
+            + "or lower(i.veterinario.name) like lower(concat('%', :q, '%')) "
+            + "or str(i.id) like concat('%', :q, '%'))")
     Page<Internacao> search(@Param("pacienteId") Long pacienteId,
-                            @Param("status") InternacaoStatus status, Pageable pageable);
+                    @Param("status") InternacaoStatus status,
+                    @Param("q") String q,
+                    Pageable pageable);
 
     @Lock(LockModeType.PESSIMISTIC_WRITE)
     @Query("select i from Internacao i where i.id = :id")

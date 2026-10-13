@@ -13,7 +13,9 @@ export function RecoveryCard({ eyebrow, title, description, children }: Recovery
   return (
     <main className="recovery-shell">
       <Link to="/login" className="recovery-brand" aria-label="QRVet - voltar ao login">
-        <span className="brand-symbol"><PawPrint size={25} strokeWidth={2.2} /></span>
+        <span className="brand-symbol">
+          <PawPrint size={25} strokeWidth={2.2} />
+        </span>
         <span className="brand-text">
           <span className="brand-name">QRVet</span>
           <span className="brand-subtitle">Gestão de internação veterinária</span>

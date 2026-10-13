@@ -25,6 +25,10 @@ public class QrCodeService {
         return publicUrl.replaceAll("/+$", "") + "/public/internacoes/qr/" + token;
     }
 
+    public String hospitalizationUrl(Long id) {
+        return publicUrl.replaceAll("/+$", "") + "/internacoes/" + id;
+    }
+
     public String base64(String value) {
         try {
             BitMatrix matrix = new QRCodeWriter().encode(value, BarcodeFormat.QR_CODE, 400, 400);

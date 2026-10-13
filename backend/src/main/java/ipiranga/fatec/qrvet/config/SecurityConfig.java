@@ -73,7 +73,7 @@ public class SecurityConfig {
 
     @Bean
     JwtDecoder decoder(SecretKey key) {
-        var decoder = NimbusJwtDecoder.withSecretKey(key).macAlgorithm(MacAlgorithm.HS256).build();
+        NimbusJwtDecoder decoder = NimbusJwtDecoder.withSecretKey(key).macAlgorithm(MacAlgorithm.HS256).build();
         decoder.setJwtValidator(JwtValidators.createDefaultWithIssuer("qrvet"));
         return decoder;
     }
@@ -119,7 +119,7 @@ public class SecurityConfig {
     }
 
     private CookieCsrfTokenRepository csrfRepository() {
-        var csrf = CookieCsrfTokenRepository.withHttpOnlyFalse();
+        CookieCsrfTokenRepository csrf = CookieCsrfTokenRepository.withHttpOnlyFalse();
         csrf.setCookieCustomizer(cookie -> cookie.secure(secure).sameSite("Lax").path("/"));
         return csrf;
     }

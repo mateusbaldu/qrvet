@@ -21,7 +21,8 @@ public final class UserSpecifications {
                 .and(filterByName(filter.name()))
                 .and(filterByEmail(filter.email()))
                 .and(filterByRole(filter.role()))
-                .and(filterByActive(filter.active()));
+                .and(filterByActive(filter.active()))
+                .and(filterByConfirmed(filter.confirmed()));
     }
 
     private static Specification<User> filterByName(String name) {
@@ -44,6 +45,13 @@ public final class UserSpecifications {
             return Specification.unrestricted();
         }
         return (root, query, builder) -> builder.equal(root.get("active"), active);
+    }
+
+    private static Specification<User> filterByConfirmed(Boolean confirmed) {
+        if (confirmed == null) {
+            return Specification.unrestricted();
+        }
+        return (root, query, builder) -> builder.equal(root.get("confirmed"), confirmed);
     }
 
     private static Specification<User> containsIgnoreCase(String attribute, String value) {
