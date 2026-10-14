@@ -26,11 +26,14 @@ public class PacienteService {
     private final PacienteRepository pacienteRepository;
     private final TutorRepository tutorRepository;
     private final TutorService tutorService;
+    private final AuditService auditService;
 
-    public PacienteService(PacienteRepository pacienteRepository, TutorRepository tutorRepository, TutorService tutorService) {
+    public PacienteService(PacienteRepository pacienteRepository, TutorRepository tutorRepository, TutorService tutorService,
+                           AuditService auditService) {
         this.pacienteRepository = pacienteRepository;
         this.tutorRepository = tutorRepository;
         this.tutorService = tutorService;
+        this.auditService = auditService;
     }
 
     @Transactional
@@ -56,6 +59,8 @@ public class PacienteService {
                 .build();
         PacienteResponse response = PacienteResponse.from(pacienteRepository.saveAndFlush(paciente));
         logger.info("Patient {} created", response.id());
+        auditService.log("PATIENT_CREATED", "patient", String.valueOf(response.id()),
+                java.util.Map.of("name", response.nome(), "species", response.especie()));
         return response;
     }
 

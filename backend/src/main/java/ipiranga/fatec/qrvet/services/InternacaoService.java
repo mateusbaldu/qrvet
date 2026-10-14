@@ -39,6 +39,7 @@ public class InternacaoService {
     private final AlimentacaoAgendadaRepository agenda;
     private final JavaMailSender mail;
     private final String mailFrom;
+    private final AuditService auditService;
 
     public InternacaoService(
             InternacaoRepository internacaoRepository,
@@ -47,7 +48,7 @@ public class InternacaoService {
             UserRepository userRepository,
             QrCodeService qrCodeService,
             JejumRepository jejumRepository, AlimentacaoAgendadaRepository agenda,
-            JavaMailSender mail, @Value("${qrvet.mail-from}") String mailFrom) {
+            JavaMailSender mail, @Value("${qrvet.mail-from}") String mailFrom, AuditService auditService) {
         this.internacaoRepository = internacaoRepository;
         this.pacienteRepository = pacienteRepository;
         this.baiaRepository = baiaRepository;
@@ -57,6 +58,7 @@ public class InternacaoService {
         this.agenda = agenda;
         this.mail = mail;
         this.mailFrom = mailFrom;
+        this.auditService = auditService;
     }
 
     @Transactional
@@ -91,6 +93,8 @@ public class InternacaoService {
                 .build();
         InternacaoResponse response = InternacaoResponse.from(internacaoRepository.saveAndFlush(internacao));
         logger.info("Hospitalization {} opened for patient {}", response.id(), request.pacienteId());
+        auditService.log("INTERNACAO_CREATED", "internacao", String.valueOf(response.id()),
+                java.util.Map.of("patientId", request.pacienteId(), "bayId", request.baiaId()));
         return response;
     }
 
@@ -195,6 +199,8 @@ public class InternacaoService {
         }
         InternacaoResponse response = InternacaoResponse.from(internacao);
         logger.info("Hospitalization {} closed with status {}", id, request.statusEncerramento());
+        auditService.log("INTERNACAO_UPDATED", "internacao", String.valueOf(id),
+                java.util.Map.of("status", request.statusEncerramento().name()));
         return response;
     }
 
