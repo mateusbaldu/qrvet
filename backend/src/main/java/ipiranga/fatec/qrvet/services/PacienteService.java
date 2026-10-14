@@ -94,6 +94,8 @@ public class PacienteService {
         paciente.setObservacoes(request.observacoes());
         PacienteResponse response = PacienteResponse.from(pacienteRepository.saveAndFlush(paciente));
         logger.info("Patient {} updated", id);
+        auditService.log("PATIENT_UPDATED", "patient", String.valueOf(id),
+                Map.of("name", response.nome(), "species", response.especie()));
         return response;
     }
 
