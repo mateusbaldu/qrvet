@@ -1,5 +1,8 @@
 package ipiranga.fatec.qrvet.controllers;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
 import ipiranga.fatec.qrvet.dtos.request.*;
 import ipiranga.fatec.qrvet.dtos.response.*;
 import ipiranga.fatec.qrvet.dtos.*;
@@ -19,6 +22,7 @@ import java.util.Map;
 @RestController
 @RequestMapping("/v1/auth")
 public class AuthController {
+    private static final Logger logger = LoggerFactory.getLogger(AuthController.class);
     private final AuthService auth;
     private final boolean secure;
     private static final long REFRESH_DAYS = 5;
@@ -46,6 +50,7 @@ public class AuthController {
 
     @PostMapping("/login")
     public ResponseEntity<AccessTokenResponse> login(@Valid @RequestBody LoginRequest r) {
+        logger.info("Processing login request");
         AuthSession session = auth.login(r);
         return ResponseEntity.ok()
                 .header(HttpHeaders.SET_COOKIE, cookie(session.refreshToken(), Duration.ofDays(REFRESH_DAYS)))

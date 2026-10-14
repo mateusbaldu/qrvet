@@ -1,5 +1,8 @@
 package ipiranga.fatec.qrvet.controllers;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
 import ipiranga.fatec.qrvet.dtos.request.BaiaDetailsRequest;
 import ipiranga.fatec.qrvet.dtos.request.BaiaRequest;
 import ipiranga.fatec.qrvet.dtos.request.BaiaStatusRequest;
@@ -16,6 +19,7 @@ import org.springframework.web.bind.annotation.*;
 @RestController
 @RequestMapping("/v1/baias")
 public class BaiaController {
+    private static final Logger logger = LoggerFactory.getLogger(BaiaController.class);
     private final BaiaService service;
 
     public BaiaController(BaiaService service) {

@@ -38,6 +38,11 @@ services:
       context: ./backend
       dockerfile: Dockerfile
     container_name: qrvet_backend
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
     volumes:
       - patient_photos:/opt/app/uploads
     ports:

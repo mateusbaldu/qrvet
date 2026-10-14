@@ -1,5 +1,8 @@
 package ipiranga.fatec.qrvet.security;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
 import ipiranga.fatec.qrvet.dtos.AuthSession;
 import ipiranga.fatec.qrvet.dtos.RefreshToken;
 import ipiranga.fatec.qrvet.dtos.request.*;
@@ -22,6 +25,7 @@ import java.util.UUID;
 
 @Service
 public class AuthService {
+    private static final Logger logger = LoggerFactory.getLogger(AuthService.class);
     private final UserRepository users;
     private final PasswordEncoder passwordEncoder;
     private final TokenService tokens;
@@ -43,6 +47,7 @@ public class AuthService {
 
     @Transactional
     public AuthSession login(LoginRequest request) {
+        logger.info("Login attempt received for email {}", request.email().trim());
         User user = users.findByEmailIgnoreCase(request.email().trim())
                 .orElseThrow(() ->  new BadCredentialsException("Invalid credentials"));
         if (!user.isActive() || !user.isConfirmed()) {
@@ -59,6 +64,7 @@ public class AuthService {
 
         AccessTokenResponse accessToken = new AccessTokenResponse(tokens.generateAccessToken(user, now));
 
+        logger.info("User {} authenticated successfully", user.getId());
         return new AuthSession((accessToken), refresh.value());
     }
 
@@ -87,6 +93,7 @@ public class AuthService {
 
         Jwt jwt = tokens.decodeRefreshToken(refreshToken);
         sessoes.revokeSession(Long.valueOf(jwt.getSubject()), jwt.getId());
+        logger.info("Session revoked for user {}", jwt.getSubject());
     }
 
     @Transactional
@@ -101,6 +108,7 @@ public class AuthService {
 
         user.setPassword(request.newPassword(), passwordEncoder);
         user.setAuthenticationVersion(user.getAuthenticationVersion() + 1);
+        logger.info("Password changed for user {}", user.getId());
     }
 
     @Transactional

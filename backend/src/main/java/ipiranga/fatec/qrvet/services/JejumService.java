@@ -1,5 +1,8 @@
 package ipiranga.fatec.qrvet.services;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
 import ipiranga.fatec.qrvet.dtos.request.JejumRequest;
 import ipiranga.fatec.qrvet.dtos.response.JejumResponse;
 import ipiranga.fatec.qrvet.exceptions.InvalidRequestException;
@@ -17,6 +20,7 @@ import org.springframework.transaction.annotation.Transactional;
 
 @Service
 public class JejumService {
+    private static final Logger logger = LoggerFactory.getLogger(JejumService.class);
     private final InternacaoRepository internacaoRepository;
     private final JejumRepository jejumRepository;
 

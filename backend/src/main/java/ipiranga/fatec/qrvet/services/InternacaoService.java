@@ -1,5 +1,8 @@
 package ipiranga.fatec.qrvet.services;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
 import ipiranga.fatec.qrvet.dtos.request.EncerramentoInternacaoRequest;
 import ipiranga.fatec.qrvet.dtos.request.InternacaoRequest;
 import ipiranga.fatec.qrvet.dtos.request.PaginationRequest;
@@ -26,6 +29,7 @@ import org.springframework.transaction.annotation.Transactional;
 
 @Service
 public class InternacaoService {
+    private static final Logger logger = LoggerFactory.getLogger(InternacaoService.class);
     private final InternacaoRepository internacaoRepository;
     private final PacienteRepository pacienteRepository;
     private final BaiaRepository baiaRepository;
@@ -58,6 +62,7 @@ public class InternacaoService {
     @Transactional
     @PreAuthorize("@qrvetSecurity.hasAnyRole('ADMIN', 'VETERINARIO', 'RECEPCIONISTA')")
     public InternacaoResponse open(InternacaoRequest request) {
+        logger.info("Opening hospitalization for patient {} in bay {}", request.pacienteId(), request.baiaId());
         Paciente paciente = pacienteRepository.findByIdForUpdate(request.pacienteId())
                 .orElseThrow(() -> new ResourceNotFoundException("Patient not found."));
 
@@ -84,7 +89,9 @@ public class InternacaoService {
                 .diagnosticoInicial(request.diagnosticoInicial().trim())
                 .observacoes(observacoes)
                 .build();
-        return InternacaoResponse.from(internacaoRepository.saveAndFlush(internacao));
+        InternacaoResponse response = InternacaoResponse.from(internacaoRepository.saveAndFlush(internacao));
+        logger.info("Hospitalization {} opened for patient {}", response.id(), request.pacienteId());
+        return response;
     }
 
     @Transactional(readOnly = true)
@@ -169,6 +176,7 @@ public class InternacaoService {
     @Transactional
     @PreAuthorize("@qrvetSecurity.hasAnyRole('ADMIN', 'VETERINARIO', 'RECEPCIONISTA')")
     public InternacaoResponse close(Long id, EncerramentoInternacaoRequest request) {
+        logger.info("Closing hospitalization {}", id);
         Internacao internacao = internacaoRepository.findByIdForUpdate(id)
                 .orElseThrow(() -> new ResourceNotFoundException("Hospitalization not found."));
         if (internacao.getStatus() != InternacaoStatus.ATIVA) {
@@ -185,7 +193,9 @@ public class InternacaoService {
         } catch (IllegalStateException exception) {
             throw new OperationConflictException(exception.getMessage());
         }
-        return InternacaoResponse.from(internacao);
+        InternacaoResponse response = InternacaoResponse.from(internacao);
+        logger.info("Hospitalization {} closed with status {}", id, request.statusEncerramento());
+        return response;
     }
 
     private Internacao find(Long id) {
