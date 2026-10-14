@@ -22,6 +22,7 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.nio.charset.StandardCharsets;
 import java.time.Instant;
+import java.util.Map;
 import java.util.UUID;
 
 @Service
@@ -54,7 +55,7 @@ public class AuthService {
         User user = users.findByEmailIgnoreCase(request.email().trim()).orElse(null);
         if (user == null || !user.isActive() || !user.isConfirmed()
                 || !user.passwordMatches(request.password(), passwordEncoder)) {
-            audit.log("LOGIN_FAILED", "auth", null, java.util.Map.of("email", request.email().trim()));
+            audit.log("LOGIN_FAILED", "auth", null, Map.of("email", request.email().trim()));
             throw new BadCredentialsException("Invalid credentials");
         }
 
@@ -67,7 +68,7 @@ public class AuthService {
 
         logger.info("User {} authenticated successfully", user.getId());
         audit.log("LOGIN_SUCCESS", "auth", String.valueOf(user.getId()),
-                java.util.Map.of("email", user.getEmail()));
+                Map.of("email", user.getEmail()));
         return new AuthSession((accessToken), refresh.value());
     }
 
@@ -131,7 +132,7 @@ public class AuthService {
         try {
             events.publishEvent(new PasswordRecoveryEmailRequested(user.getEmail(), token));
             audit.log("PASSWORD_RECOVERY_REQUESTED", "auth", String.valueOf(user.getId()),
-                    java.util.Map.of("email", user.getEmail()));
+                    Map.of("email", user.getEmail()));
         } catch (org.springframework.mail.MailException e) {
             passwordRecovery.delete(token);
         }

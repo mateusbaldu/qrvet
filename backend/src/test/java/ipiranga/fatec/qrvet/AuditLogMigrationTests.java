@@ -6,11 +6,13 @@ import org.testcontainers.containers.MySQLContainer;
 import org.testcontainers.junit.jupiter.Container;
 import org.testcontainers.junit.jupiter.Testcontainers;
 
+import java.sql.DatabaseMetaData;
+import java.sql.Connection;
 import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.sql.Types;
-import java.sql.DatabaseMetaData;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.Map;
 import java.util.Set;
 
@@ -51,7 +53,7 @@ class AuditLogMigrationTests {
         }
     }
 
-    private int timestampPrecision(java.sql.Connection connection) throws SQLException {
+    private int timestampPrecision(Connection connection) throws SQLException {
         try (var statement = connection.prepareStatement("""
                 SELECT DATETIME_PRECISION
                 FROM information_schema.columns
@@ -65,14 +67,14 @@ class AuditLogMigrationTests {
         }
     }
 
-    private String tableName(java.sql.Connection connection) throws SQLException {
+    private String tableName(Connection connection) throws SQLException {
         try (ResultSet tables = connection.getMetaData().getTables(null, null, "audit_logs", null)) {
             assertTrue(tables.next());
             return tables.getString("TABLE_NAME");
         }
     }
 
-    private Map<String, ColumnMetadata> columns(java.sql.Connection connection) throws SQLException {
+    private Map<String, ColumnMetadata> columns(Connection connection) throws SQLException {
         Map<String, ColumnMetadata> result = new HashMap<>();
         try (ResultSet columns = connection.getMetaData().getColumns(null, null, "audit_logs", null)) {
             while (columns.next()) {
@@ -87,8 +89,8 @@ class AuditLogMigrationTests {
         return result;
     }
 
-    private Set<String> indexes(java.sql.Connection connection) throws SQLException {
-        Set<String> result = new java.util.HashSet<>();
+    private Set<String> indexes(Connection connection) throws SQLException {
+        Set<String> result = new HashSet<>();
         try (ResultSet indexes = connection.getMetaData().getIndexInfo(null, null, "audit_logs", false, false)) {
             while (indexes.next()) {
                 String name = indexes.getString("INDEX_NAME");

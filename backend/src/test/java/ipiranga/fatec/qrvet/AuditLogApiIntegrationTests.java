@@ -20,6 +20,7 @@ import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.request.MockHttpServletRequestBuilder;
+import org.springframework.test.web.servlet.ResultActions;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.Instant;
@@ -112,7 +113,7 @@ class AuditLogApiIntegrationTests {
         auditLogs.saveAndFlush(log);
     }
 
-    private org.springframework.test.web.servlet.ResultActions perform(
+    private ResultActions perform(
             MockHttpServletRequestBuilder request, User user) throws Exception {
         return mvc.perform(request
                 .header("Authorization", "Bearer " + tokens.generateAccessToken(user, Instant.now()))

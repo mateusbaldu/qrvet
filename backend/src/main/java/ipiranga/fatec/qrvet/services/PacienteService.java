@@ -19,6 +19,8 @@ import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.util.Map;
+
 @Service
 @PreAuthorize("@qrvetSecurity.hasAnyRole('ADMIN', 'VETERINARIO', 'RECEPCIONISTA')")
 public class PacienteService {
@@ -60,7 +62,7 @@ public class PacienteService {
         PacienteResponse response = PacienteResponse.from(pacienteRepository.saveAndFlush(paciente));
         logger.info("Patient {} created", response.id());
         auditService.log("PATIENT_CREATED", "patient", String.valueOf(response.id()),
-                java.util.Map.of("name", response.nome(), "species", response.especie()));
+                Map.of("name", response.nome(), "species", response.especie()));
         return response;
     }
 
