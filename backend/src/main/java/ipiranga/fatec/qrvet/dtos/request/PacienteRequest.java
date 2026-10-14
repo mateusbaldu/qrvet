@@ -1,5 +1,6 @@
 package ipiranga.fatec.qrvet.dtos.request;
 
+import jakarta.validation.Valid;
 import jakarta.validation.constraints.*;
 import java.math.BigDecimal;
 import java.time.LocalDate;
@@ -13,7 +14,7 @@ public record PacienteRequest(
         @NotNull @PastOrPresent LocalDate dataNascimento,
         @NotNull @DecimalMin("0.01") @Digits(integer = 4, fraction = 2) BigDecimal peso,
         @Size(max = 10000) String observacoes,
-        @jakarta.validation.Valid TutorRequest novoTutor) {
+        @Valid TutorRequest novoTutor) {
     @AssertTrue(message = "Selecione um tutor existente ou preencha um novo tutor.")
     public boolean isTutorValido() { return (tutorId != null) != (novoTutor != null); }
 }

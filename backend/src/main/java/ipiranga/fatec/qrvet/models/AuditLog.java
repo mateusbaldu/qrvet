@@ -35,7 +35,7 @@ public class AuditLog {
     private String resourceId;
 
     @JdbcTypeCode(SqlTypes.JSON)
-    @Column(name = "details", columnDefinition = "JSON")
+    @Column(name = "details", columnDefinition = "json")
     private String details;
 
     @PrePersist

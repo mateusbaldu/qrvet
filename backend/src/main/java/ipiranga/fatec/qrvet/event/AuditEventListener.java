@@ -13,10 +13,15 @@ import org.springframework.transaction.annotation.Transactional;
 public class AuditEventListener {
     private final AuditLogRepository auditLogRepository;
     private final ObjectMapper objectMapper;
+    private final AuditDetailsSanitizer sanitizer;
 
-    public AuditEventListener(AuditLogRepository auditLogRepository, ObjectMapper objectMapper) {
+    public AuditEventListener(
+            AuditLogRepository auditLogRepository,
+            ObjectMapper objectMapper,
+            AuditDetailsSanitizer sanitizer) {
         this.auditLogRepository = auditLogRepository;
         this.objectMapper = objectMapper;
+        this.sanitizer = sanitizer;
     }
 
     @Async
@@ -33,9 +38,9 @@ public class AuditEventListener {
 
         if (event.details() != null) {
             try {
-                auditLog.setDetails(objectMapper.writeValueAsString(event.details()));
+                auditLog.setDetails(objectMapper.writeValueAsString(sanitizer.sanitize(event.details())));
             } catch (JsonProcessingException e) {
-                auditLog.setDetails(String.valueOf(event.details()));
+                auditLog.setDetails("{\"error\":\"details_unavailable\"}");
             }
         }
 

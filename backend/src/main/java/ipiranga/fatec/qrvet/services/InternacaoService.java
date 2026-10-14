@@ -17,6 +17,9 @@ import ipiranga.fatec.qrvet.models.Tutor;
 import ipiranga.fatec.qrvet.models.User;
 import ipiranga.fatec.qrvet.models.enums.BaiaStatus;
 import ipiranga.fatec.qrvet.models.enums.InternacaoStatus;
+import ipiranga.fatec.qrvet.models.enums.Role;
+import ipiranga.fatec.qrvet.models.enums.AuditAction;
+import ipiranga.fatec.qrvet.models.enums.AuditResource;
 import ipiranga.fatec.qrvet.repositories.*;
 import ipiranga.fatec.qrvet.utils.PaginationUtils;
 import ipiranga.fatec.qrvet.utils.QrCodeService;
@@ -26,6 +29,10 @@ import org.springframework.mail.javamail.JavaMailSender;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+
+import java.util.List;
+import java.util.Map;
+import java.util.UUID;
 
 @Service
 public class InternacaoService {
@@ -39,6 +46,7 @@ public class InternacaoService {
     private final AlimentacaoAgendadaRepository agenda;
     private final JavaMailSender mail;
     private final String mailFrom;
+    private final AuditService auditService;
 
     public InternacaoService(
             InternacaoRepository internacaoRepository,
@@ -47,7 +55,7 @@ public class InternacaoService {
             UserRepository userRepository,
             QrCodeService qrCodeService,
             JejumRepository jejumRepository, AlimentacaoAgendadaRepository agenda,
-            JavaMailSender mail, @Value("${qrvet.mail-from}") String mailFrom) {
+            JavaMailSender mail, @Value("${qrvet.mail-from}") String mailFrom, AuditService auditService) {
         this.internacaoRepository = internacaoRepository;
         this.pacienteRepository = pacienteRepository;
         this.baiaRepository = baiaRepository;
@@ -57,6 +65,7 @@ public class InternacaoService {
         this.agenda = agenda;
         this.mail = mail;
         this.mailFrom = mailFrom;
+        this.auditService = auditService;
     }
 
     @Transactional
@@ -73,7 +82,7 @@ public class InternacaoService {
                 .orElseThrow(() -> new ResourceNotFoundException("Bay not found."));
 
         User veterinario = userRepository.findByIdAndRoleAndActiveTrue(
-                request.veterinarioId(), ipiranga.fatec.qrvet.models.enums.Role.VETERINARIO)
+                request.veterinarioId(), Role.VETERINARIO)
                 .orElseThrow(() -> new ResourceNotFoundException("Active veterinarian not found."));
 
         baia.occupyAutomatically();
@@ -91,22 +100,27 @@ public class InternacaoService {
                 .build();
         InternacaoResponse response = InternacaoResponse.from(internacaoRepository.saveAndFlush(internacao));
         logger.info("Hospitalization {} opened for patient {}", response.id(), request.pacienteId());
+        auditService.log(AuditAction.HOSPITALIZATION_CREATED, AuditResource.HOSPITALIZATION, String.valueOf(response.id()),
+                Map.of("patientId", request.pacienteId(), "bayId", request.baiaId()));
         return response;
     }
 
     @Transactional(readOnly = true)
     @PreAuthorize("@qrvetSecurity.hasAnyRole('ADMIN', 'VETERINARIO', 'RECEPCIONISTA')")
     public PageResponse<InternacaoResponse> list(PaginationRequest pagination, Long pacienteId, InternacaoStatus status, String q) {
-        String query = q == null || q.isBlank() ? null : q.trim();
+        String query = null;
+        if (q != null && !q.isBlank()) {
+            query = q.trim();
+        }
         return PageResponse.from(internacaoRepository.search(pacienteId, status, query, PaginationUtils.byId(pagination))
                 .map(InternacaoResponse::from));
     }
 
     @Transactional(readOnly = true)
     @PreAuthorize("@qrvetSecurity.hasAnyRole('ADMIN', 'VETERINARIO', 'RECEPCIONISTA')")
-    public java.util.List<VeterinarioResponse> veterinarios() {
+    public List<VeterinarioResponse> veterinarios() {
         return userRepository.findAllByRoleAndActiveTrueAndConfirmedTrueOrderByNameAsc(
-                        ipiranga.fatec.qrvet.models.enums.Role.VETERINARIO).stream()
+                        Role.VETERINARIO).stream()
                 .map(user -> new VeterinarioResponse(user.getId(), user.getName())).toList();
     }
 
@@ -166,7 +180,7 @@ public class InternacaoService {
     }
 
     @Transactional(readOnly = true)
-    public InternacaoPublicResponse publicDetails(java.util.UUID uuidToken) {
+    public InternacaoPublicResponse publicDetails(UUID uuidToken) {
         Internacao internacao = internacaoRepository.findByUuidToken(uuidToken)
                 .orElseThrow(() -> new ResourceNotFoundException("Hospitalization not found."));
         boolean jejumAtivo = jejumRepository.existsByInternacaoIdAndAtivoTrue(internacao.getId());
@@ -195,6 +209,8 @@ public class InternacaoService {
         }
         InternacaoResponse response = InternacaoResponse.from(internacao);
         logger.info("Hospitalization {} closed with status {}", id, request.statusEncerramento());
+        auditService.log(AuditAction.HOSPITALIZATION_UPDATED, AuditResource.HOSPITALIZATION, String.valueOf(id),
+                Map.of("status", request.statusEncerramento().name()));
         return response;
     }
 
