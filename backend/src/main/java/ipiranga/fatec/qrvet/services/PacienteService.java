@@ -11,6 +11,8 @@ import ipiranga.fatec.qrvet.dtos.response.PageResponse;
 import ipiranga.fatec.qrvet.exceptions.ResourceNotFoundException;
 import ipiranga.fatec.qrvet.models.Paciente;
 import ipiranga.fatec.qrvet.models.Tutor;
+import ipiranga.fatec.qrvet.models.enums.AuditAction;
+import ipiranga.fatec.qrvet.models.enums.AuditResource;
 import ipiranga.fatec.qrvet.repositories.PacienteRepository;
 import ipiranga.fatec.qrvet.repositories.TutorRepository;
 import ipiranga.fatec.qrvet.utils.PaginationUtils;
@@ -61,7 +63,7 @@ public class PacienteService {
                 .build();
         PacienteResponse response = PacienteResponse.from(pacienteRepository.saveAndFlush(paciente));
         logger.info("Patient {} created", response.id());
-        auditService.log("PATIENT_CREATED", "patient", String.valueOf(response.id()),
+        auditService.log(AuditAction.PATIENT_CREATED, AuditResource.PATIENT, String.valueOf(response.id()),
                 Map.of("name", response.nome(), "species", response.especie()));
         return response;
     }
@@ -94,7 +96,7 @@ public class PacienteService {
         paciente.setObservacoes(request.observacoes());
         PacienteResponse response = PacienteResponse.from(pacienteRepository.saveAndFlush(paciente));
         logger.info("Patient {} updated", id);
-        auditService.log("PATIENT_UPDATED", "patient", String.valueOf(id),
+        auditService.log(AuditAction.PATIENT_UPDATED, AuditResource.PATIENT, String.valueOf(id),
                 Map.of("name", response.nome(), "species", response.especie()));
         return response;
     }

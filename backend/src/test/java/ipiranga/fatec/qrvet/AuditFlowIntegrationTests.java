@@ -97,12 +97,12 @@ class AuditFlowIntegrationTests {
                 {"pacienteId":%d,"baiaId":%d,"veterinarioId":%d,"motivo":"Observação","diagnosticoInicial":"Avaliação","observacoes":""}
                 """.formatted(patientId, bayId, veterinarian.getId())), receptionist)
                 .andExpect(status().isCreated())).get("id").asLong();
-        assertTrue(awaitAction("INTERNACAO_CREATED", hospitalizationId));
+        assertTrue(awaitAction("HOSPITALIZATION_CREATED", hospitalizationId));
 
         perform(put("/v1/internacoes/" + hospitalizationId + "/encerrar")
                 .content("{\"statusEncerramento\":\"ALTA\"}"), receptionist)
                 .andExpect(status().isOk());
-        assertTrue(awaitAction("INTERNACAO_UPDATED", hospitalizationId));
+        assertTrue(awaitAction("HOSPITALIZATION_UPDATED", hospitalizationId));
     }
 
     private User user(Role role) {

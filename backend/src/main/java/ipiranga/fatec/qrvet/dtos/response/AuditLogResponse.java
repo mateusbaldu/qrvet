@@ -1,6 +1,8 @@
 package ipiranga.fatec.qrvet.dtos.response;
 
 import ipiranga.fatec.qrvet.models.AuditLog;
+import ipiranga.fatec.qrvet.models.enums.AuditAction;
+import ipiranga.fatec.qrvet.models.enums.AuditResource;
 
 import java.time.Instant;
 
@@ -21,8 +23,8 @@ public record AuditLogResponse(
                 auditLog.getUserId(),
                 auditLog.getUserEmail(),
                 auditLog.getIpAddress(),
-                auditLog.getAction(),
-                auditLog.getResourceName(),
+                AuditAction.labelFor(auditLog.getAction()),
+                AuditResource.labelFor(auditLog.getResourceName()),
                 auditLog.getResourceId(),
                 auditLog.getDetails());
     }

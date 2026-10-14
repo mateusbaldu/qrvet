@@ -5,6 +5,8 @@ import org.slf4j.LoggerFactory;
 
 import ipiranga.fatec.qrvet.event.AuditEvent;
 import ipiranga.fatec.qrvet.models.User;
+import ipiranga.fatec.qrvet.models.enums.AuditAction;
+import ipiranga.fatec.qrvet.models.enums.AuditResource;
 import ipiranga.fatec.qrvet.repositories.UserRepository;
 import jakarta.servlet.http.HttpServletRequest;
 import org.springframework.context.ApplicationEventPublisher;
@@ -29,6 +31,10 @@ public class AuditService {
     public void log(String action, String resourceName, String resourceId, Object details) {
         HttpServletRequest request = resolveRequest();
         log(request, action, resourceName, resourceId, details);
+    }
+
+    public void log(AuditAction action, AuditResource resource, String resourceId, Object details) {
+        log(action.code(), resource.code(), resourceId, details);
     }
 
     public void log(HttpServletRequest request, String action, String resourceName, String resourceId, Object details) {

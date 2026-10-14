@@ -18,6 +18,8 @@ import ipiranga.fatec.qrvet.models.User;
 import ipiranga.fatec.qrvet.models.enums.BaiaStatus;
 import ipiranga.fatec.qrvet.models.enums.InternacaoStatus;
 import ipiranga.fatec.qrvet.models.enums.Role;
+import ipiranga.fatec.qrvet.models.enums.AuditAction;
+import ipiranga.fatec.qrvet.models.enums.AuditResource;
 import ipiranga.fatec.qrvet.repositories.*;
 import ipiranga.fatec.qrvet.utils.PaginationUtils;
 import ipiranga.fatec.qrvet.utils.QrCodeService;
@@ -98,7 +100,7 @@ public class InternacaoService {
                 .build();
         InternacaoResponse response = InternacaoResponse.from(internacaoRepository.saveAndFlush(internacao));
         logger.info("Hospitalization {} opened for patient {}", response.id(), request.pacienteId());
-        auditService.log("INTERNACAO_CREATED", "internacao", String.valueOf(response.id()),
+        auditService.log(AuditAction.HOSPITALIZATION_CREATED, AuditResource.HOSPITALIZATION, String.valueOf(response.id()),
                 Map.of("patientId", request.pacienteId(), "bayId", request.baiaId()));
         return response;
     }
@@ -204,7 +206,7 @@ public class InternacaoService {
         }
         InternacaoResponse response = InternacaoResponse.from(internacao);
         logger.info("Hospitalization {} closed with status {}", id, request.statusEncerramento());
-        auditService.log("INTERNACAO_UPDATED", "internacao", String.valueOf(id),
+        auditService.log(AuditAction.HOSPITALIZATION_UPDATED, AuditResource.HOSPITALIZATION, String.valueOf(id),
                 Map.of("status", request.statusEncerramento().name()));
         return response;
     }

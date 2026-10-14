@@ -90,8 +90,8 @@ class AuditLogApiIntegrationTests {
                 .andExpect(jsonPath("$.size").value(1))
                 .andExpect(jsonPath("$.total").value(2))
                 .andExpect(jsonPath("$.pages").value(2))
-                .andExpect(jsonPath("$.items[0].action").value("PATIENT_UPDATED"))
-                .andExpect(jsonPath("$.items[0].resourceName").value("patient"));
+                .andExpect(jsonPath("$.items[0].action").value("Paciente atualizado"))
+                .andExpect(jsonPath("$.items[0].resourceName").value("paciente"));
     }
 
     @Test

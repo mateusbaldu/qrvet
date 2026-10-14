@@ -9,6 +9,8 @@ import ipiranga.fatec.qrvet.dtos.request.*;
 import ipiranga.fatec.qrvet.dtos.response.*;
 import ipiranga.fatec.qrvet.dtos.RecoveryData;
 import ipiranga.fatec.qrvet.models.User;
+import ipiranga.fatec.qrvet.models.enums.AuditAction;
+import ipiranga.fatec.qrvet.models.enums.AuditResource;
 import ipiranga.fatec.qrvet.event.PasswordRecoveryEmailRequested;
 import ipiranga.fatec.qrvet.services.AuditService;
 import ipiranga.fatec.qrvet.exceptions.*;
@@ -55,7 +57,7 @@ public class AuthService {
         User user = users.findByEmailIgnoreCase(request.email().trim()).orElse(null);
         if (user == null || !user.isActive() || !user.isConfirmed()
                 || !user.passwordMatches(request.password(), passwordEncoder)) {
-            audit.log("LOGIN_FAILED", "auth", null, Map.of("email", request.email().trim()));
+            audit.log(AuditAction.LOGIN_FAILED, AuditResource.AUTH, null, Map.of("email", request.email().trim()));
             throw new BadCredentialsException("Invalid credentials");
         }
 
@@ -67,7 +69,7 @@ public class AuthService {
         AccessTokenResponse accessToken = new AccessTokenResponse(tokens.generateAccessToken(user, now));
 
         logger.info("User {} authenticated successfully", user.getId());
-        audit.log("LOGIN_SUCCESS", "auth", String.valueOf(user.getId()),
+        audit.log(AuditAction.LOGIN_SUCCESS, AuditResource.AUTH, String.valueOf(user.getId()),
                 Map.of("email", user.getEmail()));
         return new AuthSession((accessToken), refresh.value());
     }
@@ -98,7 +100,7 @@ public class AuthService {
         Jwt jwt = tokens.decodeRefreshToken(refreshToken);
         sessoes.revokeSession(Long.valueOf(jwt.getSubject()), jwt.getId());
         logger.info("Session revoked for user {}", jwt.getSubject());
-        audit.log("LOGOUT", "auth", jwt.getSubject(), null);
+        audit.log(AuditAction.LOGOUT, AuditResource.AUTH, jwt.getSubject(), null);
     }
 
     @Transactional
@@ -114,7 +116,7 @@ public class AuthService {
         user.setPassword(request.newPassword(), passwordEncoder);
         user.setAuthenticationVersion(user.getAuthenticationVersion() + 1);
         logger.info("Password changed for user {}", user.getId());
-        audit.log("PASSWORD_CHANGED", "auth", String.valueOf(user.getId()), null);
+        audit.log(AuditAction.PASSWORD_CHANGED, AuditResource.AUTH, String.valueOf(user.getId()), null);
     }
 
     @Transactional
@@ -131,7 +133,7 @@ public class AuthService {
 
         try {
             events.publishEvent(new PasswordRecoveryEmailRequested(user.getEmail(), token));
-            audit.log("PASSWORD_RECOVERY_REQUESTED", "auth", String.valueOf(user.getId()),
+            audit.log(AuditAction.PASSWORD_RECOVERY_REQUESTED, AuditResource.AUTH, String.valueOf(user.getId()),
                     Map.of("email", user.getEmail()));
         } catch (org.springframework.mail.MailException e) {
             passwordRecovery.delete(token);
@@ -152,7 +154,7 @@ public class AuthService {
 
         dbUser.setPassword(request.newPassword(), passwordEncoder);
         dbUser.setAuthenticationVersion(dbUser.getAuthenticationVersion() + 1);
-        audit.log("PASSWORD_RESET", "auth", String.valueOf(dbUser.getId()), null);
+        audit.log(AuditAction.PASSWORD_RESET, AuditResource.AUTH, String.valueOf(dbUser.getId()), null);
     }
 
 
