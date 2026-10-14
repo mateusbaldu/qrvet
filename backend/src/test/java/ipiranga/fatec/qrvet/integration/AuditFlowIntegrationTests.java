@@ -1,4 +1,4 @@
-package ipiranga.fatec.qrvet;
+package ipiranga.fatec.qrvet.integration;
 
 import ipiranga.fatec.qrvet.models.AuditLog;
 import ipiranga.fatec.qrvet.models.User;
@@ -8,12 +8,16 @@ import ipiranga.fatec.qrvet.repositories.UserRepository;
 import ipiranga.fatec.qrvet.security.SessionService;
 import ipiranga.fatec.qrvet.security.TokenService;
 import jakarta.servlet.http.Cookie;
+import org.mockito.ArgumentCaptor;
+import org.mockito.Mockito;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.boot.webmvc.test.autoconfigure.AutoConfigureMockMvc;
 import org.springframework.data.redis.core.StringRedisTemplate;
+import org.springframework.data.redis.core.ValueOperations;
+import org.springframework.mail.SimpleMailMessage;
 import org.springframework.mail.javamail.JavaMailSender;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.test.context.ActiveProfiles;
@@ -29,8 +33,14 @@ import java.time.Instant;
 import java.util.List;
 import java.util.UUID;
 
+import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyString;
+import static org.mockito.Mockito.timeout;
+import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.when;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.put;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
@@ -73,6 +83,60 @@ class AuditFlowIntegrationTests {
         AuditLog audit = await("LOGIN_SUCCESS");
         assertFalse(audit.getDetails().contains(PASSWORD));
         assertTrue(audit.getDetails().contains(receptionist.getEmail()));
+    }
+
+    @Test
+    @SuppressWarnings("unchecked")
+    void recoveryAndResetFlowsDoNotExposeTokenOrPasswordInAuditData() throws Exception {
+        ValueOperations<String, String> values = Mockito.mock(ValueOperations.class);
+        when(redis.opsForValue()).thenReturn(values);
+        when(values.setIfAbsent(anyString(), anyString(), any(Duration.class))).thenReturn(true);
+
+        perform(post("/v1/auth/forgot-password").content("""
+                {"email":"%s"}
+                """.formatted(receptionist.getEmail())), null)
+                .andExpect(status().isAccepted());
+
+        ArgumentCaptor<SimpleMailMessage> message = ArgumentCaptor.forClass(SimpleMailMessage.class);
+        verify(mail, timeout(2000)).send(message.capture());
+        String emailBody = message.getValue().getText();
+        assertNotNull(emailBody);
+        String recoveryToken = emailBody.substring(emailBody.lastIndexOf("#token=") + "#token=".length())
+                .split("\\R", 2)[0]
+                .trim();
+        assertFalse(recoveryToken.isBlank());
+
+        AuditLog requested = await("PASSWORD_RECOVERY_REQUESTED");
+        assertFalse(requested.getDetails().contains(recoveryToken));
+        assertFalse(requested.getDetails().contains(PASSWORD));
+        assertFalse(requested.getDetails().toLowerCase().contains("secret"));
+        assertFalse(requested.getDetails().toLowerCase().contains("credential"));
+
+        when(values.getAndDelete("password-recovery:" + recoveryToken))
+                .thenReturn(receptionist.getId() + ":0");
+        perform(post("/v1/auth/reset-password").content("""
+                {"token":"%s","newPassword":"Reset-only-456!"}
+                """.formatted(recoveryToken)), null)
+                .andExpect(status().isNoContent());
+
+        AuditLog reset = await("PASSWORD_RESET");
+        assertTrue(reset.getDetails() == null || !reset.getDetails().contains(recoveryToken));
+        assertTrue(reset.getDetails() == null || !reset.getDetails().contains("Reset-only-456!"));
+    }
+
+    @Test
+    void failedLoginDoesNotPersistPasswordOrCredentialValues() throws Exception {
+        String password = "wrong-password-value";
+
+        perform(post("/v1/auth/login").content("""
+                {"email":"%s","password":"%s"}
+                """.formatted(receptionist.getEmail(), password)), null)
+                .andExpect(status().isInternalServerError());
+
+        AuditLog failed = await("LOGIN_FAILED");
+        assertFalse(failed.getDetails().contains(password));
+        assertFalse(failed.getDetails().toLowerCase().contains("credential"));
+        assertFalse(failed.getDetails().toLowerCase().contains("secret"));
     }
 
     @Test

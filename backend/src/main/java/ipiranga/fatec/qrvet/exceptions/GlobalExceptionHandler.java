@@ -17,10 +17,13 @@ import java.time.Instant;
 import java.util.LinkedHashMap;
 import java.util.Map;
 import java.util.UUID;
+import java.util.regex.Pattern;
 
 @RestControllerAdvice
 public class GlobalExceptionHandler {
     private static final Logger logger = LoggerFactory.getLogger(GlobalExceptionHandler.class);
+    private static final Pattern SENSITIVE_LOG_VALUE = Pattern.compile(
+            "(?i)(password|senha|token|secret|segredo|credential|credencial)\\s*[:=]\\s*[^\\s,;]+");
 
     @ExceptionHandler(MethodArgumentNotValidException.class)
     ResponseEntity<ErrorResponse> validation(MethodArgumentNotValidException e) {
@@ -85,10 +88,18 @@ public class GlobalExceptionHandler {
 
     @ExceptionHandler(Exception.class)
     ResponseEntity<ErrorResponse> unexpected(Exception e) {
-        logger.error("Unexpected application error: {}", e.getMessage(), e);
+        logger.error(
+                "Unexpected application error ({}): {}",
+                e.getClass().getName(),
+                safeLogMessage(e.getMessage()));
         return errorResponse(
                 HttpStatus.INTERNAL_SERVER_ERROR,
                 "Ocorreu um erro inesperado. Tente novamente mais tarde.",
                 Map.of());
+    }
+
+    private String safeLogMessage(String message) {
+        if (message == null) return null;
+        return SENSITIVE_LOG_VALUE.matcher(message).replaceAll("$1=[REDACTED]");
     }
 }

@@ -20,6 +20,7 @@ import ipiranga.fatec.qrvet.services.RegistroAlimentacaoService;
 import jakarta.validation.Valid;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.mail.MailException;
 import org.springframework.web.bind.annotation.*;
 import java.util.List;
 
@@ -90,7 +91,7 @@ public class InternacaoController {
     public ResponseEntity<MessageResponse> emailTutor(@PathVariable Long id) {
         try {
             return ResponseEntity.ok(service.emailTutor(id));
-        } catch (org.springframework.mail.MailException exception) {
+        } catch (MailException exception) {
             return ResponseEntity.status(HttpStatus.BAD_GATEWAY).body(new MessageResponse(
                     "Não foi possível enviar o e-mail. Confira a configuração de e-mail da clínica e tente novamente."));
         }

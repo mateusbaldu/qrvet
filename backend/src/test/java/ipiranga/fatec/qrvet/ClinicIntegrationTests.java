@@ -3,24 +3,51 @@ package ipiranga.fatec.qrvet;
 import ipiranga.fatec.qrvet.models.User;
 import ipiranga.fatec.qrvet.models.enums.Role;
 import ipiranga.fatec.qrvet.repositories.UserRepository;
+import ipiranga.fatec.qrvet.repositories.TutorRepository;
 import ipiranga.fatec.qrvet.security.SessionService;
 import ipiranga.fatec.qrvet.security.TokenService;
 import jakarta.servlet.http.Cookie;
+import jakarta.persistence.EntityManager;
+import javax.imageio.ImageIO;
+import javax.imageio.stream.ImageInputStream;
+import java.awt.image.BufferedImage;
+import java.io.ByteArrayInputStream;
+import java.io.ByteArrayOutputStream;
+import java.io.IOException;
+import java.io.UncheckedIOException;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.util.Base64;
+import java.util.List;
+import java.util.stream.Stream;
+import java.sql.Timestamp;
 import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.boot.webmvc.test.autoconfigure.AutoConfigureMockMvc;
 import org.springframework.data.redis.core.StringRedisTemplate;
 import org.springframework.data.redis.core.ValueOperations;
+import org.springframework.jdbc.core.JdbcTemplate;
+import org.springframework.mail.MailSendException;
 import org.springframework.mail.javamail.JavaMailSender;
+import org.springframework.mock.web.MockMultipartFile;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
+import org.springframework.test.context.DynamicPropertyRegistry;
+import org.springframework.test.context.DynamicPropertySource;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.ResultActions;
 import org.springframework.test.web.servlet.request.MockHttpServletRequestBuilder;
 import org.springframework.transaction.annotation.Transactional;
+import org.mockito.ArgumentCaptor;
+import org.springframework.mail.SimpleMailMessage;
+import com.google.zxing.BinaryBitmap;
+import com.google.zxing.client.j2se.BufferedImageLuminanceSource;
+import com.google.zxing.common.HybridBinarizer;
+import com.google.zxing.qrcode.QRCodeReader;
 import tools.jackson.databind.JsonNode;
 import tools.jackson.databind.json.JsonMapper;
 import java.time.Instant;
@@ -41,24 +68,24 @@ class ClinicIntegrationTests {
     @Autowired UserRepository users;
     @Autowired TokenService tokens;
     @Autowired PasswordEncoder passwords;
-    @Autowired org.springframework.jdbc.core.JdbcTemplate jdbc;
-    @Autowired jakarta.persistence.EntityManager entities;
-    @Autowired ipiranga.fatec.qrvet.repositories.TutorRepository tutors;
-    private static final java.nio.file.Path photoDirectory = temporaryPhotoDirectory();
-    private static java.nio.file.Path temporaryPhotoDirectory() {
-        try { return java.nio.file.Files.createTempDirectory("qrvet-photo-tests-"); }
-        catch (java.io.IOException e) { throw new java.io.UncheckedIOException(e); }
+    @Autowired JdbcTemplate jdbc;
+    @Autowired EntityManager entities;
+    @Autowired TutorRepository tutors;
+    private static final Path photoDirectory = temporaryPhotoDirectory();
+    private static Path temporaryPhotoDirectory() {
+        try { return Files.createTempDirectory("qrvet-photo-tests-"); }
+        catch (IOException e) { throw new UncheckedIOException(e); }
     }
-    @org.springframework.test.context.DynamicPropertySource
-    static void photos(org.springframework.test.context.DynamicPropertyRegistry properties) {
+    @DynamicPropertySource
+    static void photos(DynamicPropertyRegistry properties) {
         properties.add("qrvet.upload-dir", photoDirectory::toString);
     }
-    @org.junit.jupiter.api.AfterAll
+    @AfterAll
     static void cleanupPhotos() throws Exception {
-        try (var files = java.nio.file.Files.list(photoDirectory)) {
-            for (var file : files.toList()) java.nio.file.Files.delete(file);
+        try (Stream<Path> files = Files.list(photoDirectory)) {
+            for (Path file : files.toList()) Files.delete(file);
         }
-        java.nio.file.Files.delete(photoDirectory);
+        Files.delete(photoDirectory);
     }
     @MockitoBean SessionService sessions;
     @MockitoBean StringRedisTemplate redis;
@@ -117,7 +144,7 @@ class ClinicIntegrationTests {
 
     @Test
     void patientAdmissionCareDischargeAndPublicQrUseTheSameRecords() throws Exception {
-        var admission = openHospitalization();
+        JsonNode admission = openHospitalization();
         long id = admission.get("id").asLong();
         long patientId = admission.get("pacienteId").asLong();
         assertEquals("Luna", admission.get("pacienteNome").asText());
@@ -143,7 +170,7 @@ class ClinicIntegrationTests {
 
     @Test
     void careDirectoryDoesNotGrantAccessToPrivatePatientDataOrAdministration() throws Exception {
-        var admission = openHospitalization();
+        JsonNode admission = openHospitalization();
         long id = admission.get("id").asLong();
         perform(get("/v1/internacoes/cuidados"), assistant).andExpect(status().isOk()).andExpect(jsonPath("$.items[0].pacienteNome").value("Luna")).andExpect(jsonPath("$.items[0].diagnosticoInicial").doesNotExist());
         perform(get("/v1/internacoes/" + id), assistant).andExpect(status().isForbidden());
@@ -156,20 +183,20 @@ class ClinicIntegrationTests {
 
     @Test
     void printedQrOpensTheStaffAdmissionAndKeepsTutorAccessSeparate() throws Exception {
-        var admission = openHospitalization();
+        JsonNode admission = openHospitalization();
         long id = admission.get("id").asLong();
-        var qr = body(perform(get("/v1/internacoes/" + id + "/qrcode"), receptionist)
+        JsonNode qr = body(perform(get("/v1/internacoes/" + id + "/qrcode"), receptionist)
                 .andExpect(status().isOk()));
         String staffUrl = "http://localhost:5173/internacoes/" + id;
         String tutorUrl = "http://localhost:5173/public/internacoes/qr/" + admission.get("uuidToken").asText();
         assertEquals(staffUrl, qr.get("url").asText());
         assertEquals(tutorUrl, qr.get("tutorUrl").asText());
         assertEquals("ana@qrvet.test", qr.get("tutorEmail").asText());
-        var image = javax.imageio.ImageIO.read(new java.io.ByteArrayInputStream(
-                java.util.Base64.getDecoder().decode(qr.get("base64").asText())));
-        var bitmap = new com.google.zxing.BinaryBitmap(new com.google.zxing.common.HybridBinarizer(
-                new com.google.zxing.client.j2se.BufferedImageLuminanceSource(image)));
-        assertEquals(staffUrl, new com.google.zxing.qrcode.QRCodeReader().decode(bitmap).getText());
+        BufferedImage image = ImageIO.read(new ByteArrayInputStream(
+                Base64.getDecoder().decode(qr.get("base64").asText())));
+        BinaryBitmap bitmap = new BinaryBitmap(new HybridBinarizer(
+                new BufferedImageLuminanceSource(image)));
+        assertEquals(staffUrl, new QRCodeReader().decode(bitmap).getText());
         perform(get("/v1/internacoes/" + id), null).andExpect(status().isUnauthorized());
         perform(get("/v1/public/internacoes/qr/" + admission.get("uuidToken").asText()), null)
                 .andExpect(status().isOk()).andExpect(jsonPath("$.pacienteNome").value("Luna"))
@@ -179,16 +206,16 @@ class ClinicIntegrationTests {
 
     @Test
     void staffCanEmailThePublicLinkToTheRegisteredTutor() throws Exception {
-        var admission = openHospitalization();
+        JsonNode admission = openHospitalization();
         long id = admission.get("id").asLong();
-        for (User sender : java.util.List.of(admin, vet, receptionist)) {
+        for (User sender : List.of(admin, vet, receptionist)) {
             perform(post("/v1/internacoes/" + id + "/tutor/email"), sender)
                     .andExpect(status().isOk())
                     .andExpect(jsonPath("$.message").value("Link de acompanhamento enviado para ana@qrvet.test."));
         }
-        var messages = org.mockito.ArgumentCaptor.forClass(org.springframework.mail.SimpleMailMessage.class);
+        ArgumentCaptor<SimpleMailMessage> messages = ArgumentCaptor.forClass(SimpleMailMessage.class);
         verify(mail, times(3)).send(messages.capture());
-        for (var message : messages.getAllValues()) {
+        for (SimpleMailMessage message : messages.getAllValues()) {
             assertArrayEquals(new String[] { "ana@qrvet.test" }, message.getTo());
             assertTrue(message.getSubject().contains("Luna"));
             assertTrue(message.getText().contains("Ana Silva"));
@@ -200,15 +227,15 @@ class ClinicIntegrationTests {
 
     @Test
     void tutorEmailRequiresStaffPermissionAndReportsMailFailure() throws Exception {
-        var admission = openHospitalization();
+        JsonNode admission = openHospitalization();
         String path = "/v1/internacoes/" + admission.get("id").asLong() + "/tutor/email";
         perform(post(path), null).andExpect(status().isUnauthorized());
         perform(post(path), assistant).andExpect(status().isForbidden());
         perform(post(path), user(Role.TUTOR, true)).andExpect(status().isForbidden());
         perform(post("/v1/internacoes/9999999/tutor/email"), receptionist).andExpect(status().isNotFound());
         verifyNoInteractions(mail);
-        doThrow(new org.springframework.mail.MailSendException("SMTP unavailable"))
-                .when(mail).send(any(org.springframework.mail.SimpleMailMessage.class));
+        doThrow(new MailSendException("SMTP unavailable"))
+                .when(mail).send(any(SimpleMailMessage.class));
         perform(post(path), receptionist).andExpect(status().isBadGateway())
                 .andExpect(jsonPath("$.message").value(
                         "Não foi possível enviar o e-mail. Confira a configuração de e-mail da clínica e tente novamente."));
@@ -217,13 +244,13 @@ class ClinicIntegrationTests {
     @Test
     @SuppressWarnings("unchecked")
     void invitationCanBeAcceptedWithoutAnAdministratorSession() throws Exception {
-        var pending = user(Role.VETERINARIO, false);
+        User pending = user(Role.VETERINARIO, false);
         String token = UUID.randomUUID().toString();
         ValueOperations<String, String> values = mock(ValueOperations.class);
         when(redis.opsForValue()).thenReturn(values);
         when(values.getAndDelete("invitation:" + token)).thenReturn(pending.getId().toString());
         perform(post("/v1/auth/confirm-invitation").content("{\"token\":\"" + token + "\",\"newPassword\":\"Welcome-123!\"}"), null).andExpect(status().isNoContent());
-        var accepted = users.findById(pending.getId()).orElseThrow();
+        User accepted = users.findById(pending.getId()).orElseThrow();
         assertTrue(accepted.isConfirmed());
         assertTrue(accepted.isActive());
         assertTrue(accepted.passwordMatches("Welcome-123!", passwords));
@@ -231,7 +258,7 @@ class ClinicIntegrationTests {
 
     @Test
     void duplicateAdmissionsAndInvalidFormsAreRejected() throws Exception {
-        var admission = openHospitalization();
+        JsonNode admission = openHospitalization();
         perform(post("/v1/internacoes").content("""
                 {"pacienteId":%d,"baiaId":%d,"veterinarioId":%d,"motivo":"Novo","diagnosticoInicial":"Teste"}
                 """.formatted(admission.get("pacienteId").asLong(), admission.get("baiaId").asLong(), vet.getId())), admin).andExpect(status().isConflict());
@@ -247,7 +274,7 @@ class ClinicIntegrationTests {
                 """;
         perform(post("/v1/pacientes").content(data.replace("8.5", "-1")), receptionist).andExpect(status().isBadRequest());
         assertTrue(tutors.findByEmailIgnoreCase("bia@qrvet.test").isEmpty());
-        var patient = body(perform(post("/v1/pacientes").content(data), receptionist).andExpect(status().isCreated()));
+        JsonNode patient = body(perform(post("/v1/pacientes").content(data), receptionist).andExpect(status().isCreated()));
         long tutorId = patient.get("tutorId").asLong();
         perform(post("/v1/pacientes").content(data), receptionist).andExpect(status().isConflict());
         String update = """
@@ -270,16 +297,16 @@ class ClinicIntegrationTests {
 
     @Test
     void feedingChecklistRespectsFastingAndCompletesExactlyOnceWithAuditTrail() throws Exception {
-        var admission = openHospitalization();
+        JsonNode admission = openHospitalization();
         long id = admission.get("id").asLong();
-        var time = Instant.now().plusSeconds(3600);
-        var item = schedule(id, time);
+        Instant time = Instant.now().plusSeconds(3600);
+        JsonNode item = schedule(id, time);
         String path = "/v1/internacoes/" + id + "/alimentacao/agenda/" + item.get("id").asLong();
         perform(put(path + "/concluir").content("{}"), assistant).andExpect(status().isBadRequest());
         perform(get("/v1/alimentacao/agenda").param("inicio", time.minusSeconds(1).toString()).param("fim", time.plusSeconds(1).toString()), assistant)
                 .andExpect(status().isOk()).andExpect(jsonPath("$[0].pacienteNome").value("Luna"));
         // Make this meal due without sleeping; the API still rejects past times on creation.
-        jdbc.update("update alimentacao_agendada set horario = ? where id = ?", java.sql.Timestamp.from(Instant.now().minusSeconds(60)), item.get("id").asLong());
+        jdbc.update("update alimentacao_agendada set horario = ? where id = ?", Timestamp.from(Instant.now().minusSeconds(60)), item.get("id").asLong());
         entities.clear();
         perform(post("/v1/internacoes/" + id + "/jejum").content("{\"motivo\":\"Exame\"}"), vet).andExpect(status().isCreated());
         perform(put(path + "/concluir").content("{}"), assistant).andExpect(status().isBadRequest());
@@ -298,8 +325,8 @@ class ClinicIntegrationTests {
     @Test
     void schedulesRejectDuplicatesAndClosedAdmissionsCancelPendingMeals() throws Exception {
         long id = openHospitalization().get("id").asLong();
-        var time = Instant.now().plusSeconds(3600);
-        var item = schedule(id, time);
+        Instant time = Instant.now().plusSeconds(3600);
+        JsonNode item = schedule(id, time);
         String create = "/v1/internacoes/" + id + "/alimentacao/agenda";
         perform(post(create).content("""
                 {"alimento":"Ração","quantidade":"40 g","horarios":["%s","%s"]}
@@ -309,7 +336,7 @@ class ClinicIntegrationTests {
                 """.formatted(Instant.now().minusSeconds(10))), assistant).andExpect(status().isBadRequest());
         perform(get("/v1/alimentacao/agenda").param("inicio", time.minusSeconds(1).toString()).param("fim", time.plusSeconds(7200).toString()), vet)
                 .andExpect(jsonPath("$.length()").value(1));
-        var other = schedule(id, time.plusSeconds(3600));
+        JsonNode other = schedule(id, time.plusSeconds(3600));
         String otherPath = create + "/" + other.get("id").asLong();
         perform(put(otherPath + "/cancelar").content("{\"motivo\":\"Mudança na dieta\"}"), vet).andExpect(status().isOk())
                 .andExpect(jsonPath("$.motivoCancelamento").value("Mudança na dieta"));
@@ -326,16 +353,16 @@ class ClinicIntegrationTests {
     void localPhotoUploadValidatesBytesAndRequiresPrivatePatientAccess() throws Exception {
         long id = openHospitalization().get("pacienteId").asLong();
         String path = "/v1/pacientes/" + id + "/foto";
-        var output = new java.io.ByteArrayOutputStream();
-        javax.imageio.ImageIO.write(new java.awt.image.BufferedImage(24, 24, java.awt.image.BufferedImage.TYPE_INT_RGB), "png", output);
-        var photo = new org.springframework.mock.web.MockMultipartFile("foto", "../../foto.png", "image/png", output.toByteArray());
+        ByteArrayOutputStream output = new ByteArrayOutputStream();
+        ImageIO.write(new BufferedImage(24, 24, BufferedImage.TYPE_INT_RGB), "png", output);
+        MockMultipartFile photo = new MockMultipartFile("foto", "../../foto.png", "image/png", output.toByteArray());
         mvc.perform(multipart(path).file(photo).header("Authorization", "Bearer " + tokens.generateAccessToken(receptionist, Instant.now()))
                 .cookie(new Cookie("XSRF-TOKEN", "test-csrf")).header("X-XSRF-TOKEN", "test-csrf"))
                 .andExpect(status().isOk()).andExpect(jsonPath("$.fotoVersao").isNotEmpty());
         perform(get(path), receptionist).andExpect(status().isOk()).andExpect(content().contentType("image/jpeg"));
         perform(get(path), assistant).andExpect(status().isForbidden());
         perform(get(path), null).andExpect(status().isUnauthorized());
-        mvc.perform(multipart(path).file(new org.springframework.mock.web.MockMultipartFile("foto", "fake.png", "image/png", "<svg>fake</svg>".getBytes()))
+        mvc.perform(multipart(path).file(new MockMultipartFile("foto", "fake.png", "image/png", "<svg>fake</svg>".getBytes()))
                 .header("Authorization", "Bearer " + tokens.generateAccessToken(vet, Instant.now()))
                 .cookie(new Cookie("XSRF-TOKEN", "test-csrf")).header("X-XSRF-TOKEN", "test-csrf"))
                 .andExpect(status().isBadRequest());

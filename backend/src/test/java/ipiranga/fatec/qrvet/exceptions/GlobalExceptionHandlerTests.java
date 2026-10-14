@@ -1,9 +1,11 @@
 package ipiranga.fatec.qrvet.exceptions;
 
+import ipiranga.fatec.qrvet.dtos.response.ErrorResponse;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.springframework.boot.test.system.CapturedOutput;
 import org.springframework.boot.test.system.OutputCaptureExtension;
+import org.springframework.http.ResponseEntity;
 import org.springframework.http.HttpStatus;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
@@ -16,7 +18,8 @@ class GlobalExceptionHandlerTests {
 
     @Test
     void handledExceptionReturnsBadRequestAndWritesWarning(CapturedOutput output) {
-        var response = handler.invalidRequest(new InvalidRequestException("Invalid request"));
+        ResponseEntity<ErrorResponse> response =
+                handler.invalidRequest(new InvalidRequestException("Invalid request"));
 
         assertEquals(HttpStatus.BAD_REQUEST, response.getStatusCode());
         assertEquals("BAD_REQUEST", response.getBody().codigo());
@@ -26,7 +29,8 @@ class GlobalExceptionHandlerTests {
 
     @Test
     void unexpectedExceptionReturnsInternalServerErrorAndWritesError(CapturedOutput output) {
-        var response = handler.unexpected(new IllegalStateException("unexpected failure"));
+        ResponseEntity<ErrorResponse> response =
+                handler.unexpected(new IllegalStateException("unexpected failure"));
 
         assertEquals(HttpStatus.INTERNAL_SERVER_ERROR, response.getStatusCode());
         assertEquals("INTERNAL_SERVER_ERROR", response.getBody().codigo());
@@ -44,5 +48,22 @@ class GlobalExceptionHandlerTests {
 
         assertFalse(output.getOut().contains(password));
         assertFalse(output.getOut().contains(token));
+    }
+
+    @Test
+    void unexpectedLogsRedactSensitiveExceptionValues(CapturedOutput output) {
+        String password = "plain-password-value";
+        String token = "recovery-token-value";
+        String secret = "application-secret-value";
+        String credential = "credential-value";
+
+        handler.unexpected(new IllegalStateException(
+                "password=" + password + " token=" + token
+                        + " secret=" + secret + " credential=" + credential));
+
+        assertFalse(output.getOut().contains(password));
+        assertFalse(output.getOut().contains(token));
+        assertFalse(output.getOut().contains(secret));
+        assertFalse(output.getOut().contains(credential));
     }
 }

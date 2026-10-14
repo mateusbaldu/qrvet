@@ -1,4 +1,4 @@
-package ipiranga.fatec.qrvet;
+package ipiranga.fatec.qrvet.controllers;
 
 import ipiranga.fatec.qrvet.models.AuditLog;
 import ipiranga.fatec.qrvet.models.User;
@@ -19,8 +19,8 @@ import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.test.web.servlet.MockMvc;
-import org.springframework.test.web.servlet.request.MockHttpServletRequestBuilder;
 import org.springframework.test.web.servlet.ResultActions;
+import org.springframework.test.web.servlet.request.MockHttpServletRequestBuilder;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.Instant;

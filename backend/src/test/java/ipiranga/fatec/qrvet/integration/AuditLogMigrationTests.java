@@ -1,4 +1,4 @@
-package ipiranga.fatec.qrvet;
+package ipiranga.fatec.qrvet.integration;
 
 import org.flywaydb.core.Flyway;
 import org.junit.jupiter.api.Test;
@@ -8,6 +8,7 @@ import org.testcontainers.junit.jupiter.Testcontainers;
 
 import java.sql.DatabaseMetaData;
 import java.sql.Connection;
+import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.sql.Types;
@@ -34,7 +35,7 @@ class AuditLogMigrationTests {
                 .load()
                 .migrate();
 
-        try (var connection = mysql.createConnection("")) {
+        try (Connection connection = mysql.createConnection("")) {
             assertEquals("audit_logs", tableName(connection));
 
             Map<String, ColumnMetadata> columns = columns(connection);
@@ -54,7 +55,7 @@ class AuditLogMigrationTests {
     }
 
     private int timestampPrecision(Connection connection) throws SQLException {
-        try (var statement = connection.prepareStatement("""
+        try (PreparedStatement statement = connection.prepareStatement("""
                 SELECT DATETIME_PRECISION
                 FROM information_schema.columns
                 WHERE table_schema = DATABASE()

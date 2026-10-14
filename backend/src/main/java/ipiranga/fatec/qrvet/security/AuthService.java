@@ -19,6 +19,7 @@ import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.security.authentication.BadCredentialsException;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.security.oauth2.jwt.Jwt;
+import org.springframework.mail.MailException;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -135,7 +136,7 @@ public class AuthService {
             events.publishEvent(new PasswordRecoveryEmailRequested(user.getEmail(), token));
             audit.log(AuditAction.PASSWORD_RECOVERY_REQUESTED, AuditResource.AUTH, String.valueOf(user.getId()),
                     Map.of("email", user.getEmail()));
-        } catch (org.springframework.mail.MailException e) {
+        } catch (MailException e) {
             passwordRecovery.delete(token);
         }
     }

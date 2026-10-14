@@ -1,7 +1,5 @@
-package ipiranga.fatec.qrvet;
+package ipiranga.fatec.qrvet.event;
 
-import ipiranga.fatec.qrvet.event.AuditEvent;
-import ipiranga.fatec.qrvet.event.AuditEventListener;
 import ipiranga.fatec.qrvet.repositories.AuditLogRepository;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;

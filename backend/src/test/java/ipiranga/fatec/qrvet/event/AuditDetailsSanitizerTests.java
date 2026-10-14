@@ -1,7 +1,7 @@
-package ipiranga.fatec.qrvet;
+package ipiranga.fatec.qrvet.event;
 
+import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import ipiranga.fatec.qrvet.event.AuditDetailsSanitizer;
 import org.junit.jupiter.api.Test;
 
 import java.util.List;
@@ -14,13 +14,13 @@ class AuditDetailsSanitizerTests {
 
     @Test
     void redactsSensitiveFieldsRecursively() {
-        var details = Map.of(
+        Map<String, Object> details = Map.of(
                 "email", "user@example.com",
                 "password", "plain-secret",
                 "nested", Map.of("recoveryToken", "token-value"),
                 "items", List.of(Map.of("clientSecret", "secret-value")));
 
-        var sanitized = sanitizer.sanitize(details);
+        JsonNode sanitized = sanitizer.sanitize(details);
 
         assertEquals("user@example.com", sanitized.get("email").asText());
         assertEquals("[REDACTED]", sanitized.get("password").asText());

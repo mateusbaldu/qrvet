@@ -16,14 +16,21 @@ import org.springframework.transaction.support.TransactionSynchronization;
 import org.springframework.transaction.support.TransactionSynchronizationManager;
 import org.springframework.web.multipart.MultipartFile;
 import javax.imageio.ImageIO;
+import javax.imageio.IIOException;
+import javax.imageio.ImageReader;
+import javax.imageio.stream.ImageInputStream;
 import java.awt.Color;
+import java.awt.Graphics2D;
 import java.awt.RenderingHints;
 import java.awt.image.BufferedImage;
 import java.io.IOException;
 import java.io.UncheckedIOException;
 import java.nio.file.Files;
+import java.nio.file.NoSuchFileException;
 import java.nio.file.Path;
 import java.util.UUID;
+import java.io.ByteArrayInputStream;
+import java.util.Iterator;
 
 @Service
 @PreAuthorize("@qrvetSecurity.hasAnyRole('ADMIN', 'VETERINARIO', 'RECEPCIONISTA')")
@@ -43,10 +50,10 @@ public class PacienteFotoService {
         if (file.isEmpty() || file.getSize() > 5 * 1024 * 1024)
             throw new InvalidRequestException("Escolha uma foto JPG ou PNG de até 5 MB.");
         String name = UUID.randomUUID() + ".jpg";
-        try (javax.imageio.stream.ImageInputStream input = ImageIO.createImageInputStream(new java.io.ByteArrayInputStream(file.getBytes()))) {
-            java.util.Iterator<javax.imageio.ImageReader> readers = ImageIO.getImageReaders(input);
+        try (ImageInputStream input = ImageIO.createImageInputStream(new ByteArrayInputStream(file.getBytes()))) {
+            Iterator<ImageReader> readers = ImageIO.getImageReaders(input);
             if (!readers.hasNext()) throw invalidImage();
-            javax.imageio.ImageReader reader = readers.next();
+            ImageReader reader = readers.next();
             try {
                 reader.setInput(input);
                 String format = reader.getFormatName();
@@ -56,7 +63,7 @@ public class PacienteFotoService {
                 BufferedImage original = reader.read(0);
                 double scale = Math.min(1, 1280.0 / Math.max(width, height));
                 BufferedImage resized = new BufferedImage(Math.max(1, (int) (width * scale)), Math.max(1, (int) (height * scale)), BufferedImage.TYPE_INT_RGB);
-                java.awt.Graphics2D graphics = resized.createGraphics();
+                Graphics2D graphics = resized.createGraphics();
                 try {
                     graphics.setColor(Color.WHITE);
                     graphics.fillRect(0, 0, resized.getWidth(), resized.getHeight());
@@ -67,7 +74,7 @@ public class PacienteFotoService {
                 cleanupAfterTransaction(patient.getFotoArquivo(), name);
                 ImageIO.write(resized, "jpg", directory.resolve(name).toFile());
             } finally { reader.dispose(); }
-        } catch (javax.imageio.IIOException e) { throw invalidImage(); }
+        } catch (IIOException e) { throw invalidImage(); }
         catch (IOException e) { throw new UncheckedIOException("Não foi possível armazenar a foto.", e); }
         patient.setFotoArquivo(name);
         return PacienteResponse.from(patients.saveAndFlush(patient));
@@ -78,7 +85,7 @@ public class PacienteFotoService {
         Paciente patient = patients.findById(id).orElseThrow(() -> new ResourceNotFoundException("Patient not found."));
         if (patient.getFotoArquivo() == null) throw new ResourceNotFoundException("Paciente sem foto.");
         try { return Files.readAllBytes(directory.resolve(patient.getFotoArquivo())); }
-        catch (java.nio.file.NoSuchFileException e) { throw new ResourceNotFoundException("Foto não encontrada no armazenamento local."); }
+        catch (NoSuchFileException e) { throw new ResourceNotFoundException("Foto não encontrada no armazenamento local."); }
         catch (IOException e) { throw new UncheckedIOException(e); }
     }
 
