@@ -108,7 +108,10 @@ public class InternacaoService {
     @Transactional(readOnly = true)
     @PreAuthorize("@qrvetSecurity.hasAnyRole('ADMIN', 'VETERINARIO', 'RECEPCIONISTA')")
     public PageResponse<InternacaoResponse> list(PaginationRequest pagination, Long pacienteId, InternacaoStatus status, String q) {
-        String query = q == null || q.isBlank() ? null : q.trim();
+        String query = null;
+        if (q != null && !q.isBlank()) {
+            query = q.trim();
+        }
         return PageResponse.from(internacaoRepository.search(pacienteId, status, query, PaginationUtils.byId(pagination))
                 .map(InternacaoResponse::from));
     }

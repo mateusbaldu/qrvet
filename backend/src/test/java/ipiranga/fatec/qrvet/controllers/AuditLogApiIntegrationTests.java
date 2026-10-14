@@ -104,7 +104,11 @@ class AuditLogApiIntegrationTests {
         AuditLog log = new AuditLog();
         log.setTimestamp(timestamp);
         log.setUserId(userId);
-        log.setUserEmail(userId.equals(admin.getId()) ? admin.getEmail() : receptionist.getEmail());
+        String userEmail = receptionist.getEmail();
+        if (userId.equals(admin.getId())) {
+            userEmail = admin.getEmail();
+        }
+        log.setUserEmail(userEmail);
         log.setIpAddress("127.0.0.1");
         log.setAction(action);
         log.setResourceName(resourceName);

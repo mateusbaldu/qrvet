@@ -24,6 +24,7 @@ import java.sql.Timestamp;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.ExtendWith;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.boot.webmvc.test.autoconfigure.AutoConfigureMockMvc;
@@ -38,6 +39,8 @@ import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.test.context.DynamicPropertyRegistry;
 import org.springframework.test.context.DynamicPropertySource;
+import org.springframework.boot.test.system.CapturedOutput;
+import org.springframework.boot.test.system.OutputCaptureExtension;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.ResultActions;
 import org.springframework.test.web.servlet.request.MockHttpServletRequestBuilder;
@@ -63,6 +66,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 @AutoConfigureMockMvc
 @ActiveProfiles("test")
 @Transactional
+@ExtendWith(OutputCaptureExtension.class)
 class ClinicIntegrationTests {
     @Autowired MockMvc mvc;
     @Autowired UserRepository users;
@@ -166,6 +170,24 @@ class ClinicIntegrationTests {
         perform(get("/v1/internacoes/" + id + "/cuidados"), assistant).andExpect(jsonPath("$.status").value("ALTA"));
         perform(post("/v1/internacoes/" + id + "/alimentacao").content("{\"alimento\":\"Ração\",\"quantidade\":\"40 g\"}"), assistant).andExpect(status().isBadRequest());
         perform(get("/v1/internacoes/" + id + "/qrcode"), receptionist).andExpect(status().isOk()).andExpect(jsonPath("$.base64").isNotEmpty());
+    }
+
+    @Test
+    void hospitalizationLogsOperationStartAndCompletionAtInfoWithoutSensitiveData(
+            CapturedOutput output) throws Exception {
+        JsonNode admission = openHospitalization();
+        long patientId = admission.get("pacienteId").asLong();
+        long hospitalizationId = admission.get("id").asLong();
+        long bayId = admission.get("baiaId").asLong();
+
+        assertTrue(output.getOut().contains("INFO"));
+        assertTrue(output.getOut().contains(
+                "Opening hospitalization for patient " + patientId + " in bay " + bayId));
+        assertTrue(output.getOut().contains(
+                "Hospitalization " + hospitalizationId + " opened for patient " + patientId));
+        assertFalse(output.getOut().contains("Test-only-123!"));
+        assertFalse(output.getOut().toLowerCase().contains("password"));
+        assertFalse(output.getOut().toLowerCase().contains("credential"));
     }
 
     @Test

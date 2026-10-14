@@ -39,9 +39,15 @@ public class AuditService {
 
     public void log(HttpServletRequest request, String action, String resourceName, String resourceId, Object details) {
         User currentUser = resolveCurrentUser();
+        Long userId = null;
+        String userEmail = null;
+        if (currentUser != null) {
+            userId = currentUser.getId();
+            userEmail = currentUser.getEmail();
+        }
         events.publishEvent(new AuditEvent(
-                currentUser != null ? currentUser.getId() : null,
-                currentUser != null ? currentUser.getEmail() : null,
+                userId,
+                userEmail,
                 extractClientIpAddress(request),
                 action,
                 resourceName,
