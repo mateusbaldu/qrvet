@@ -1,5 +1,8 @@
 package ipiranga.fatec.qrvet.services;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
 import ipiranga.fatec.qrvet.dtos.request.AgendaAlimentacaoRequest;
 import ipiranga.fatec.qrvet.dtos.request.RegistroAlimentacaoRequest;
 import ipiranga.fatec.qrvet.dtos.response.AgendaAlimentacaoResponse;
@@ -18,6 +21,7 @@ import java.util.*;
 @Service
 @PreAuthorize("@qrvetSecurity.hasAnyRole('ADMIN', 'VETERINARIO', 'AUXILIAR_TECNICO')")
 public class AgendaAlimentacaoService {
+    private static final Logger logger = LoggerFactory.getLogger(AgendaAlimentacaoService.class);
     private final AlimentacaoAgendadaRepository agenda;
     private final InternacaoRepository admissions;
     private final JejumRepository fasts;

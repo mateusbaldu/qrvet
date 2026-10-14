@@ -1,5 +1,8 @@
 package ipiranga.fatec.qrvet.services;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
 import ipiranga.fatec.qrvet.dtos.request.PacienteRequest;
 import ipiranga.fatec.qrvet.dtos.request.PaginationRequest;
 import ipiranga.fatec.qrvet.dtos.filter.PacienteSearchFilter;
@@ -19,6 +22,7 @@ import org.springframework.transaction.annotation.Transactional;
 @Service
 @PreAuthorize("@qrvetSecurity.hasAnyRole('ADMIN', 'VETERINARIO', 'RECEPCIONISTA')")
 public class PacienteService {
+    private static final Logger logger = LoggerFactory.getLogger(PacienteService.class);
     private final PacienteRepository pacienteRepository;
     private final TutorRepository tutorRepository;
     private final TutorService tutorService;
@@ -31,6 +35,7 @@ public class PacienteService {
 
     @Transactional
     public PacienteResponse create(PacienteRequest request) {
+        logger.info("Creating patient record");
         Long tutorId;
         if (request.novoTutor() == null) {
             tutorId = request.tutorId();
@@ -49,7 +54,9 @@ public class PacienteService {
                 .peso(request.peso())
                 .observacoes(request.observacoes())
                 .build();
-        return PacienteResponse.from(pacienteRepository.saveAndFlush(paciente));
+        PacienteResponse response = PacienteResponse.from(pacienteRepository.saveAndFlush(paciente));
+        logger.info("Patient {} created", response.id());
+        return response;
     }
 
     @Transactional(readOnly = true)
@@ -60,6 +67,7 @@ public class PacienteService {
 
     @Transactional
     public PacienteResponse update(Long id, PacienteRequest request) {
+        logger.info("Updating patient {}", id);
         Paciente paciente = pacienteRepository.findByIdForUpdate(id)
                 .orElseThrow(() -> new ResourceNotFoundException("Patient not found."));
         Long tutorId;
@@ -77,7 +85,9 @@ public class PacienteService {
         paciente.setDataNascimento(request.dataNascimento());
         paciente.setPeso(request.peso());
         paciente.setObservacoes(request.observacoes());
-        return PacienteResponse.from(pacienteRepository.saveAndFlush(paciente));
+        PacienteResponse response = PacienteResponse.from(pacienteRepository.saveAndFlush(paciente));
+        logger.info("Patient {} updated", id);
+        return response;
     }
 
     @Transactional(readOnly = true)

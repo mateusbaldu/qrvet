@@ -1,5 +1,8 @@
 package ipiranga.fatec.qrvet.controllers;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
 import ipiranga.fatec.qrvet.dtos.request.EncerramentoInternacaoRequest;
 import ipiranga.fatec.qrvet.dtos.request.InternacaoRequest;
 import ipiranga.fatec.qrvet.dtos.request.JejumRequest;
@@ -23,6 +26,7 @@ import java.util.List;
 @RestController
 @RequestMapping("/v1/internacoes")
 public class InternacaoController {
+    private static final Logger logger = LoggerFactory.getLogger(InternacaoController.class);
     private final InternacaoService service;
     private final JejumService jejumService;
     private final RegistroAlimentacaoService alimentacaoService;

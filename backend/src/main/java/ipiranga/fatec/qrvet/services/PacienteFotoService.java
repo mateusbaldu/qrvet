@@ -1,5 +1,8 @@
 package ipiranga.fatec.qrvet.services;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
 import ipiranga.fatec.qrvet.dtos.response.PacienteResponse;
 import ipiranga.fatec.qrvet.exceptions.InvalidRequestException;
 import ipiranga.fatec.qrvet.exceptions.ResourceNotFoundException;
@@ -25,6 +28,7 @@ import java.util.UUID;
 @Service
 @PreAuthorize("@qrvetSecurity.hasAnyRole('ADMIN', 'VETERINARIO', 'RECEPCIONISTA')")
 public class PacienteFotoService {
+    private static final Logger logger = LoggerFactory.getLogger(PacienteFotoService.class);
     private final PacienteRepository patients;
     private final Path directory;
 

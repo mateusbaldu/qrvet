@@ -1,5 +1,8 @@
 package ipiranga.fatec.qrvet.services;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
 import ipiranga.fatec.qrvet.dtos.request.PaginationRequest;
 import ipiranga.fatec.qrvet.dtos.request.ResetPasswordRequest;
 import ipiranga.fatec.qrvet.dtos.request.UserRequest;
@@ -29,6 +32,7 @@ import java.util.UUID;
 @Service
 @PreAuthorize("hasRole('ADMIN')")
 public class UserService {
+    private static final Logger logger = LoggerFactory.getLogger(UserService.class);
     private static final int MAX_PAGE_SIZE = 100;
     private final UserRepository repository;
     private final PasswordEncoder encoder;
@@ -58,6 +62,7 @@ public class UserService {
     @Transactional
     public UserResponse createUser(UserRequest userRequest) {
         String email = userRequest.email().trim().toLowerCase(Locale.ROOT);
+        logger.info("Creating user account for email {}", email);
         if (repository.findByEmailIgnoreCase(email).isPresent())
             throw new ResourceAlreadyExistsException("User with this email already exists.");
 
@@ -73,12 +78,14 @@ public class UserService {
         repository.saveAndFlush(newUser);
         sendInvitationToUserById(newUser.getId());
 
+        logger.info("User {} created", newUser.getId());
         return UserResponse.from(newUser);
     }
 
 
     @Transactional
     public void sendInvitationToUserById(Long id) {
+        logger.info("Sending invitation to user {}", id);
         User dbUser = repository.findUserByIdWithLock(id)
                 .orElseThrow(() -> new ResourceNotFoundException("User not found."));
         dbUser.validateConfirmed();
@@ -110,6 +117,7 @@ public class UserService {
         dbUser.setConfirmed(true);
         dbUser.setActive(true);
         dbUser.setAuthenticationVersion(dbUser.getAuthenticationVersion() + 1);
+        logger.info("User {} confirmed invitation", dbUser.getId());
     }
 
 

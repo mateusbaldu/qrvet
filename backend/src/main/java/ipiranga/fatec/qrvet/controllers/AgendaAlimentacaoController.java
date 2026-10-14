@@ -1,5 +1,8 @@
 package ipiranga.fatec.qrvet.controllers;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
 import ipiranga.fatec.qrvet.dtos.request.AgendaAlimentacaoRequest;
 import ipiranga.fatec.qrvet.dtos.response.AgendaAlimentacaoResponse;
 import ipiranga.fatec.qrvet.services.AgendaAlimentacaoService;
@@ -13,6 +16,7 @@ import java.util.List;
 @RestController
 @RequestMapping("/v1")
 public class AgendaAlimentacaoController {
+    private static final Logger logger = LoggerFactory.getLogger(AgendaAlimentacaoController.class);
     private final AgendaAlimentacaoService service;
     public AgendaAlimentacaoController(AgendaAlimentacaoService service) { this.service = service; }
     public record ConclusaoRequest(@Size(max = 10000) String observacao) {}

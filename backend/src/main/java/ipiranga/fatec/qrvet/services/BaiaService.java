@@ -1,5 +1,8 @@
 package ipiranga.fatec.qrvet.services;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
 import ipiranga.fatec.qrvet.dtos.request.BaiaDetailsRequest;
 import ipiranga.fatec.qrvet.dtos.request.BaiaRequest;
 import ipiranga.fatec.qrvet.dtos.request.BaiaStatusRequest;
@@ -22,6 +25,7 @@ import org.springframework.transaction.annotation.Transactional;
 
 @Service
 public class BaiaService {
+    private static final Logger logger = LoggerFactory.getLogger(BaiaService.class);
     private final BaiaRepository repository;
 
     public BaiaService(BaiaRepository repository) {

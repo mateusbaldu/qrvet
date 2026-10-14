@@ -1,5 +1,8 @@
 package ipiranga.fatec.qrvet.controllers;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
 import ipiranga.fatec.qrvet.dtos.request.PacienteRequest;
 import ipiranga.fatec.qrvet.dtos.request.PaginationRequest;
 import ipiranga.fatec.qrvet.dtos.filter.PacienteSearchFilter;
@@ -14,6 +17,7 @@ import org.springframework.web.bind.annotation.*;
 @RestController
 @RequestMapping("/v1/pacientes")
 public class PacienteController {
+    private static final Logger logger = LoggerFactory.getLogger(PacienteController.class);
     private final PacienteService service;
     private final ipiranga.fatec.qrvet.services.PacienteFotoService photos;
     public PacienteController(PacienteService service, ipiranga.fatec.qrvet.services.PacienteFotoService photos) {

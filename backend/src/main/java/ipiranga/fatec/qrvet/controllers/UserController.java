@@ -1,5 +1,8 @@
 package ipiranga.fatec.qrvet.controllers;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
 import ipiranga.fatec.qrvet.dtos.request.PaginationRequest;
 import ipiranga.fatec.qrvet.dtos.request.ResetPasswordRequest;
 import ipiranga.fatec.qrvet.dtos.request.UserRequest;
@@ -14,6 +17,7 @@ import org.springframework.web.bind.annotation.*;
 @RestController
 @RequestMapping("/v1")
 public class UserController {
+    private static final Logger logger = LoggerFactory.getLogger(UserController.class);
     private final UserService service;
 
     public UserController(UserService service) {
@@ -29,6 +33,7 @@ public class UserController {
 
     @PostMapping("/users")
     public ResponseEntity<UserResponse> create(@Valid @RequestBody UserRequest r) {
+        logger.info("Processing user creation request");
         return ResponseEntity.status(HttpStatus.CREATED).body(service.createUser(r));
     }
 

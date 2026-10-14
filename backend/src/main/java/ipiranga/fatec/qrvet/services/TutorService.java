@@ -1,5 +1,8 @@
 package ipiranga.fatec.qrvet.services;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
 import ipiranga.fatec.qrvet.dtos.filter.TutorSearchFilter;
 import ipiranga.fatec.qrvet.dtos.request.PaginationRequest;
 import ipiranga.fatec.qrvet.dtos.request.TutorRequest;
@@ -20,6 +23,7 @@ import java.util.Locale;
 @Service
 @PreAuthorize("@qrvetSecurity.hasAnyRole('ADMIN', 'VETERINARIO', 'RECEPCIONISTA')")
 public class TutorService {
+    private static final Logger logger = LoggerFactory.getLogger(TutorService.class);
     private final TutorRepository repository;
 
     public TutorService(TutorRepository repository) {
