@@ -1,9 +1,10 @@
 package ipiranga.fatec.qrvet.config;
 
-import ipiranga.fatec.qrvet.dtos.request.BootstrapAdminRequest;
-import ipiranga.fatec.qrvet.services.BootstrapService;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+
+import ipiranga.fatec.qrvet.dtos.request.BootstrapAdminRequest;
+import ipiranga.fatec.qrvet.services.BootstrapService;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.ApplicationRunner;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;

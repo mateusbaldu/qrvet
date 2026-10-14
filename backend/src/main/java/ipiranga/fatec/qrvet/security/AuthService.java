@@ -1,27 +1,36 @@
 package ipiranga.fatec.qrvet.security;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
 import ipiranga.fatec.qrvet.dtos.AuthSession;
 import ipiranga.fatec.qrvet.dtos.RefreshToken;
 import ipiranga.fatec.qrvet.dtos.request.*;
 import ipiranga.fatec.qrvet.dtos.response.*;
 import ipiranga.fatec.qrvet.dtos.RecoveryData;
 import ipiranga.fatec.qrvet.models.User;
+import ipiranga.fatec.qrvet.models.enums.AuditAction;
+import ipiranga.fatec.qrvet.models.enums.AuditResource;
 import ipiranga.fatec.qrvet.event.PasswordRecoveryEmailRequested;
+import ipiranga.fatec.qrvet.services.AuditService;
 import ipiranga.fatec.qrvet.exceptions.*;
 import ipiranga.fatec.qrvet.repositories.UserRepository;
 import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.security.authentication.BadCredentialsException;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.security.oauth2.jwt.Jwt;
+import org.springframework.mail.MailException;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.nio.charset.StandardCharsets;
 import java.time.Instant;
+import java.util.Map;
 import java.util.UUID;
 
 @Service
 public class AuthService {
+    private static final Logger logger = LoggerFactory.getLogger(AuthService.class);
     private final UserRepository users;
     private final PasswordEncoder passwordEncoder;
     private final TokenService tokens;
@@ -29,8 +38,9 @@ public class AuthService {
     private final SessionService sessoes;
     private final PasswordRecoveryService passwordRecovery;
     private final ApplicationEventPublisher events;
+    private final AuditService audit;
 
-    public AuthService(UserRepository users, PasswordEncoder passwordEncoder, TokenService tokens, CurrentUser current, SessionService sessoes, PasswordRecoveryService passwordRecovery, ApplicationEventPublisher events) {
+    public AuthService(UserRepository users, PasswordEncoder passwordEncoder, TokenService tokens, CurrentUser current, SessionService sessoes, PasswordRecoveryService passwordRecovery, ApplicationEventPublisher events, AuditService audit) {
         this.users = users;
         this.passwordEncoder = passwordEncoder;
         this.tokens = tokens;
@@ -38,17 +48,17 @@ public class AuthService {
         this.sessoes = sessoes;
         this.passwordRecovery = passwordRecovery;
         this.events = events;
+        this.audit = audit;
     }
 
 
     @Transactional
     public AuthSession login(LoginRequest request) {
-        User user = users.findByEmailIgnoreCase(request.email().trim())
-                .orElseThrow(() ->  new BadCredentialsException("Invalid credentials"));
-        if (!user.isActive() || !user.isConfirmed()) {
-            throw new BadCredentialsException("Invalid credentials");
-        }
-        if (!user.passwordMatches(request.password(), passwordEncoder)) {
+        logger.info("Login attempt received for email {}", request.email().trim());
+        User user = users.findByEmailIgnoreCase(request.email().trim()).orElse(null);
+        if (user == null || !user.isActive() || !user.isConfirmed()
+                || !user.passwordMatches(request.password(), passwordEncoder)) {
+            audit.log(AuditAction.LOGIN_FAILED, AuditResource.AUTH, null, Map.of("email", request.email().trim()));
             throw new BadCredentialsException("Invalid credentials");
         }
 
@@ -59,6 +69,9 @@ public class AuthService {
 
         AccessTokenResponse accessToken = new AccessTokenResponse(tokens.generateAccessToken(user, now));
 
+        logger.info("User {} authenticated successfully", user.getId());
+        audit.log(AuditAction.LOGIN_SUCCESS, AuditResource.AUTH, String.valueOf(user.getId()),
+                Map.of("email", user.getEmail()));
         return new AuthSession((accessToken), refresh.value());
     }
 
@@ -87,6 +100,8 @@ public class AuthService {
 
         Jwt jwt = tokens.decodeRefreshToken(refreshToken);
         sessoes.revokeSession(Long.valueOf(jwt.getSubject()), jwt.getId());
+        logger.info("Session revoked for user {}", jwt.getSubject());
+        audit.log(AuditAction.LOGOUT, AuditResource.AUTH, jwt.getSubject(), null);
     }
 
     @Transactional
@@ -101,6 +116,8 @@ public class AuthService {
 
         user.setPassword(request.newPassword(), passwordEncoder);
         user.setAuthenticationVersion(user.getAuthenticationVersion() + 1);
+        logger.info("Password changed for user {}", user.getId());
+        audit.log(AuditAction.PASSWORD_CHANGED, AuditResource.AUTH, String.valueOf(user.getId()), null);
     }
 
     @Transactional
@@ -117,7 +134,9 @@ public class AuthService {
 
         try {
             events.publishEvent(new PasswordRecoveryEmailRequested(user.getEmail(), token));
-        } catch (org.springframework.mail.MailException e) {
+            audit.log(AuditAction.PASSWORD_RECOVERY_REQUESTED, AuditResource.AUTH, String.valueOf(user.getId()),
+                    Map.of("email", user.getEmail()));
+        } catch (MailException e) {
             passwordRecovery.delete(token);
         }
     }
@@ -136,6 +155,7 @@ public class AuthService {
 
         dbUser.setPassword(request.newPassword(), passwordEncoder);
         dbUser.setAuthenticationVersion(dbUser.getAuthenticationVersion() + 1);
+        audit.log(AuditAction.PASSWORD_RESET, AuditResource.AUTH, String.valueOf(dbUser.getId()), null);
     }
 
 

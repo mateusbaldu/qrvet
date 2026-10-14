@@ -15,10 +15,17 @@ services:
       - "127.0.0.1:8025:8025"
 
   backend:
+    volumes:
+      - patient_photos:/opt/app/uploads
     build:
       context: ./backend
       dockerfile: Dockerfile.dev
     init: true
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
     ports:
       - "127.0.0.1:8080:8080"
     environment:
@@ -96,3 +103,6 @@ services:
           path: ./frontend/package-lock.json
         - action: rebuild
           path: ./frontend/Dockerfile.dev
+
+volumes:
+  patient_photos:

@@ -8,7 +8,7 @@ on:
 
 jobs:
   backend:
-    name: Backend - Compile
+    name: Backend - Tests
     runs-on: ubuntu-latest
 
     defaults:
@@ -30,8 +30,8 @@ jobs:
       - name: Grant execute permission
         run: chmod +x mvnw
 
-      - name: Compile backend
-        run: ./mvnw clean compile
+      - name: Test backend
+        run: ./mvnw clean test
 
   frontend:
     name: Frontend - Lint & Build

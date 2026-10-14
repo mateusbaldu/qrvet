@@ -19,14 +19,15 @@ export function ResetPassword({ invitation = false }: { invitation?: boolean }) 
     { texto: 'Um caractere especial', atendido: /[^A-Za-z0-9]/.test(senha) },
   ]
 
-  const senhaValida = requisitos.every((requisito) => requisito.atendido)
+  const senhaValida = requisitos.every(requisito => requisito.atendido)
   const senhasIguais = confirmacao.length > 0 && senha === confirmacao
   const formularioValido = senhaValida && senhasIguais
 
   async function enviar(event: FormEvent<HTMLFormElement>) {
     event.preventDefault()
-    const token = new URLSearchParams(window.location.hash.slice(1)).get('token')
-      ?? new URLSearchParams(window.location.search).get('token')
+    const token =
+      new URLSearchParams(window.location.hash.slice(1)).get('token') ??
+      new URLSearchParams(window.location.search).get('token')
     if (!token) {
       setErro('Este link não contém um token válido. Solicite um novo e-mail.')
       return
@@ -39,7 +40,11 @@ export function ResetPassword({ invitation = false }: { invitation?: boolean }) 
       else await authApi.resetPassword(token, senha)
       navigate('/login', {
         replace: true,
-        state: { message: invitation ? 'Cadastro confirmado. Agora você já pode entrar.' : 'Senha redefinida com sucesso.' },
+        state: {
+          message: invitation
+            ? 'Cadastro confirmado. Agora você já pode entrar.'
+            : 'Senha redefinida com sucesso.',
+        },
       })
     } catch (error) {
       setErro(readableError(error))
@@ -52,12 +57,22 @@ export function ResetPassword({ invitation = false }: { invitation?: boolean }) 
     <RecoveryCard
       eyebrow={invitation ? 'PRIMEIRO ACESSO' : 'NOVA SENHA'}
       title={invitation ? 'Confirme seu cadastro.' : 'Crie uma nova senha.'}
-      description={invitation ? 'Escolha sua senha para ativar a conta e acessar o QRVet.' : 'Escolha uma senha segura e confirme-a antes de continuar.'}
+      description={
+        invitation
+          ? 'Escolha sua senha para ativar a conta e acessar o QRVet.'
+          : 'Escolha uma senha segura e confirme-a antes de continuar.'
+      }
     >
       <form onSubmit={enviar}>
-        {erro && <p className="form-message error" role="alert">{erro}</p>}
+        {erro && (
+          <p className="form-message error" role="alert">
+            {erro}
+          </p>
+        )}
         <div className="mb-4">
-          <label className="form-label auth-label" htmlFor="nova-senha">Nova senha</label>
+          <label className="form-label auth-label" htmlFor="nova-senha">
+            Nova senha
+          </label>
           <input
             className="form-control auth-input"
             id="nova-senha"
@@ -66,12 +81,12 @@ export function ResetPassword({ invitation = false }: { invitation?: boolean }) 
             placeholder="Digite sua nova senha"
             autoComplete="new-password"
             value={senha}
-            onChange={(event) => setSenha(event.target.value)}
+            onChange={event => setSenha(event.target.value)}
             required
           />
 
           <ul className="password-requirements" aria-label="Requisitos da senha" aria-live="polite">
-            {requisitos.map((requisito) => (
+            {requisitos.map(requisito => (
               <li className={requisito.atendido ? 'requirement-valid' : ''} key={requisito.texto}>
                 <span className="requirement-icon" aria-hidden="true">
                   {requisito.atendido ? <Check size={14} strokeWidth={3} /> : <Circle size={10} />}
@@ -83,7 +98,9 @@ export function ResetPassword({ invitation = false }: { invitation?: boolean }) 
         </div>
 
         <div className="mb-4">
-          <label className="form-label auth-label" htmlFor="confirmar-senha">Confirme a nova senha</label>
+          <label className="form-label auth-label" htmlFor="confirmar-senha">
+            Confirme a nova senha
+          </label>
           <input
             className="form-control auth-input"
             id="confirmar-senha"
@@ -92,7 +109,7 @@ export function ResetPassword({ invitation = false }: { invitation?: boolean }) 
             placeholder="Digite a senha novamente"
             autoComplete="new-password"
             value={confirmacao}
-            onChange={(event) => setConfirmacao(event.target.value)}
+            onChange={event => setConfirmacao(event.target.value)}
             aria-describedby="confirmacao-status"
             required
           />
@@ -115,11 +132,14 @@ export function ResetPassword({ invitation = false }: { invitation?: boolean }) 
           type="submit"
           disabled={!formularioValido || enviando}
         >
-          {enviando ? 'Salvando...' : invitation ? 'Ativar minha conta' : 'Redefinir minha senha'} {!enviando && <ArrowRight size={20} />}
+          {enviando ? 'Salvando...' : invitation ? 'Ativar minha conta' : 'Redefinir minha senha'}{' '}
+          {!enviando && <ArrowRight size={20} />}
         </button>
       </form>
 
-      <Link className="recovery-back" to="/login"><ArrowLeft size={17} /> Voltar para o login</Link>
+      <Link className="recovery-back" to="/login">
+        <ArrowLeft size={17} /> Voltar para o login
+      </Link>
     </RecoveryCard>
   )
 }

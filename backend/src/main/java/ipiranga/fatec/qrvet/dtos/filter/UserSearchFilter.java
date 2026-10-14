@@ -6,5 +6,6 @@ public record UserSearchFilter(
         String name,
         String email,
         Role role,
-        Boolean active) {
+        Boolean active,
+        Boolean confirmed) {
 }

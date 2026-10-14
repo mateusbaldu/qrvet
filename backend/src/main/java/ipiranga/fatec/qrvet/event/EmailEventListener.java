@@ -1,5 +1,8 @@
 package ipiranga.fatec.qrvet.event;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.event.EventListener;
 import org.springframework.mail.SimpleMailMessage;
@@ -10,6 +13,7 @@ import org.springframework.stereotype.Component;
 
 @Component
 public class EmailEventListener {
+    private static final Logger logger = LoggerFactory.getLogger(EmailEventListener.class);
     private final JavaMailSender mail;
     private final String frontend;
     private final String sender;
@@ -43,7 +47,7 @@ public class EmailEventListener {
                             + "\n\nO convite é válido por 24 horas e pode ser usado uma única vez.");
             mail.send(message);
         } catch (Exception e) {
-            System.err.println("Erro ao enviar e-mail de convite.");
+            logger.error("Failed to send invitation email to {}", event.recipient(), e);
             throw e;
         }
     }
@@ -65,7 +69,7 @@ public class EmailEventListener {
                             + "\n\nEste link fica válido por 20 minutos e pode ser usado uma única vez.");
             mail.send(message);
         } catch (Exception e) {
-            System.err.println("Erro ao enviar e-mail de redefinição de senha.");
+            logger.error("Failed to send password recovery email to {}", event.recipient(), e);
             throw e;
         }
     }

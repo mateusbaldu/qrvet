@@ -7,7 +7,7 @@
     "dev": "vite",
     "build": "tsc -b && vite build",
     "lint": "oxlint",
-    "test:e2e": "node tests/clinic-smoke.mjs",
+    "test:e2e": "node tests/clinic-smoke.mjs && node tests/mvp-smoke.mjs",
     "preview": "vite preview"
   },
   "dependencies": {

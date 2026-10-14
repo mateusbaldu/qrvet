@@ -34,9 +34,15 @@ export function ForgotPassword() {
       description="Informe o e-mail da sua conta para receber as instruções de recuperação."
     >
       <form onSubmit={enviar}>
-        {(erro || mensagem) && <p className={`form-message ${erro ? 'error' : 'success'}`} role="alert">{erro || mensagem}</p>}
+        {(erro || mensagem) && (
+          <p className={`form-message ${erro ? 'error' : 'success'}`} role="alert">
+            {erro || mensagem}
+          </p>
+        )}
         <div className="mb-4">
-          <label className="form-label auth-label" htmlFor="email-recuperacao">Seu e-mail</label>
+          <label className="form-label auth-label" htmlFor="email-recuperacao">
+            Seu e-mail
+          </label>
           <div className="recovery-input-icon">
             <Mail size={19} aria-hidden="true" />
             <input
@@ -51,12 +57,18 @@ export function ForgotPassword() {
           </div>
         </div>
 
-        <button className="btn auth-submit w-100 d-flex align-items-center justify-content-center gap-3" type="submit" disabled={enviando}>
+        <button
+          className="btn auth-submit w-100 d-flex align-items-center justify-content-center gap-3"
+          type="submit"
+          disabled={enviando}
+        >
           {enviando ? 'Enviando...' : 'Enviar instruções'} {!enviando && <ArrowRight size={20} />}
         </button>
       </form>
 
-      <Link className="recovery-back" to="/login"><ArrowLeft size={17} /> Voltar para o login</Link>
+      <Link className="recovery-back" to="/login">
+        <ArrowLeft size={17} /> Voltar para o login
+      </Link>
     </RecoveryCard>
   )
 }

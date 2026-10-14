@@ -14,19 +14,32 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   useEffect(() => {
     let active = true
-    authApi.restore()
-      .then((restoredUser) => { if (active) setUser(restoredUser) })
-      .catch(() => { if (active) setUser(null) })
-      .finally(() => { if (active) setLoading(false) })
-    return () => { active = false }
+    authApi
+      .restore()
+      .then(restoredUser => {
+        if (active) setUser(restoredUser)
+      })
+      .catch(() => {
+        if (active) setUser(null)
+      })
+      .finally(() => {
+        if (active) setLoading(false)
+      })
+    return () => {
+      active = false
+    }
   }, [])
 
   useEffect(() => {
     if (!user) return
-    const sendHeartbeat = () => { void authApi.heartbeat().catch(() => undefined) }
+    const sendHeartbeat = () => {
+      void authApi.heartbeat().catch(() => undefined)
+    }
     sendHeartbeat()
     const interval = window.setInterval(sendHeartbeat, 60_000)
-    const onVisibilityChange = () => { if (document.visibilityState === 'visible') sendHeartbeat() }
+    const onVisibilityChange = () => {
+      if (document.visibilityState === 'visible') sendHeartbeat()
+    }
     document.addEventListener('visibilitychange', onVisibilityChange)
     window.addEventListener('focus', sendHeartbeat)
     return () => {
@@ -36,26 +49,33 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     }
   }, [user])
 
-  const value = useMemo<AuthContextValue>(() => ({
-    user,
-    loading,
-    async login(email, password) {
-      await authApi.login(email, password)
-      const authenticatedUser = await authApi.me()
-      setUser(authenticatedUser)
-      return authenticatedUser
-    },
-    async logout() {
-      try { await authApi.logout() } finally { setUser(null) }
-    },
-    clearSession() {
-      authApi.clearLocalSession()
-      setUser(null)
-    },
-    async reloadUser() {
-      setUser(await authApi.me())
-    },
-  }), [loading, user])
+  const value = useMemo<AuthContextValue>(
+    () => ({
+      user,
+      loading,
+      async login(email, password) {
+        await authApi.login(email, password)
+        const authenticatedUser = await authApi.me()
+        setUser(authenticatedUser)
+        return authenticatedUser
+      },
+      async logout() {
+        try {
+          await authApi.logout()
+        } finally {
+          setUser(null)
+        }
+      },
+      clearSession() {
+        authApi.clearLocalSession()
+        setUser(null)
+      },
+      async reloadUser() {
+        setUser(await authApi.me())
+      },
+    }),
+    [loading, user]
+  )
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>
 }

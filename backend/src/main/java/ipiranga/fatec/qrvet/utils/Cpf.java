@@ -30,6 +30,12 @@ public final class Cpf {
             sum += (cpf.charAt(i) - '0') * (length + 1 - i);
         }
         int remainder = sum % 11;
-        return remainder < 2 ? 0 : 11 - remainder;
+        int result;
+        if (remainder < 2) {
+            result = 0;
+        } else {
+            result = 11 - remainder;
+        }
+        return result;
     }
 }
