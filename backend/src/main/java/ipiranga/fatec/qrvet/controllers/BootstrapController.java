@@ -1,5 +1,8 @@
 package ipiranga.fatec.qrvet.controllers;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
 import ipiranga.fatec.qrvet.dtos.request.BootstrapAdminRequest;
 import ipiranga.fatec.qrvet.services.BootstrapService;
 import jakarta.validation.Valid;
@@ -10,6 +13,7 @@ import org.springframework.web.bind.annotation.*;
 @RestController
 @RequestMapping("/v1/bootstrap")
 public class BootstrapController {
+    private static final Logger logger = LoggerFactory.getLogger(BootstrapController.class);
     private final BootstrapService service;
 
     public BootstrapController(BootstrapService service) {

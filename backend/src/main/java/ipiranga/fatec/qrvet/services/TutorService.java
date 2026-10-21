@@ -1,5 +1,8 @@
 package ipiranga.fatec.qrvet.services;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
 import ipiranga.fatec.qrvet.dtos.filter.TutorSearchFilter;
 import ipiranga.fatec.qrvet.dtos.request.PaginationRequest;
 import ipiranga.fatec.qrvet.dtos.request.TutorRequest;
@@ -20,6 +23,7 @@ import java.util.Locale;
 @Service
 @PreAuthorize("@qrvetSecurity.hasAnyRole('ADMIN', 'VETERINARIO', 'RECEPCIONISTA')")
 public class TutorService {
+    private static final Logger logger = LoggerFactory.getLogger(TutorService.class);
     private final TutorRepository repository;
 
     public TutorService(TutorRepository repository) {
@@ -51,5 +55,24 @@ public class TutorService {
         return PageResponse.from(repository.findAll(TutorSpecifications.matches(filter),
                 PaginationUtils.byId(pagination))
                 .map(TutorResponse::from));
+    }
+
+    @Transactional
+    public TutorResponse update(Long id, TutorRequest request) {
+        Tutor tutor = repository.findById(id).orElseThrow(() ->
+                new ipiranga.fatec.qrvet.exceptions.ResourceNotFoundException("Tutor not found."));
+        String cpf = Cpf.normalize(request.cpf());
+        String email = request.email().trim().toLowerCase(Locale.ROOT);
+        if (!Cpf.isValid(cpf)) throw new InvalidRequestException("Invalid CPF.");
+        if (repository.findByCpf(cpf).filter(t -> !t.getId().equals(id)).isPresent())
+            throw new ResourceAlreadyExistsException("A tutor with this CPF already exists.");
+        if (repository.findByEmailIgnoreCase(email).filter(t -> !t.getId().equals(id)).isPresent())
+            throw new ResourceAlreadyExistsException("A tutor with this email already exists.");
+        tutor.setNome(request.nome().trim());
+        tutor.setCpf(cpf);
+        tutor.setEmail(email);
+        tutor.setTelefone(request.telefone().trim());
+        tutor.setEndereco(request.endereco().trim());
+        return TutorResponse.from(repository.saveAndFlush(tutor));
     }
 }

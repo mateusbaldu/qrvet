@@ -1,5 +1,8 @@
 package ipiranga.fatec.qrvet.controllers;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
 import ipiranga.fatec.qrvet.dtos.filter.TutorSearchFilter;
 import ipiranga.fatec.qrvet.dtos.request.PaginationRequest;
 import ipiranga.fatec.qrvet.dtos.request.TutorRequest;
@@ -14,6 +17,7 @@ import org.springframework.web.bind.annotation.*;
 @RestController
 @RequestMapping("/v1/tutores")
 public class TutorController {
+    private static final Logger logger = LoggerFactory.getLogger(TutorController.class);
     private final TutorService service;
     public TutorController(TutorService service) { this.service = service; }
 
@@ -26,5 +30,10 @@ public class TutorController {
     public PageResponse<TutorResponse> list(@Valid @ModelAttribute PaginationRequest pagination,
                                              @ModelAttribute TutorSearchFilter filter) {
         return service.list(pagination, filter);
+    }
+
+    @PutMapping("/{id}")
+    public TutorResponse update(@PathVariable Long id, @Valid @RequestBody TutorRequest request) {
+        return service.update(id, request);
     }
 }

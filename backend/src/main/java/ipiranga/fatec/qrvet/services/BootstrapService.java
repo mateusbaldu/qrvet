@@ -1,5 +1,8 @@
 package ipiranga.fatec.qrvet.services;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
 import ipiranga.fatec.qrvet.dtos.request.BootstrapAdminRequest;
 import ipiranga.fatec.qrvet.exceptions.InvalidRequestException;
 import ipiranga.fatec.qrvet.exceptions.OperationConflictException;
@@ -18,6 +21,7 @@ import java.util.Locale;
 
 @Service
 public class BootstrapService {
+    private static final Logger logger = LoggerFactory.getLogger(BootstrapService.class);
     private final UserRepository users;
     private final PasswordEncoder passwordEncoder;
     private final String secret;

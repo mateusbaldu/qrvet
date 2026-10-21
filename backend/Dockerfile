@@ -10,6 +10,7 @@ RUN ./mvnw clean package -DskipTests
 FROM eclipse-temurin:21-jre-jammy AS final
 WORKDIR /opt/app
 RUN addgroup --system spring && adduser --system --ingroup spring spring
+RUN mkdir -p /opt/app/uploads && chown spring:spring /opt/app/uploads
 EXPOSE 8080
 COPY --chown=spring:spring --from=builder /opt/app/target/*.jar /opt/app/app.jar
 USER spring:spring

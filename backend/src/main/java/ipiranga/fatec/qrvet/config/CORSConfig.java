@@ -14,13 +14,13 @@ public class CORSConfig {
     @Bean
     CorsConfigurationSource corsConfigurationSource(
             @Value("${qrvet.frontend-url}") String frontendOrigin) {
-        var cors = new CorsConfiguration();
+        CorsConfiguration cors = new CorsConfiguration();
         cors.setAllowedOrigins(List.of(frontendOrigin));
         cors.setAllowedMethods(List.of("GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"));
         cors.setAllowedHeaders(List.of("Authorization", "Content-Type", "X-XSRF-TOKEN"));
         cors.setAllowCredentials(true);
 
-        var source = new UrlBasedCorsConfigurationSource();
+        UrlBasedCorsConfigurationSource source = new UrlBasedCorsConfigurationSource();
         source.registerCorsConfiguration("/**", cors);
         return source;
     }
