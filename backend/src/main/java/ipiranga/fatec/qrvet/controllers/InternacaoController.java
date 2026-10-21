@@ -15,8 +15,7 @@ import ipiranga.fatec.qrvet.dtos.response.MessageResponse;
 import ipiranga.fatec.qrvet.dtos.response.PageResponse;
 import ipiranga.fatec.qrvet.dtos.response.RegistroAlimentacaoResponse;
 import ipiranga.fatec.qrvet.services.InternacaoService;
-import ipiranga.fatec.qrvet.services.JejumService;
-import ipiranga.fatec.qrvet.services.RegistroAlimentacaoService;
+import ipiranga.fatec.qrvet.services.NutricaoClinicaService;
 import jakarta.validation.Valid;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -29,16 +28,13 @@ import java.util.List;
 public class InternacaoController {
     private static final Logger logger = LoggerFactory.getLogger(InternacaoController.class);
     private final InternacaoService service;
-    private final JejumService jejumService;
-    private final RegistroAlimentacaoService alimentacaoService;
+    private final NutricaoClinicaService nutricaoService;
 
     public InternacaoController(
             InternacaoService service,
-            JejumService jejumService,
-            RegistroAlimentacaoService alimentacaoService) {
+            NutricaoClinicaService nutricaoService) {
         this.service = service;
-        this.jejumService = jejumService;
-        this.alimentacaoService = alimentacaoService;
+        this.nutricaoService = nutricaoService;
     }
 
     @PostMapping
@@ -108,17 +104,17 @@ public class InternacaoController {
     public ResponseEntity<JejumResponse> startFasting(
             @PathVariable Long id,
             @Valid @RequestBody JejumRequest request) {
-        return ResponseEntity.status(HttpStatus.CREATED).body(jejumService.start(id, request));
+        return ResponseEntity.status(HttpStatus.CREATED).body(nutricaoService.startFasting(id, request));
     }
 
     @PutMapping("/{id}/jejum/encerrar")
     public JejumResponse endFasting(@PathVariable Long id) {
-        return jejumService.end(id);
+        return nutricaoService.endFasting(id);
     }
 
     @GetMapping("/{id}/jejum")
     public List<JejumResponse> fastingHistory(@PathVariable Long id) {
-        return jejumService.history(id);
+        return nutricaoService.fastingHistory(id);
     }
 
     @PostMapping("/{id}/alimentacao")
@@ -126,11 +122,11 @@ public class InternacaoController {
             @PathVariable Long id,
             @Valid @RequestBody RegistroAlimentacaoRequest request) {
         return ResponseEntity.status(HttpStatus.CREATED)
-                .body(alimentacaoService.create(id, request));
+                .body(nutricaoService.registerFood(id, request));
     }
 
     @GetMapping("/{id}/alimentacao")
     public List<RegistroAlimentacaoResponse> foodHistory(@PathVariable Long id) {
-        return alimentacaoService.history(id);
+        return nutricaoService.foodHistory(id);
     }
 }
