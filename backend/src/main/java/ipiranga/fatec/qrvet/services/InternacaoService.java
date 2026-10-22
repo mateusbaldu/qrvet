@@ -41,9 +41,8 @@ public class InternacaoService {
     private final PacienteRepository pacienteRepository;
     private final BaiaRepository baiaRepository;
     private final UserRepository userRepository;
-    private final JejumRepository jejumRepository;
     private final QrCodeService qrCodeService;
-    private final AlimentacaoAgendadaRepository agenda;
+    private final NutricaoClinicaService nutricaoClinicaService;
     private final JavaMailSender mail;
     private final String mailFrom;
     private final AuditService auditService;
@@ -54,15 +53,14 @@ public class InternacaoService {
             BaiaRepository baiaRepository,
             UserRepository userRepository,
             QrCodeService qrCodeService,
-            JejumRepository jejumRepository, AlimentacaoAgendadaRepository agenda,
+            NutricaoClinicaService nutricaoClinicaService,
             JavaMailSender mail, @Value("${qrvet.mail-from}") String mailFrom, AuditService auditService) {
         this.internacaoRepository = internacaoRepository;
         this.pacienteRepository = pacienteRepository;
         this.baiaRepository = baiaRepository;
         this.userRepository = userRepository;
         this.qrCodeService = qrCodeService;
-        this.jejumRepository = jejumRepository;
-        this.agenda = agenda;
+        this.nutricaoClinicaService = nutricaoClinicaService;
         this.mail = mail;
         this.mailFrom = mailFrom;
         this.auditService = auditService;
@@ -183,7 +181,7 @@ public class InternacaoService {
     public InternacaoPublicResponse publicDetails(UUID uuidToken) {
         Internacao internacao = internacaoRepository.findByUuidToken(uuidToken)
                 .orElseThrow(() -> new ResourceNotFoundException("Hospitalization not found."));
-        boolean jejumAtivo = jejumRepository.existsByInternacaoIdAndAtivoTrue(internacao.getId());
+        boolean jejumAtivo = nutricaoClinicaService.isFastingActive(internacao.getId());
         return InternacaoPublicResponse.from(internacao, jejumAtivo);
     }
 
@@ -200,9 +198,7 @@ public class InternacaoService {
                 .orElseThrow(() -> new ResourceNotFoundException("Bay not found."));
         try {
             internacao.close(InternacaoStatus.valueOf(request.statusEncerramento().name()));
-            agenda.findAllByInternacaoIdAndStatus(id, ipiranga.fatec.qrvet.models.AlimentacaoAgendada.Status.PENDENTE)
-                    .forEach(a -> a.cancel("Internação encerrada"));
-            jejumRepository.findActiveForUpdate(id).ifPresent(jejum -> jejum.end());
+            nutricaoClinicaService.cancelForDischarge(id);
             baia.releaseAutomatically();
         } catch (IllegalStateException exception) {
             throw new OperationConflictException(exception.getMessage());

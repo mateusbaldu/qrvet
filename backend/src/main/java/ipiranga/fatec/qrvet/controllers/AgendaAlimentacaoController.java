@@ -5,7 +5,7 @@ import org.slf4j.LoggerFactory;
 
 import ipiranga.fatec.qrvet.dtos.request.AgendaAlimentacaoRequest;
 import ipiranga.fatec.qrvet.dtos.response.AgendaAlimentacaoResponse;
-import ipiranga.fatec.qrvet.services.AgendaAlimentacaoService;
+import ipiranga.fatec.qrvet.services.NutricaoClinicaService;
 import jakarta.validation.Valid;
 import jakarta.validation.constraints.*;
 import org.springframework.http.HttpStatus;
@@ -17,8 +17,8 @@ import java.util.List;
 @RequestMapping("/v1")
 public class AgendaAlimentacaoController {
     private static final Logger logger = LoggerFactory.getLogger(AgendaAlimentacaoController.class);
-    private final AgendaAlimentacaoService service;
-    public AgendaAlimentacaoController(AgendaAlimentacaoService service) { this.service = service; }
+    private final NutricaoClinicaService service;
+    public AgendaAlimentacaoController(NutricaoClinicaService service) { this.service = service; }
     public record ConclusaoRequest(@Size(max = 10000) String observacao) {}
     public record CancelamentoRequest(@NotBlank @Size(max = 255) String motivo) {}
 
@@ -29,14 +29,14 @@ public class AgendaAlimentacaoController {
     }
     @PostMapping("/internacoes/{id}/alimentacao/agenda") @ResponseStatus(HttpStatus.CREATED)
     public List<AgendaAlimentacaoResponse> create(@PathVariable Long id, @Valid @RequestBody AgendaAlimentacaoRequest request) {
-        return service.create(id, request);
+        return service.createSchedule(id, request);
     }
     @PutMapping("/internacoes/{id}/alimentacao/agenda/{agendaId}/concluir")
     public AgendaAlimentacaoResponse complete(@PathVariable Long id, @PathVariable Long agendaId, @Valid @RequestBody ConclusaoRequest request) {
-        return service.complete(id, agendaId, request.observacao());
+        return service.completeSchedule(id, agendaId, request.observacao());
     }
     @PutMapping("/internacoes/{id}/alimentacao/agenda/{agendaId}/cancelar")
     public AgendaAlimentacaoResponse cancel(@PathVariable Long id, @PathVariable Long agendaId, @Valid @RequestBody CancelamentoRequest request) {
-        return service.cancel(id, agendaId, request.motivo());
+        return service.cancelSchedule(id, agendaId, request.motivo());
     }
 }
