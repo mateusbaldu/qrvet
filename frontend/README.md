@@ -23,7 +23,7 @@ As fotos ficam no disco do backend, e não no armazenamento do navegador. O fron
 
 Os horários são apresentados no fuso do dispositivo e enviados à API como instantes UTC. O checklist é atualizado a cada minuto e ao voltar à janela. A conclusão cria o registro clínico no servidor.
 
-Configure `QRVET_PUBLIC_URL` no backend com a origem do frontend acessível pelos celulares da equipe e pelo tutor. O QR Code abre `/internacoes/:id` com login; auxiliares são direcionados aos cuidados daquela internação. O botão “Enviar link por e-mail” usa o SMTP do backend para enviar `/public/internacoes/qr/:token` ao e-mail cadastrado do tutor. A impressão contém apenas a etiqueta do animal e seu QR Code.
+Configure `QRVET_FRONTEND_URL` no backend com a origem do frontend acessível pelos celulares da equipe e pelo tutor (porta `3000` no Docker principal e `5173` em desenvolvimento). Os links herdam essa origem; `QRVET_PUBLIC_URL` permite sobrescrevê-la. O QR Code abre `/internacoes/:id` com login; auxiliares são direcionados aos cuidados daquela internação. O botão “Enviar link por e-mail” usa o SMTP do backend para enviar `/public/internacoes/qr/:token` ao e-mail cadastrado do tutor. A impressão contém apenas a etiqueta do animal e seu QR Code.
 
 ## Guia de primeiros passos
 

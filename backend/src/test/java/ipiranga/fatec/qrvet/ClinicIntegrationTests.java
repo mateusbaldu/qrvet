@@ -209,8 +209,8 @@ class ClinicIntegrationTests {
         long id = admission.get("id").asLong();
         JsonNode qr = body(perform(get("/v1/internacoes/" + id + "/qrcode"), receptionist)
                 .andExpect(status().isOk()));
-        String staffUrl = "http://localhost:5173/internacoes/" + id;
-        String tutorUrl = "http://localhost:5173/public/internacoes/qr/" + admission.get("uuidToken").asText();
+        String staffUrl = "http://localhost:3000/internacoes/" + id;
+        String tutorUrl = "http://localhost:3000/public/internacoes/qr/" + admission.get("uuidToken").asText();
         assertEquals(staffUrl, qr.get("url").asText());
         assertEquals(tutorUrl, qr.get("tutorUrl").asText());
         assertEquals("ana@qrvet.test", qr.get("tutorEmail").asText());
@@ -241,9 +241,9 @@ class ClinicIntegrationTests {
             assertArrayEquals(new String[] { "ana@qrvet.test" }, message.getTo());
             assertTrue(message.getSubject().contains("Luna"));
             assertTrue(message.getText().contains("Ana Silva"));
-            assertTrue(message.getText().contains("http://localhost:5173/public/internacoes/qr/"
+            assertTrue(message.getText().contains("http://localhost:3000/public/internacoes/qr/"
                     + admission.get("uuidToken").asText()));
-            assertFalse(message.getText().contains("http://localhost:5173/internacoes/"));
+            assertFalse(message.getText().contains("http://localhost:3000/internacoes/"));
         }
     }
 
