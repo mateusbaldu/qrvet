@@ -120,6 +120,7 @@ export function QrLookup() {
   return (
     <Page
       title="Consultar QR Code"
+      help="Para escanear, use a câmera do celular e toque no link. Este campo é uma alternativa para colar o endereço ou digitar o número da internação; ele não abre a câmera."
       description="Um acesso rápido ao acompanhamento de quem está sob nossos cuidados."
     >
       <div className="clinic-lookup-grid">

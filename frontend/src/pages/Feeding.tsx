@@ -538,6 +538,7 @@ export function Feeding() {
   return (
     <Page
       title="Alimentação"
+      help="Escolha o dia e filtre as refeições. Concluir só fica disponível a partir do horário agendado, com internação ativa e sem jejum. A confirmação registra o horário real e o responsável."
       description="Organize os horários e acompanhe as refeições da equipe em um só lugar."
       action={
         <Link className="clinic-button" to="/cuidados">

@@ -249,7 +249,13 @@ await page.route('**/qrvet/api/v1/**', async route => {
       )
     if (path === '/alimentacao/agenda') return send([])
     if (path === '/tutores') return send(paged(tutors, url))
-    if (path === '/pacientes') return send(paged(patients, url))
+    if (path === '/pacientes') {
+      const active = url.searchParams.get('active')
+      const matching = active === null ? patients : patients.filter(p =>
+        (created && status === 'ATIVA' && p.id === admission().pacienteId) === (active === 'true')
+      )
+      return send(paged(matching, url))
+    }
     if (/^\/pacientes\/\d+$/.test(path))
       return send(
         patients.find(p => p.id === Number(path.split('/').pop())) ?? {},
@@ -418,8 +424,10 @@ try {
   await page.getByRole('link', { name: 'Ver detalhes de Luna' }).waitFor()
   await shot('patients')
   await page.getByPlaceholder('Buscar por paciente ou tutor').fill('ana')
+  await page.waitForFunction(() => document.querySelectorAll('tbody tr').length === 3)
   assert.equal(await page.locator('tbody tr').count(), 3)
   await page.getByRole('button', { name: 'Internados', exact: true }).click()
+  await page.waitForFunction(() => document.querySelectorAll('tbody tr').length === 1)
   assert.equal(await page.locator('tbody tr').count(), 1)
   await page.getByRole('link', { name: 'Ver detalhes de Luna' }).click()
   await page.getByRole('heading', { name: 'Histórico de internações' }).waitFor()

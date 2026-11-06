@@ -106,6 +106,11 @@ export function Registry({ kind }: { kind: 'tutores' | 'pacientes' | 'baias' }) 
   return (
     <Page
       title={title}
+      help={{
+        pacientes: 'Busque antes de cadastrar. Você pode cadastrar paciente e tutor juntos e abrir uma internação após salvar. A ficha reúne dados, foto e internações anteriores.',
+        tutores: 'Tutor é o responsável pelo animal. Um tutor pode ter vários pacientes; reutilize o cadastro para manter os contatos e o histórico organizados.',
+        baias: 'A internação ocupa a baia automaticamente e o encerramento a libera. O administrador pode indicar manutenção para impedir novas internações naquele espaço.',
+      }[kind]}
       description={
         {
           tutores: 'Os responsáveis que confiam seu cuidado à nossa clínica.',

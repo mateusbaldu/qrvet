@@ -151,6 +151,7 @@ export function Hospitalizations() {
   return (
     <Page
       title="Internações"
+      help="Para abrir uma internação, é necessário um paciente sem internação ativa, uma baia disponível e um veterinário com convite aceito. Use os filtros para consultar altas e óbitos."
       description="Um olhar atento para cada paciente, da entrada à recuperação."
       action={
         <button className="clinic-primary" onClick={() => setCreating(true)}>
@@ -262,6 +263,7 @@ export function HospitalizationDetail() {
   return (
     <Page
       title={i?.pacienteNome ?? 'Internação'}
+      help="O QR Code da etiqueta abre esta internação para a equipe autenticada. Para o tutor, use o envio por e-mail: ele recebe um link de acompanhamento sem login."
       description={
         i
           ? 'Internação #' + i.id + ' · Baia ' + i.baiaIdentificacao + ' · ' + i.veterinarioNome
@@ -688,6 +690,7 @@ export function CareLookup() {
   return (
     <Page
       title="Cuidados"
+      help="Selecione a internação para consultar alimentação e jejum. Registrar uma refeição e iniciar ou encerrar um jejum são ações diferentes; siga a orientação clínica e confira o paciente antes de confirmar."
       description="Acompanhe a alimentação e o jejum dos pacientes internados."
       action={
         <Link className="clinic-button clinic-primary" to="/alimentacao">

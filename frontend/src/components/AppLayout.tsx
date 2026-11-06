@@ -9,6 +9,7 @@ import {
   Users,
   X,
   HeartPulse,
+  CircleHelp,
   House,
   QrCode,
   ShieldCheck,
@@ -18,6 +19,7 @@ import { Link, NavLink, Outlet, useLocation, useNavigate } from 'react-router-do
 import { useAuth } from '../auth/useAuth'
 import type { Role } from '../services/api'
 import '../styles/layout.css'
+import { Onboarding } from './Onboarding'
 
 const titulos: Record<string, string> = {
   '/equipe': 'Equipe',
@@ -54,6 +56,7 @@ const navIcons = {
 
 export function AppLayout() {
   const [menuAberto, setMenuAberto] = useState(false)
+  const [guideOpen, setGuideOpen] = useState(false)
   const [menuRecolhido, setMenuRecolhido] = useState(false)
   const location = useLocation()
   const navigate = useNavigate()
@@ -268,6 +271,9 @@ export function AppLayout() {
           </div>
 
           <div className="header-actions">
+            <button type="button" className="onboarding-help-button" onClick={() => setGuideOpen(true)} aria-label="Ajuda: guia do QRVet">
+              <CircleHelp size={18} aria-hidden="true" /> Ajuda
+            </button>
             <Link to="/consultar-qr" className="header-qr">
               <QrCode size={17} />
               <span>Consultar por QR</span>
@@ -283,6 +289,8 @@ export function AppLayout() {
         </header>
 
         <div className="app-content" id="conteudo" tabIndex={-1}>
+          <Onboarding key={user.id + ':' + user.role} user={user} open={guideOpen}
+            onOpen={() => setGuideOpen(true)} onClose={() => setGuideOpen(false)} />
           <Outlet />
         </div>
       </div>

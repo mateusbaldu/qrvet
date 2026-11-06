@@ -44,7 +44,7 @@ save('02-pacientes.svg',shell('Pacientes',`
  ${patientRow(376,'TH','Thor','Cão · Golden Retriever','Marina Souza','Internado','Agora')}${patientRow(466,'LU','Luna','Gato · SRD','Carlos Mendes','Em observação','Há 18 min')}${patientRow(556,'ME','Mel','Cão · Shih-tzu','Bianca Lima','Alta','Ontem, 16:42')}${patientRow(646,'TO','Tobias','Gato · Siamês','Rafael Alves','Alta','02/09/2026')}
 `));
 
-function patientRow(y,initial,name,sub,tutor,status,when){return `${circle(338,y,24,C.pale)}${text(338,y+5,11,700,C.green,'middle')}${text(376,y-3,name,15,700,C.ink)}${text(376,y+19,sub,12,400,C.gray)}${text(620,y+5,tutor,14,500,C.ink)}${badge(880,y-14,status,status==='Internado'?'green':status==='Em observação'?'amber':'gray')}${text(1120,y+5,when,13,500,C.gray)}${text(1356,y+5,'›',24,400,C.green,'middle')}${line(310,y+43,1376,y+43)}`;}
+function patientRow(y,initial,name,sub,tutor,status,when){return `${circle(338,y,24,C.pale)}${text(338,y+5,initial,11,700,C.green,'middle')}${text(376,y-3,name,15,700,C.ink)}${text(376,y+19,sub,12,400,C.gray)}${text(620,y+5,tutor,14,500,C.ink)}${badge(880,y-14,status,status==='Internado'?'green':status==='Em observação'?'amber':'gray')}${text(1120,y+5,when,13,500,C.gray)}${text(1356,y+5,'›',24,400,C.green,'middle')}${line(310,y+43,1376,y+43)}`;}
 
 save('03-cadastrar-paciente.svg',shell('Cadastrar paciente',`
  ${text(286,116,'Inclua os dados do paciente e de seu responsável.',15,400,C.gray)}
@@ -124,5 +124,102 @@ save('11-equipe.svg',shell('Equipe',`
 `,'Equipe'));
 function stat(x,n,l){return `${rect(x,158,202,92,C.white,14,C.line)}${text(x+20,196,n,25,800,C.ink)}${text(x+20,222,l,12,600,C.gray)}`}
 function member(y,i,n,email,role,status,date){return `${circle(338,y,20,C.pale)}${text(338,y+4,i,10,700,C.green,'middle')}${text(372,y-3,n,14,700,C.ink)}${text(372,y+17,email,11,400,C.gray)}${badge(720,y-14,role,role==='Admin'?'green':'gray')}${text(948,y+4,status,12,600,status.startsWith('Ativo')?C.green:C.gray)}${text(1164,y+4,date,12,500,C.gray)}${text(1354,y+4,'⋮',20,700,C.gray,'middle')}`}
+
+// Telas complementares do produto atual. Todas são SVGs vetoriais com textos
+// separados para apoiar a montagem de camadas editáveis no Figma.
+save('12-inicio.svg',shell('Um bom dia começa com cuidado.',`
+ ${text(286,118,'Uma visão da clínica para organizar o seu próximo atendimento.',15,400,C.gray)}${button(1172,103,228,'+  Abrir internação')}
+ ${button(286,151,266,'+  Cadastrar paciente e tutor',false)}
+ ${statWide(286,'128','Pacientes cadastrados')}${statWide(570,'8','Internações ativas')}${statWide(854,'12','Baias disponíveis')}${statWide(1138,'96','Tutores cadastrados')}
+ ${rect(286,318,1114,120,'#E5F6DD',14)}${text(312,351,'ALIMENTAÇÃO DE HOJE',11,700,C.green)}${text(312,389,'5 refeições programadas',22,800,C.ink)}${text(312,414,'2 concluídas  ·  2 pendentes  ·  1 em jejum',13,500,C.gray)}${button(1160,356,210,'Abrir checklist',false)}
+ ${rect(286,464,690,336,C.white,14,C.line)}${text(312,506,'Quem está sob nossos cuidados',19,800,C.ink)}${text(312,531,'As internações mais recentes da clínica.',13,400,C.gray)}${dashboardPatient(312,574,'TH','Thor','Baia A-04 · Entrada 08/09 às 14:30','Em observação')}${dashboardPatient(312,654,'LU','Luna','Baia B-02 · Entrada 07/09 às 09:20','Estável')}${dashboardPatient(312,734,'BE','Bento','Baia A-01 · Entrada 06/09 às 17:10','Em observação')}
+ ${rect(1000,464,400,206,C.white,14,C.line)}${text(1026,505,'Próximos passos',19,800,C.ink)}${text(1026,550,'Pacientes',14,700,C.ink)}${text(1026,571,'Consultar e cadastrar animais',12,400,C.gray)}${line(1026,588,1374,588)}${text(1026,617,'Tutores',14,700,C.ink)}${text(1026,638,'Dados dos responsáveis',12,400,C.gray)}
+ ${rect(1000,688,400,112,C.white,14,C.line)}${text(1026,727,'Ocupação das baias',17,800,C.ink)}${badge(1026,749,'A-01','amber')}${badge(1100,749,'A-04','amber')}${badge(1178,749,'B-02','amber')}${badge(1256,749,'12 livres')}
+`,'Início'));
+function statWide(x,n,l){return `${rect(x,224,262,68,C.white,12,C.line)}${text(x+18,258,n,25,800,C.ink)}${text(x+18,280,l,12,600,C.gray)}`}
+function dashboardPatient(x,y,i,n,sub,status){return `${circle(x+20,y+17,20,C.pale)}${text(x+20,y+22,i,10,700,C.green,'middle')}${text(x+52,y+9,n,15,700,C.ink)}${text(x+52,y+31,sub,12,400,C.gray)}${badge(x+480,y+4,status,status==='Estável'?'green':'amber')}${line(x,y+62,x+638,y+62)}`}
+
+save('13-internacoes.svg',shell('Internações',`
+ ${text(286,116,'Acompanhe pacientes internados e organize novos atendimentos.',15,400,C.gray)}${button(1172,104,228,'+  Abrir internação')}
+ ${stat(286,'8','Ativas')}${stat(510,'3','Em observação')}${stat(734,'5','Estáveis')}${stat(958,'12','Baias livres')}${stat(1182,'24','Encerradas')}
+ ${rect(286,278,1114,82,C.white,14,C.line)}${field(310,295,530,'Buscar','Paciente, baia, veterinário ou código')}${badge(876,308,'Ativas')}${badge(960,308,'Todas','gray')}${badge(1040,308,'Encerradas','gray')}
+ ${hospitalCard(286,386,'Thor','Golden Retriever · Marina Souza','A-04','Dra. Sarah Jenkins','Em observação','08/09, 14:30')}
+ ${hospitalCard(854,386,'Luna','Gato SRD · Carlos Mendes','B-02','Dr. Mike Ross','Estável','07/09, 09:20')}
+ ${hospitalCard(286,618,'Bento','Bulldog · Carla Nunes','A-01','Dra. Sarah Jenkins','Em observação','06/09, 17:10')}
+ ${hospitalCard(854,618,'Nina','Poodle · Bruna Lima','C-03','Dra. Anna Costa','Estável','06/09, 08:35')}
+`,'Internações'));
+function hospitalCard(x,y,n,sub,bay,doctor,status,date){return `${rect(x,y,546,208,C.white,14,C.line)}${circle(x+48,y+51,24,C.pale)}${text(x+48,y+56,n.slice(0,2).toUpperCase(),10,700,C.green,'middle')}${text(x+88,y+48,n,20,800,C.ink)}${text(x+88,y+72,sub,12,400,C.gray)}${badge(x+355,y+34,status,status==='Estável'?'green':'amber')}${line(x+24,y+96,x+522,y+96)}${labelValue(x+24,y+123,'Baia',bay)}${labelValue(x+152,y+123,'Veterinário',doctor)}${labelValue(x+375,y+123,'Entrada',date)}${text(x+24,y+190,'Ver internação  →',13,700,C.green)}`}
+
+save('14-tutores.svg',shell('Tutores',`
+ ${text(286,116,'Consulte os responsáveis e os pacientes vinculados.',15,400,C.gray)}${button(1172,104,228,'+  Cadastrar tutor')}
+ ${rect(286,174,1114,82,C.white,14,C.line)}${field(310,191,620,'Buscar','Nome, telefone ou e-mail')}${badge(982,205,'Todos')}${badge(1060,205,'Com pacientes','gray')}
+ ${rect(286,282,1114,477,C.white,14,C.line)}${text(314,322,'TUTOR',11,700,C.gray)}${text(745,322,'CONTATO',11,700,C.gray)}${text(1080,322,'PACIENTES',11,700,C.gray)}${line(310,342,1376,342)}
+ ${tutorRow(384,'MS','Marina Souza','marina.souza@email.com','(11) 98888-4455','Thor')}${tutorRow(474,'CM','Carlos Mendes','carlos.mendes@email.com','(11) 97654-3210','Luna')}${tutorRow(564,'BN','Bianca Nunes','bianca.nunes@email.com','(11) 96543-2010','Mel, Bento')}${tutorRow(654,'RA','Rafael Alves','rafael.alves@email.com','(11) 95432-1098','Tobias')}
+`,'Tutores'));
+function tutorRow(y,i,n,email,phone,pets){return `${circle(338,y,22,C.pale)}${text(338,y+5,i,11,700,C.green,'middle')}${text(376,y-4,n,15,700,C.ink)}${text(376,y+19,email,12,400,C.gray)}${text(745,y+5,phone,14,500,C.ink)}${text(1080,y+5,pets,14,600,C.green)}${text(1355,y+5,'›',24,400,C.green,'middle')}${line(310,y+44,1376,y+44)}`}
+
+save('15-baias.svg',shell('Baias',`
+ ${text(286,116,'Gerencie a disponibilidade e a ocupação dos leitos.',15,400,C.gray)}${button(1172,104,228,'+  Cadastrar baia')}
+ ${stat(286,'20','Total')}${stat(510,'12','Disponíveis')}${stat(734,'8','Ocupadas')}${stat(958,'0','Em manutenção')}${stat(1182,'60%','Livres')}
+ ${rect(286,279,1114,78,C.white,14,C.line)}${field(310,294,510,'Buscar','Identificação da baia')}${badge(858,307,'Todas')}${badge(940,307,'Disponíveis','gray')}${badge(1072,307,'Ocupadas','gray')}
+ ${bayCard(286,384,'A-01','Ocupada','Bento · Bulldog')}${bayCard(666,384,'A-02','Disponível','Pronta para uso')}${bayCard(1046,384,'A-03','Disponível','Pronta para uso')}
+ ${bayCard(286,590,'A-04','Ocupada','Thor · Golden Retriever')}${bayCard(666,590,'B-01','Disponível','Pronta para uso')}${bayCard(1046,590,'B-02','Ocupada','Luna · Gato SRD')}
+`,'Baias'));
+function bayCard(x,y,id,status,patient){return `${rect(x,y,354,180,C.white,14,C.line)}${circle(x+42,y+42,19,C.pale)}${text(x+42,y+48,'⌂',19,700,C.green,'middle')}${badge(x+218,y+27,status,status==='Disponível'?'green':'amber')}${text(x+24,y+100,id,22,800,C.ink)}${text(x+24,y+126,patient,13,500,C.gray)}${text(x+24,y+158,'Ver detalhes  →',12,700,C.green)}`}
+
+save('16-alimentacao.svg',shell('Alimentação',`
+ ${text(286,116,'Planeje as refeições dos pacientes internados.',15,400,C.gray)}${button(1172,104,228,'+  Agendar alimentação')}
+ ${stat(286,'5','Programadas hoje')}${stat(510,'2','Concluídas')}${stat(734,'2','Pendentes')}${stat(958,'1','Em jejum')}${stat(1182,'8','Pacientes ativos')}
+ ${rect(286,277,1114,86,C.white,14,C.line)}${field(310,294,480,'Buscar','Nome do paciente ou baia')}${badge(836,308,'Hoje')}${badge(918,308,'Amanhã','gray')}${badge(1018,308,'Calendário','gray')}
+ ${rect(286,389,1114,411,C.white,14,C.line)}${text(314,431,'CHECKLIST · HOJE, 08 DE SETEMBRO',12,700,C.green)}${text(314,459,'Refeições agendadas',20,800,C.ink)}${text(314,503,'HORÁRIO',11,700,C.gray)}${text(473,503,'PACIENTE',11,700,C.gray)}${text(796,503,'ALIMENTO',11,700,C.gray)}${text(1170,503,'STATUS',11,700,C.gray)}${line(310,522,1376,522)}
+ ${feedingRow(558,'08:00','Thor · A-04','Ração pastosa · 120 g','Concluída')}${feedingRow(622,'12:00','Luna · B-02','Ração úmida · 80 g','Concluída')}${feedingRow(686,'14:00','Thor · A-04','Ração pastosa · 120 g','Pendente')}${feedingRow(750,'18:00','Bento · A-01','Dieta enteral · 60 ml','Em jejum')}
+`,'Alimentação'));
+function feedingRow(y,time,name,food,status){return `${text(314,y,time,14,700,C.ink)}${text(473,y,name,14,600,C.ink)}${text(796,y,food,13,500,C.gray)}${badge(1170,y-19,status,status==='Concluída'?'green':status==='Em jejum'?'amber':'gray')}${line(310,y+25,1376,y+25)}`}
+
+save('17-cuidados.svg',shell('Cuidados do plantão',`
+ ${text(286,116,'Registre os cuidados e confira os próximos horários.',15,400,C.gray)}${button(1172,104,228,'Atualizar checklist',false)}
+ ${rect(286,162,1114,112,'#E5F6DD',14)}${text(318,201,'HOJE · 08 DE SETEMBRO',11,700,C.green)}${text(318,236,'Próximas refeições',23,800,C.ink)}${text(778,206,'2 pendentes',14,700,C.ink)}${text(778,234,'1 paciente em jejum',13,500,C.gray)}
+ ${rect(286,300,1114,88,C.white,14,C.line)}${field(310,316,480,'Buscar','Nome do paciente ou baia')}${badge(840,330,'Todos')}${badge(918,330,'Pendentes','gray')}${badge(1030,330,'Concluídos','gray')}${badge(1160,330,'Jejum','gray')}
+ ${careCard(286,416,'14:00','Thor','A-04','Ração pastosa gastrointestinal · 120 g','Pendente')}
+ ${careCard(854,416,'16:00','Luna','B-02','Ração úmida · 80 g','Pendente')}
+ ${careCard(286,616,'18:00','Bento','A-01','Dieta enteral · 60 ml','Em jejum')}
+ ${careCard(854,616,'12:00','Mel','C-03','Ração seca · 100 g','Concluída')}
+`,'Internações'));
+function careCard(x,y,time,name,bay,food,status){return `${rect(x,y,546,174,C.white,14,C.line)}${text(x+24,y+38,time,22,800,C.ink)}${badge(x+380,y+20,status,status==='Concluída'?'green':status==='Em jejum'?'amber':'gray')}${text(x+24,y+75,name+' · Baia '+bay,17,700,C.ink)}${text(x+24,y+100,food,13,400,C.gray)}${button(x+24,y+117,210,status==='Pendente'?'Concluir refeição':'Ver registro',status==='Pendente')}`}
+
+save('18-meu-perfil.svg',shell('Meu perfil',`
+ ${text(286,116,'Consulte seus dados e altere sua credencial de acesso.',15,400,C.gray)}
+ ${rect(286,169,324,381,C.white,14,C.line)}${circle(448,250,52,C.pale)}${text(448,260,'MS',24,800,C.green,'middle')}${text(448,329,'Marina Silva',22,800,C.ink,'middle')}${text(448,355,'marina@qrvet.clinic',13,400,C.gray,'middle')}${badge(387,385,'Administradora')}
+ ${rect(634,169,766,250,C.white,14,C.line)}${text(666,211,'Dados pessoais',19,800,C.ink)}${text(666,236,'Informações cadastradas para sua conta.',13,400,C.gray)}${field(666,267,334,'Nome completo','Marina Silva')}${field(1022,267,346,'E-mail','marina@qrvet.clinic')}${text(666,384,'Para atualizar seus dados, contate a administração da clínica.',12,400,C.gray)}
+ ${rect(634,443,766,357,C.white,14,C.line)}${text(666,485,'Alterar senha',19,800,C.ink)}${text(666,510,'Sua sessão será encerrada após a alteração.',13,400,C.gray)}${field(666,540,702,'Senha atual','••••••••')}${field(666,629,330,'Nova senha','••••••••')}${field(1018,629,350,'Confirmar nova senha','••••••••')}${button(1168,732,200,'Alterar senha')}
+`,'Perfil'));
+
+save('19-recuperar-senha.svg',`
+ ${rect(0,0,1440,900,C.bg,0)}${rect(0,0,500,900,C.dark,0)}${circle(56,54,21,C.mint)}${text(56,61,'+',27,800,C.dark,'middle')}${text(90,56,'QRVet',30,800,C.white)}
+ ${text(52,254,'Cuidar também é',38,700,C.white)}${text(52,302,'ter acesso seguro.',38,800,C.mint)}${text(52,369,'Recupere sua conta e volte a acompanhar',15,400,'#C6D9D4')}${text(52,393,'os pacientes da clínica.',15,400,'#C6D9D4')}
+ ${rect(690,184,600,532,C.white,20,C.line)}${text(736,237,'RECUPERAÇÃO DE ACESSO',11,700,C.green)}${text(736,291,'Esqueceu sua senha?',31,800,C.ink)}${text(736,326,'Informe o e-mail da sua conta para receber as',14,400,C.gray)}${text(736,349,'instruções de recuperação.',14,400,C.gray)}
+ ${field(736,398,508,'Seu e-mail','seuemail@exemplo.com')}${button(736,518,508,'Enviar instruções  →')}${text(990,618,'←  Voltar para o login',13,700,C.green,'middle')}
+`,1440,900);
+
+save('20-agendar-alimentacao.svg',shell('Alimentação',`
+ <rect x="246" width="1194" height="900" fill="#0B302D" opacity="0.48"/>
+ ${rect(422,70,844,760,C.white,18)}${text(462,121,'Agendar alimentação',24,800,C.ink)}${text(1222,119,'×',28,400,C.gray,'middle')}${line(462,145,1222,145)}
+ ${text(462,177,'Defina dias e horários. Cada refeição entra no checklist.',14,400,C.gray)}
+ ${field(462,205,760,'Paciente internado','Thor · Baia A-04')}${field(462,295,362,'Alimento','Ração pastosa gastrointestinal')}${field(850,295,372,'Quantidade','120 g')}
+ ${field(462,385,362,'Data inicial','08/09/2026')}${field(850,385,372,'Repetir diariamente até','10/09/2026')}
+ ${text(462,505,'Horários de cada dia',17,800,C.ink)}${field(462,528,225,'Horário 1','08:00')}${field(712,528,225,'Horário 2','14:00')}${field(962,528,260,'Horário 3','20:00')}
+ ${button(462,633,205,'+  Adicionar horário',false)}${rect(462,702,760,48,'#E8F4EE',9)}${text(480,732,'Os horários de hoje que já passaram serão ignorados.',12,500,C.green)}
+ ${button(832,768,172,'Cancelar',false)}${button(1020,768,202,'Criar agendamentos')}
+`,'Alimentação'));
+
+save('21-registrar-jejum.svg',shell('Internação de Thor',`
+ <rect x="246" width="1194" height="900" fill="#0B302D" opacity="0.48"/>
+ ${rect(452,104,784,692,C.white,18)}${text(492,155,'Registrar jejum',24,800,C.ink)}${text(1192,153,'×',28,400,C.gray,'middle')}${line(492,179,1192,179)}
+ ${text(492,212,'Um jejum ativo impede a conclusão das refeições agendadas.',14,400,C.gray)}
+ ${field(492,246,326,'Início do jejum','08/09/2026 18:00')}${field(844,246,348,'Previsão de término','09/09/2026 08:00')}
+ ${field(492,337,700,'Motivo','Preparo para exame de imagem')}${field(492,428,700,'Orientações','Manter hidratação conforme prescrição veterinária')}
+ ${rect(492,535,700,72,'#FFF7E5',10)}${text(512,561,'Atenção à segurança alimentar',13,700,'#805B12')}${text(512,585,'Confirme o horário e informe a equipe responsável.',12,400,'#805B12')}
+ ${button(810,708,180,'Cancelar',false)}${button(1006,708,186,'Iniciar jejum')}
+`,'Internações'));
 
 console.log(`Generated ${fs.readdirSync(out).length} editable SVG screens in ${out}`);

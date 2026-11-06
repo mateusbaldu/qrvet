@@ -2,17 +2,20 @@ import { useEffect, useId, useRef, useState, type ReactNode, type FormEvent } fr
 import { CheckCircle2, Inbox, LoaderCircle, X } from 'lucide-react'
 import { ApiError, readableError } from '../services/api'
 import '../styles/clinic.css'
+import { HelpTip } from './HelpTip'
 
 export function Page({
   title,
   description,
   children,
   action,
+  help,
 }: {
   title: string
   description: string
   children: ReactNode
   action?: ReactNode
+  help?: string
 }) {
   return (
     <section className="clinic-page">
@@ -21,6 +24,7 @@ export function Page({
           <p className="clinic-eyebrow">CLÍNICA VETERINÁRIA</p>
           <h1>{title}</h1>
           <p>{description}</p>
+          {help && <div className="page-context-help">Como usar esta tela <HelpTip label={'Ajuda sobre ' + title}>{help}</HelpTip></div>}
         </div>
         {action}
       </header>
@@ -109,6 +113,7 @@ export function Modal({
     const dialog = ref.current!
     const previous = document.activeElement as HTMLElement | null
     dialog.showModal()
+    dialog.querySelector<HTMLElement>('[data-autofocus]')?.focus()
     const overflow = document.body.style.overflow
     document.body.style.overflow = 'hidden'
     return () => {

@@ -25,7 +25,17 @@ Os horários são apresentados no fuso do dispositivo e enviados à API como ins
 
 Configure `QRVET_PUBLIC_URL` no backend com a origem do frontend acessível pelos celulares da equipe e pelo tutor. O QR Code abre `/internacoes/:id` com login; auxiliares são direcionados aos cuidados daquela internação. O botão “Enviar link por e-mail” usa o SMTP do backend para enviar `/public/internacoes/qr/:token` ao e-mail cadastrado do tutor. A impressão contém apenas a etiqueta do animal e seu QR Code.
 
-## Verificação
+## Guia de primeiros passos
+
+No primeiro acesso autenticado, um convite permite conhecer o sistema sem interromper a tarefa atual. O guia adapta as etapas ao perfil (administrador, veterinário, recepcionista, auxiliar ou tutor). O botão **Ajuda** no cabeçalho permite retomar ou rever o guia. Fechar ou escolher “Continuar depois” guarda a etapa; concluir permite recomeçar na próxima abertura.
+
+O progresso é salvo apenas neste navegador, por usuário e perfil, na chave `qrvet:onboarding:v1:<id>:<perfil>`. Outro navegador ou a limpeza do armazenamento local faz o convite aparecer novamente. Sem armazenamento disponível, o guia continua funcionando durante a sessão. Não há alteração no backend.
+
+As dicas “Como usar esta tela” abrem ao passar o mouse, focar pelo teclado ou tocar no ícone. Escape, saída do foco ou toque fora fecham a dica. O guia usa diálogo com foco contido e retorna o foco ao botão de origem ao fechar.
+
+Com o Vite em execução, `npm run test:onboarding` verifica os cinco perfis, retomada, conclusão, reabertura, teclado, dicas e layout móvel usando respostas HTTP simuladas. Para usar o Edge: `$env:PLAYWRIGHT_CHANNEL='msedge'`.
+
+## Executar verificações
 
 ```powershell
 npm run build
