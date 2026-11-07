@@ -16,6 +16,11 @@ public interface BaiaRepository extends JpaRepository<Baia, Long> {
     Optional<Baia> findByIdentificacaoIgnoreCase(String identificacao);
     Page<Baia> findAllByStatus(BaiaStatus status, Pageable pageable);
 
+    @Query("select b from Baia b where (:status is null or b.status = :status) "
+            + "and (:q is null or lower(b.identificacao) like lower(concat('%', :q, '%')) "
+            + "or lower(coalesce(b.observacao, '')) like lower(concat('%', :q, '%')))")
+    Page<Baia> search(@Param("status") BaiaStatus status, @Param("q") String q, Pageable pageable);
+
     @Lock(LockModeType.PESSIMISTIC_WRITE)
     @Query("select b from Baia b where b.id = :id")
     Optional<Baia> findByIdForUpdate(@Param("id") Long id);
