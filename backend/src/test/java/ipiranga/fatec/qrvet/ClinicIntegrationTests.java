@@ -158,6 +158,8 @@ class ClinicIntegrationTests {
                 .andExpect(status().isOk()).andExpect(jsonPath("$.total").value(1));
         perform(post("/v1/internacoes/" + id + "/jejum").content("{\"motivo\":\"Exame\"}"), assistant).andExpect(status().isCreated());
         perform(post("/v1/internacoes/" + id + "/alimentacao").content("{\"alimento\":\"Ração\",\"quantidade\":\"40 g\"}"), assistant).andExpect(status().isBadRequest());
+        perform(post("/v1/internacoes/" + id + "/medicacao").content("{\"medicamento\":\"Ondansetrona\",\"dose\":\"0,5\",\"unidade\":\"mg/kg\",\"via\":\"Intravenosa\",\"prescricao\":\"A cada 8 horas\",\"observacoes\":\"Sem intercorrências\"}"), assistant).andExpect(status().isCreated());
+        perform(get("/v1/internacoes/" + id + "/medicacao"), vet).andExpect(jsonPath("$[0].medicamento").value("Ondansetrona"));
         String publicPath = "/v1/public/internacoes/qr/" + admission.get("uuidToken").asText();
         perform(get(publicPath), null).andExpect(status().isOk()).andExpect(jsonPath("$.jejumAtivo").value(true)).andExpect(jsonPath("$.tutorId").doesNotExist());
         perform(put("/v1/internacoes/" + id + "/jejum/encerrar"), assistant).andExpect(status().isOk());

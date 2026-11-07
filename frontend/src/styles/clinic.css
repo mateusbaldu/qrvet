@@ -797,6 +797,9 @@
 .clinic-timeline .event-food::before {
   background: #7baf75;
 }
+.clinic-timeline .event-medication::before {
+  background: #2b7a9b;
+}
 .clinic-timeline li:last-child {
   border-left-color: transparent;
   padding-bottom: .3rem;

@@ -61,6 +61,8 @@ const translations: Record<string, string> = {
     'Paciente em jejum. Encerre o jejum antes de registrar alimentação.',
   'Food can only be recorded for an active hospitalization.':
     'A internação foi encerrada. Não é possível registrar alimentação.',
+  'Medication can only be recorded for an active hospitalization.':
+    'A internação foi encerrada. Não é possível registrar medicação.',
   'Fasting can only be changed for an active hospitalization.':
     'A internação foi encerrada. Não é possível alterar o jejum.',
   'The hospitalization already has an active fasting period.': 'Este paciente já está em jejum.',

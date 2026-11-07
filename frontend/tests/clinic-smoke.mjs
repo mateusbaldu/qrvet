@@ -50,6 +50,7 @@ const tutor = {
 const tutors = [tutor]
 const bay = { id: 1, identificacao: 'A-01', status: 'DISPONIVEL', observacao: 'Ala de observação' }
 const foods = []
+const medications = []
 const fasts = []
 const user = () => ({
   id: 2,
@@ -214,6 +215,18 @@ await page.route('**/qrvet/api/v1/**', async route => {
       foods.unshift(item)
       return send(item, 201)
     }
+    if (path === '/internacoes/1/medicacao') {
+      const item = {
+        ...body,
+        id: medications.length + 1,
+        internacaoId: 1,
+        usuarioId: 2,
+        responsavelNome: 'Marina Silva',
+        dataHoraRegistro: '2026-09-21T15:10:00Z',
+      }
+      medications.unshift(item)
+      return send(item, 201)
+    }
     if (path === '/internacoes/1/encerrar') {
       status = body.statusEncerramento
       bay.status = 'DISPONIVEL'
@@ -290,6 +303,7 @@ await page.route('**/qrvet/api/v1/**', async route => {
       })
     if (path.endsWith('/jejum')) return send(fasts)
     if (path.endsWith('/alimentacao')) return send(foods)
+    if (path.endsWith('/medicacao')) return send(medications)
     if (path.includes('/public/')) {
       assert(!req.headers().authorization, 'Public QR must not send bearer tokens')
       return send({
