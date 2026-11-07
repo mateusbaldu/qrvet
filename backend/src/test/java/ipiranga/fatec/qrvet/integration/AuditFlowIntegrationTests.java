@@ -131,7 +131,7 @@ class AuditFlowIntegrationTests {
         perform(post("/v1/auth/login").content("""
                 {"email":"%s","password":"%s"}
                 """.formatted(receptionist.getEmail(), password)), null)
-                .andExpect(status().isInternalServerError());
+                .andExpect(status().isUnauthorized());
 
         AuditLog failed = await("LOGIN_FAILED");
         assertFalse(failed.getDetails().contains(password));
