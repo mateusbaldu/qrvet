@@ -36,6 +36,7 @@ import {
   type Cuidado,
   type Internacao,
   type Jejum,
+  type Medicacao,
   type Paciente,
   type QrCode,
   type Veterinario,
@@ -479,16 +480,17 @@ export function QrPanel({ id, patientName }: { id: string; patientName: string }
 }
 
 export function CarePanel({ id, admission }: { id: string; admission?: Internacao }) {
-  const [action, setAction] = useState<'food' | 'fast' | 'end' | null>(null)
+  const [action, setAction] = useState<'food' | 'medication' | 'fast' | 'end' | null>(null)
   const [success, setSuccess] = useState('')
   const resource = useResource(
     async () => {
-      const [summary, fasts, foods] = await Promise.all([
+      const [summary, fasts, foods, medications] = await Promise.all([
         request<Cuidado>('/internacoes/' + id + '/cuidados'),
         request<Jejum[]>('/internacoes/' + id + '/jejum'),
         request<Alimentacao[]>('/internacoes/' + id + '/alimentacao'),
+        request<Medicacao[]>('/internacoes/' + id + '/medicacao'),
       ])
-      return { summary, fasts, foods }
+      return { summary, fasts, foods, medications }
     },
     [id, admission?.status]
   )
@@ -507,7 +509,26 @@ export function CarePanel({ id, admission }: { id: string; admission?: Internaca
               required: false,
             },
           ]
-        : []
+        : action === 'medication'
+          ? [
+              { name: 'medicamento', label: 'Medicamento', maxLength: 100 },
+              { name: 'dose', label: 'Dose', maxLength: 50 },
+              { name: 'unidade', label: 'Unidade', maxLength: 30, hint: 'Ex.: mg/kg, mL, UI' },
+              {
+                name: 'via',
+                label: 'Via',
+                maxLength: 50,
+                hint: 'Ex.: Oral, Intravenosa, Subcutânea',
+              },
+              { name: 'prescricao', label: 'Prescrição', maxLength: 255, wide: true },
+              {
+                name: 'observacoes',
+                label: 'Observações',
+                type: 'textarea',
+                required: false,
+              },
+            ]
+          : []
   const events = resource.data
     ? [
         ...resource.data.foods.map(f => ({
@@ -517,6 +538,14 @@ export function CarePanel({ id, admission }: { id: string; admission?: Internaca
           detail: f.alimento + ' · ' + f.quantidade,
           note: f.aceitacaoObservacao,
           tone: 'food',
+        })),
+        ...resource.data.medications.map(m => ({
+          key: 'medication' + m.id,
+          date: m.dataHoraRegistro,
+          title: 'Medicação registrada',
+          detail: m.medicamento + ' · ' + m.dose + ' ' + m.unidade + ' · ' + m.via,
+          note: [m.prescricao, m.observacoes, m.responsavelNome].filter(Boolean).join(' · '),
+          tone: 'medication',
         })),
         ...resource.data.fasts.flatMap(f => [
           {
@@ -610,6 +639,9 @@ export function CarePanel({ id, admission }: { id: string; admission?: Internaca
                   >
                     Registrar alimentação
                   </button>
+                  <button onClick={() => setAction('medication')}>
+                    Registrar medicação
+                  </button>
                   <button onClick={() => setAction(fasting ? 'end' : 'fast')}>
                     {fasting ? 'Encerrar jejum' : 'Iniciar jejum'}
                   </button>
@@ -621,14 +653,18 @@ export function CarePanel({ id, admission }: { id: string; admission?: Internaca
                 title={
                   action === 'food'
                     ? 'Registrar alimentação'
-                    : action === 'fast'
-                      ? 'Iniciar jejum'
-                      : 'Confirmar encerramento do jejum'
+                    : action === 'medication'
+                      ? 'Registrar medicação'
+                      : action === 'fast'
+                        ? 'Iniciar jejum'
+                        : 'Confirmar encerramento do jejum'
                 }
                 description={
                   action === 'end'
                     ? 'Confirme o encerramento para liberar os registros de alimentação.'
-                    : undefined
+                    : action === 'medication'
+                      ? 'Confirme a administração da medicação ao paciente.'
+                      : undefined
                 }
                 fields={fields}
                 onCancel={() => setAction(null)}
@@ -639,18 +675,22 @@ export function CarePanel({ id, admission }: { id: string; admission?: Internaca
                       '/' +
                       (action === 'food'
                         ? 'alimentacao'
-                        : action === 'fast'
-                          ? 'jejum'
-                          : 'jejum/encerrar'),
+                        : action === 'medication'
+                          ? 'medicacao'
+                          : action === 'fast'
+                            ? 'jejum'
+                            : 'jejum/encerrar'),
                     action === 'end' ? undefined : data,
                     action === 'end' ? 'PUT' : 'POST'
                   )
                   setSuccess(
                     action === 'food'
                       ? 'Alimentação registrada.'
-                      : action === 'fast'
-                        ? 'Jejum iniciado.'
-                        : 'Jejum encerrado.'
+                      : action === 'medication'
+                        ? 'Medicação registrada.'
+                        : action === 'fast'
+                          ? 'Jejum iniciado.'
+                          : 'Jejum encerrado.'
                   )
                   resource.reload()
                 }}

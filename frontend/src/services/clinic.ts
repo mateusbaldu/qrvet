@@ -90,6 +90,19 @@ export type Alimentacao = {
   dataHoraRegistro: string
   usuarioId: number
 }
+export type Medicacao = {
+  id: number
+  internacaoId: number
+  usuarioId: number
+  responsavelNome: string
+  medicamento: string
+  dose: string
+  unidade: string
+  via: string
+  prescricao: string
+  observacoes: string | null
+  dataHoraRegistro: string
+}
 export type PublicInternacao = {
   pacienteNome: string
   especie: string

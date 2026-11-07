@@ -28,7 +28,9 @@ export const adminRoutes: AppRoute[] = [
 
 export const routeRoles = (path: string): Role[] =>
   appRoutes.find(route => route.path === path)?.roles ??
-  (path.startsWith('/internacoes/') ? routeRoles('/internacoes') : undefined) ??
+  (path.startsWith('/internacoes/')
+    ? ['ADMIN', 'VETERINARIO', 'RECEPCIONISTA', 'AUXILIAR_TECNICO']
+    : undefined) ??
   (path.startsWith('/pacientes/') ? routeRoles('/pacientes') : undefined) ??
   adminRoutes.find(route => route.path === path)?.roles ??
   []

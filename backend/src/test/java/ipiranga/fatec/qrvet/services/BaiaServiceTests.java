@@ -66,9 +66,12 @@ class BaiaServiceTests {
         when(repository.findAll(any(PageRequest.class))).thenReturn(new PageImpl<>(List.of(bay)));
         when(repository.findAllByStatus(eq(BaiaStatus.MANUTENCAO), any(PageRequest.class)))
                 .thenReturn(new PageImpl<>(List.of(bay)));
+        when(repository.search(eq(BaiaStatus.DISPONIVEL), eq("A1"), any(PageRequest.class)))
+                .thenReturn(new PageImpl<>(List.of(bay)));
 
         assertEquals(1, service.list(new PaginationRequest(0, 20), null).items().size());
         assertEquals(1, service.list(new PaginationRequest(0, 20), BaiaStatus.MANUTENCAO).items().size());
+        assertEquals(1, service.list(new PaginationRequest(0, 20), BaiaStatus.DISPONIVEL, " A1 ").items().size());
     }
 
     @Test

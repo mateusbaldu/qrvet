@@ -134,7 +134,12 @@ await page.route('**/qrvet/api/v1/**', async route => {
     if (path === '/internacoes' || path === '/internacoes/ativas') return send(paged([]))
     if (path === '/internacoes/cuidados') return send(paged([care]))
     if (path === '/internacoes/1/cuidados') return send(care)
-    if (path === '/internacoes/1/jejum' || path === '/internacoes/1/alimentacao') return send([])
+    if (
+      path === '/internacoes/1/jejum' ||
+      path === '/internacoes/1/alimentacao' ||
+      path === '/internacoes/1/medicacao'
+    )
+      return send([])
     if (path === '/baias')
       return send(paged([{ id: 1, identificacao: 'A-01', status: 'DISPONIVEL' }]))
     if (path === '/internacoes/veterinarios') return send([{ id: 2, name: 'Marina Silva' }])
