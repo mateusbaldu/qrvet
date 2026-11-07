@@ -479,6 +479,78 @@ export function QrPanel({ id, patientName }: { id: string; patientName: string }
   )
 }
 
+function careFieldsForAction(action: 'food' | 'medication' | 'fast' | 'end' | null): Field[] {
+  if (action === 'fast') {
+    return [{ name: 'motivo', label: 'Motivo do jejum', maxLength: 255, wide: true }]
+  }
+  if (action === 'food') {
+    return [
+      { name: 'alimento', label: 'Alimento', maxLength: 100 },
+      { name: 'quantidade', label: 'Quantidade (inclua a unidade)', maxLength: 50 },
+      {
+        name: 'aceitacaoObservacao',
+        label: 'Aceitação e observações',
+        type: 'textarea',
+        required: false,
+      },
+    ]
+  }
+  if (action === 'medication') {
+    return [
+      { name: 'medicamento', label: 'Medicamento', maxLength: 100 },
+      { name: 'dose', label: 'Dose', maxLength: 50 },
+      { name: 'unidade', label: 'Unidade', maxLength: 30, hint: 'Ex.: mg/kg, mL, UI' },
+      {
+        name: 'via',
+        label: 'Via',
+        maxLength: 50,
+        hint: 'Ex.: Oral, Intravenosa, Subcutânea',
+      },
+      { name: 'prescricao', label: 'Prescrição', maxLength: 255, wide: true },
+      {
+        name: 'observacoes',
+        label: 'Observações',
+        type: 'textarea',
+        required: false,
+      },
+    ]
+  }
+  return []
+}
+
+function careEditorTitle(action: 'food' | 'medication' | 'fast' | 'end'): string {
+  if (action === 'food') return 'Registrar alimentação'
+  if (action === 'medication') return 'Registrar medicação'
+  if (action === 'fast') return 'Iniciar jejum'
+  return 'Confirmar encerramento do jejum'
+}
+
+function careEditorDescription(
+  action: 'food' | 'medication' | 'fast' | 'end'
+): string | undefined {
+  if (action === 'end') {
+    return 'Confirme o encerramento para liberar os registros de alimentação.'
+  }
+  if (action === 'medication') {
+    return 'Confirme a administração da medicação ao paciente.'
+  }
+  return undefined
+}
+
+function careEndpointSuffix(action: 'food' | 'medication' | 'fast' | 'end'): string {
+  if (action === 'food') return 'alimentacao'
+  if (action === 'medication') return 'medicacao'
+  if (action === 'fast') return 'jejum'
+  return 'jejum/encerrar'
+}
+
+function careSuccessMessage(action: 'food' | 'medication' | 'fast' | 'end'): string {
+  if (action === 'food') return 'Alimentação registrada.'
+  if (action === 'medication') return 'Medicação registrada.'
+  if (action === 'fast') return 'Jejum iniciado.'
+  return 'Jejum encerrado.'
+}
+
 export function CarePanel({ id, admission }: { id: string; admission?: Internacao }) {
   const [action, setAction] = useState<'food' | 'medication' | 'fast' | 'end' | null>(null)
   const [success, setSuccess] = useState('')
@@ -495,40 +567,7 @@ export function CarePanel({ id, admission }: { id: string; admission?: Internaca
     [id, admission?.status]
   )
   const fasting = resource.data?.fasts.some(f => f.ativo) ?? false
-  const fields: Field[] =
-    action === 'fast'
-      ? [{ name: 'motivo', label: 'Motivo do jejum', maxLength: 255, wide: true }]
-      : action === 'food'
-        ? [
-            { name: 'alimento', label: 'Alimento', maxLength: 100 },
-            { name: 'quantidade', label: 'Quantidade (inclua a unidade)', maxLength: 50 },
-            {
-              name: 'aceitacaoObservacao',
-              label: 'Aceitação e observações',
-              type: 'textarea',
-              required: false,
-            },
-          ]
-        : action === 'medication'
-          ? [
-              { name: 'medicamento', label: 'Medicamento', maxLength: 100 },
-              { name: 'dose', label: 'Dose', maxLength: 50 },
-              { name: 'unidade', label: 'Unidade', maxLength: 30, hint: 'Ex.: mg/kg, mL, UI' },
-              {
-                name: 'via',
-                label: 'Via',
-                maxLength: 50,
-                hint: 'Ex.: Oral, Intravenosa, Subcutânea',
-              },
-              { name: 'prescricao', label: 'Prescrição', maxLength: 255, wide: true },
-              {
-                name: 'observacoes',
-                label: 'Observações',
-                type: 'textarea',
-                required: false,
-              },
-            ]
-          : []
+  const fields = careFieldsForAction(action)
   const events = resource.data
     ? [
         ...resource.data.foods.map(f => ({
@@ -650,48 +689,23 @@ export function CarePanel({ id, admission }: { id: string; admission?: Internaca
             )}
             {action && (
               <Editor
-                title={
-                  action === 'food'
-                    ? 'Registrar alimentação'
-                    : action === 'medication'
-                      ? 'Registrar medicação'
-                      : action === 'fast'
-                        ? 'Iniciar jejum'
-                        : 'Confirmar encerramento do jejum'
-                }
-                description={
-                  action === 'end'
-                    ? 'Confirme o encerramento para liberar os registros de alimentação.'
-                    : action === 'medication'
-                      ? 'Confirme a administração da medicação ao paciente.'
-                      : undefined
-                }
+                title={careEditorTitle(action)}
+                description={careEditorDescription(action)}
                 fields={fields}
                 onCancel={() => setAction(null)}
                 onSave={async data => {
+                  let method = 'POST'
+                  let payload: Record<string, string | number> | undefined = data
+                  if (action === 'end') {
+                    method = 'PUT'
+                    payload = undefined
+                  }
                   await clinicApi.save(
-                    '/internacoes/' +
-                      id +
-                      '/' +
-                      (action === 'food'
-                        ? 'alimentacao'
-                        : action === 'medication'
-                          ? 'medicacao'
-                          : action === 'fast'
-                            ? 'jejum'
-                            : 'jejum/encerrar'),
-                    action === 'end' ? undefined : data,
-                    action === 'end' ? 'PUT' : 'POST'
+                    '/internacoes/' + id + '/' + careEndpointSuffix(action),
+                    payload,
+                    method
                   )
-                  setSuccess(
-                    action === 'food'
-                      ? 'Alimentação registrada.'
-                      : action === 'medication'
-                        ? 'Medicação registrada.'
-                        : action === 'fast'
-                          ? 'Jejum iniciado.'
-                          : 'Jejum encerrado.'
-                  )
+                  setSuccess(careSuccessMessage(action))
                   resource.reload()
                 }}
               />
