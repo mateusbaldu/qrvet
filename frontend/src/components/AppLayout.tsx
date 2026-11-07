@@ -1,4 +1,4 @@
-﻿import { useState } from 'react'
+import { useState } from 'react'
 import {
   ChevronLeft,
   ChevronRight,
@@ -51,6 +51,7 @@ const navIcons = {
   '/alimentacao': Stethoscope,
   '/cuidados': Stethoscope,
   '/sessoes': ShieldCheck,
+  '/auditoria': ShieldCheck,
   '/consultar-qr': QrCode,
 }
 
@@ -72,6 +73,7 @@ export function AppLayout() {
       '/alimentacao': 'Alimentação',
       '/cuidados': 'Cuidados',
       '/sessoes': 'Sessões',
+      '/auditoria': 'Auditoria',
       '/consultar-qr': 'Consultar QR Code',
       ...titulos,
     } as Record<string, string>
@@ -190,6 +192,7 @@ export function AppLayout() {
               roles: ['ADMIN', 'VETERINARIO', 'AUXILIAR_TECNICO'],
             },
             { path: '/sessoes', label: 'Sessões', roles: ['ADMIN'] },
+            { path: '/auditoria', label: 'Auditoria', roles: ['ADMIN'] },
             {
               path: '/consultar-qr',
               label: 'Consultar QR Code',

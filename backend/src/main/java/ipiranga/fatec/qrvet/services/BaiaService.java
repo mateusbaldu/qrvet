@@ -74,9 +74,8 @@ public class BaiaService {
     @PreAuthorize("@qrvetSecurity.hasAnyRole('ADMIN', 'VETERINARIO', 'RECEPCIONISTA')")
     public PageResponse<BaiaResponse> list(PaginationRequest pagination, BaiaStatus status, String q) {
         PageRequest pageable = PaginationUtils.byId(pagination, Sort.Direction.ASC);
-        String query = (q != null && !q.isBlank()) ? q.trim() : null;
-        if (query != null) {
-            return PageResponse.from(repository.search(status, query, pageable).map(BaiaResponse::from));
+        if (q != null && !q.isBlank()) {
+            return PageResponse.from(repository.search(status, q.trim(), pageable).map(BaiaResponse::from));
         }
         if (status == null) {
             return PageResponse.from(repository.findAll(pageable).map(BaiaResponse::from));

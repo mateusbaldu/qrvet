@@ -11,7 +11,7 @@ import { Registry, PatientDetail } from './pages/Registry'
 import { Feeding } from './pages/Feeding'
 import { Dashboard } from './pages/Dashboard'
 import { Hospitalizations, HospitalizationDetail, CareLookup } from './pages/Hospitalizations'
-import { PublicHospitalization, QrLookup, Sessions, Bootstrap } from './pages/ClinicAccess'
+import { PublicHospitalization, QrLookup, Sessions, AuditLogs, Bootstrap } from './pages/ClinicAccess'
 
 export default function App() {
   return (
@@ -30,6 +30,7 @@ export default function App() {
             <Route element={<AdminRoute />}>
               <Route path="/equipe" element={<Team />} />
               <Route path="/sessoes" element={<Sessions />} />
+              <Route path="/auditoria" element={<AuditLogs />} />
             </Route>
             <Route element={<RouteAccess path="/inicio" />}>
               <Route path="/inicio" element={<Dashboard />} />

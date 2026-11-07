@@ -122,6 +122,17 @@ export type QrCode = {
   tutorEmail: string
 }
 export type Session = { jti: string; createdAt: string; expiresAt: string }
+export type AuditLog = {
+  id: number
+  timestamp: string
+  userId: number | null
+  userEmail: string | null
+  ipAddress: string | null
+  action: string
+  resourceName: string
+  resourceId: string | null
+  details: string | null
+}
 export async function allPages<T>(path: string): Promise<T[]> {
   const items: T[] = []
   let page = 0
