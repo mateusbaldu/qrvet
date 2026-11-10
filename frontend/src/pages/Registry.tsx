@@ -259,60 +259,34 @@ export function Registry({ kind }: { kind: 'tutores' | 'pacientes' | 'baias' }) 
       {result && (
         <>
           {kind === 'pacientes' ? (
-            <section className="clinic-table-panel">
-              <div className="clinic-table-scroll">
-                <table className="clinic-table">
-                  <thead>
-                    <tr>
-                      <th>Paciente</th>
-                      <th>Tutor</th>
-                      <th>Situação</th>
-                      <th>Peso</th>
-                      <th>
-                        <span className="visually-hidden">Ações</span>
-                      </th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {result.items.map(item => {
-                      const p = item as Paciente
-                      const admission = resource.data!.admissions.find(i => i.pacienteId === p.id)
-                      return (
-                        <tr key={p.id}>
-                          <td>
-                            <Link className="clinic-identity" to={'/pacientes/' + p.id}>
-                              <PatientAvatar patient={p} />
-                              <span>
-                                <strong>{p.nome}</strong>
-                                <small>
-                                  {p.especie} · {p.raca}
-                                </small>
-                              </span>
-                            </Link>
-                          </td>
-                          <td>
-                            {p.tutorNome || '—'}
-                          </td>
-                          <td>
-                            <StatusBadge status={admission ? 'ATIVA' : 'NEUTRAL'}>
-                              {admission ? 'Internado' : 'Sem internação ativa'}
-                            </StatusBadge>
-                          </td>
-                          <td>{p.peso.toLocaleString('pt-BR')} kg</td>
-                          <td>
-                            <Link
-                              className="clinic-row-link"
-                              aria-label={'Ver detalhes de ' + p.nome}
-                              to={'/pacientes/' + p.id}
-                            >
-                              <ArrowRight size={18} />
-                            </Link>
-                          </td>
-                        </tr>
-                      )
-                    })}
-                  </tbody>
-                </table>
+            <section aria-label="Pacientes cadastrados">
+              <div className="clinic-grid clinic-patient-grid">
+                {result.items.map(item => {
+                  const p = item as Paciente
+                  const admission = resource.data!.admissions.find(i => i.pacienteId === p.id)
+                  return (
+                    <article className="clinic-card clinic-patient-card" key={p.id}>
+                      <Link className="clinic-patient-card-identity" to={'/pacientes/' + p.id}>
+                        <PatientAvatar patient={p} />
+                        <h2>{p.nome}</h2>
+                        <small>{p.especie} · {p.raca}</small>
+                      </Link>
+                      <p className="clinic-cell-detail">
+                        Tutor: {p.tutorNome || '—'} · {p.peso.toLocaleString('pt-BR')} kg
+                      </p>
+                      <StatusBadge status={admission ? 'ATIVA' : 'NEUTRAL'}>
+                        {admission ? 'Internado' : 'Sem internação ativa'}
+                      </StatusBadge>
+                      <Link
+                        className="clinic-card-link"
+                        aria-label={'Ver detalhes de ' + p.nome}
+                        to={'/pacientes/' + p.id}
+                      >
+                        Ver paciente <ArrowRight size={18} />
+                      </Link>
+                    </article>
+                  )
+                })}
               </div>
               {!result.total && (
                 <EmptyState>

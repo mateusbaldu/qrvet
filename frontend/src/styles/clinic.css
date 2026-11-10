@@ -674,6 +674,56 @@
   width: 62px;
   height: 62px;
 }
+.clinic-avatar.clinic-patient-photo {
+  width: 112px;
+  height: 112px;
+  border-radius: 1rem;
+}
+.clinic-avatar.clinic-patient-photo.large {
+  width: min(240px, 100%);
+  height: auto;
+  aspect-ratio: 1;
+}
+.clinic-photo-placeholder {
+  display: grid;
+  justify-items: center;
+  gap: .5rem;
+}
+.clinic-photo-placeholder small {
+  font-size: .75rem;
+}
+.clinic-patient-card-identity {
+  display: block;
+  width: 100%;
+  color: var(--ink);
+  text-decoration: none;
+}
+.clinic-patient-card-identity .clinic-patient-photo {
+  display: grid;
+  width: 100%;
+  height: auto;
+  aspect-ratio: 4 / 3;
+  margin-bottom: 1rem;
+}
+.clinic-patient-card-identity h2 {
+  margin-bottom: .25rem;
+}
+.clinic-patient-card-identity small {
+  color: var(--muted);
+}
+.clinic-editor-patient {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  margin-bottom: 1.5rem;
+}
+.clinic-editor-patient .clinic-patient-photo.large {
+  width: 112px;
+}
+.clinic-patient-banner > div {
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
 .clinic-row-link {
   display: inline-grid;
   place-items: center;

@@ -101,11 +101,13 @@ export function Modal({
   children,
   onClose,
   busy = false,
+  closeOnBackdrop = true,
 }: {
   title: string
   children: ReactNode
   onClose: () => void
   busy?: boolean
+  closeOnBackdrop?: boolean
 }) {
   const ref = useRef<HTMLDialogElement>(null)
   const titleId = useId()
@@ -132,7 +134,7 @@ export function Modal({
         if (!busy) onClose()
       }}
       onClick={event => {
-        if (event.target === event.currentTarget && !busy) {
+        if (closeOnBackdrop && event.target === event.currentTarget && !busy) {
           const box = event.currentTarget.getBoundingClientRect()
           if (
             event.clientX < box.left ||
@@ -331,7 +333,7 @@ export function Editor({
       {content}
     </section>
   ) : (
-    <Modal title={title} onClose={onCancel} busy={busy}>
+    <Modal title={title} onClose={onCancel} busy={busy} closeOnBackdrop={false}>
       {content}
     </Modal>
   )
