@@ -28,11 +28,14 @@ export function PatientAvatar({ patient, large = false }: { patient: Paciente; l
     }
   }, [patient.id, patient.fotoVersao, key])
   return (
-    <span className={'clinic-avatar' + (large ? ' large' : '')}>
+    <span className={'clinic-avatar clinic-patient-photo' + (large ? ' large' : '')}>
       {photo?.key === key ? (
         <img src={photo.url} alt={'Foto de ' + patient.nome} />
       ) : (
-        <PawPrint size={large ? 30 : 20} />
+        <span className="clinic-photo-placeholder">
+          <PawPrint size={large ? 48 : 32} aria-hidden="true" />
+          <small>Sem foto</small>
+        </span>
       )}
     </span>
   )
@@ -140,6 +143,12 @@ export function PatientEditor({
       closeOnSave={false}
       beforeFields={
         <section className="clinic-form-section">
+          {patient && (
+            <div className="clinic-editor-patient">
+              <PatientAvatar patient={patient} large />
+              <strong>{patient.nome}</strong>
+            </div>
+          )}
           <h3>Tutor responsável</h3>
           <div className="clinic-mode-switch" role="group" aria-label="Responsável pelo paciente">
             <button

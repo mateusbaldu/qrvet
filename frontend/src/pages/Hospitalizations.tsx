@@ -153,7 +153,7 @@ export function Hospitalizations() {
     <Page
       title="Internações"
       help="Para abrir uma internação, é necessário um paciente sem internação ativa, uma baia disponível e um veterinário com convite aceito. Use os filtros para consultar altas e óbitos."
-      description="Um olhar atento para cada paciente, da entrada à recuperação."
+      description="Acompanhe os pacientes internados e consulte o histórico de internações."
       action={
         <button className="clinic-primary" onClick={() => setCreating(true)}>
           <Plus size={17} />

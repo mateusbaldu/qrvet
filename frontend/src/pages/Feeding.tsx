@@ -172,14 +172,16 @@ export function FeedingChecklist({
   admissionId,
   active = true,
   onChanged,
+  initialFilter = 'TODAS',
 }: {
   admissionId?: string
   active?: boolean
   onChanged?: () => void
+  initialFilter?: string
 }) {
   const [date, setDate] = useState(localDate())
   const [search, setSearch] = useState('')
-  const [filter, setFilter] = useState('TODAS')
+  const [filter, setFilter] = useState(initialFilter)
   const [creating, setCreating] = useState(false)
   const [schedulePatient, setSchedulePatient] = useState<string>()
   const [action, setAction] = useState<{
@@ -535,6 +537,8 @@ export function FeedingChecklist({
 export function Feeding() {
   const [params] = useSearchParams()
   const id = params.get('internacao') ?? undefined
+  const requestedFilter = params.get('filtro') ?? 'TODAS'
+  const initialFilter = ['PENDENTE', 'ATRASADA', 'JEJUM', 'CONCLUIDA', 'CANCELADA'].includes(requestedFilter) ? requestedFilter : 'TODAS'
   return (
     <Page
       title="Alimentação"
@@ -547,7 +551,7 @@ export function Feeding() {
         </Link>
       }
     >
-      <FeedingChecklist key={id} admissionId={id} />
+      <FeedingChecklist key={`${id ?? ''}:${initialFilter}`} admissionId={id} initialFilter={initialFilter} />
     </Page>
   )
 }
