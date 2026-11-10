@@ -1,3 +1,4 @@
+/* Shared clinical screens use quiet surfaces and consistent controls. */
 .clinic-page {
   max-width: 1500px;
   margin: auto;
@@ -1304,4 +1305,27 @@ a.clinic-stat:hover {
   .clinic-modal {
     display: none !important;
   }
+}
+
+.app-content .clinic-page { max-width: 1600px; padding: clamp(1.1rem, 2.5vw, 2rem); }
+.app-content .clinic-heading { margin-bottom: 1.75rem; }
+.app-content .clinic-heading h1 { font-size: clamp(1.45rem, 2.1vw, 1.85rem); letter-spacing: -.035em; margin-bottom: .45rem; }
+.app-content .clinic-heading p { font-size: .84rem; line-height: 1.6; }
+.app-content .clinic-panel, .app-content .clinic-card, .app-content .clinic-table-panel { border-color: #e2e9e6; box-shadow: 0 2px 3px #143d2d02; }
+.app-content .clinic-panel h2, .app-content .clinic-card h2 { font-size: 1rem; }
+.app-content .clinic-toolbar.clinic-panel { background: #fff; padding: 1.1rem 1.25rem; }
+.app-content .clinic-filters button { min-height: 40px; padding: .55rem .9rem; border-radius: .45rem; background: #f3f6f4; font-size: .76rem; }
+.app-content .clinic-filters button.selected { background: #e5f2e9; color: #24694e; box-shadow: inset 0 0 0 1px #c0dbca; }
+.app-content .clinic-fields label, .app-content .clinic-search > span:first-child { font-size: .8rem; }
+.app-content .status-ativa, .app-content .status-disponivel { background: #e4f3e9; color: #286e4b; }
+.app-content .status-ocupada { background: #eef2fa; color: #536d9b; }
+.app-content .clinic-table th { font-size: .69rem; text-transform: none; letter-spacing: 0; background: #fafcfb; }
+.app-content .clinic-table td { font-size: .82rem; }
+.app-content .clinic-table-actions button, .app-content .clinic-table-actions .clinic-button { min-height: 40px; }
+.app-content .clinic-grid { gap: 1rem; }
+.app-content .admission-card { border-top: 3px solid #c9e2d4; }
+.app-content .admission-card .clinic-card-link { min-height: 44px; }
+@media (max-width: 480px) {
+  .app-content .clinic-page { padding: 1.1rem; }
+  .app-content .clinic-panel, .app-content .clinic-card { padding: 1.1rem; }
 }

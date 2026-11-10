@@ -113,8 +113,8 @@ export function Registry({ kind }: { kind: 'tutores' | 'pacientes' | 'baias' }) 
       }[kind]}
       description={
         {
-          tutores: 'Os responsáveis que confiam seu cuidado à nossa clínica.',
-          pacientes: 'Cada paciente, uma história. Encontre todas elas aqui.',
+          tutores: 'Consulte os responsáveis e encontre seus dados de contato.',
+          pacientes: 'Busque um paciente, abra sua ficha ou faça um novo cadastro.',
           baias: 'Organize os espaços e acompanhe a ocupação da clínica.',
         }[kind]
       }

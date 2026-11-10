@@ -21,7 +21,6 @@ export function Page({
     <section className="clinic-page">
       <header className="clinic-heading">
         <div>
-          <p className="clinic-eyebrow">CLÍNICA VETERINÁRIA</p>
           <h1>{title}</h1>
           <p>{description}</p>
           {help && <div className="page-context-help">Como usar esta tela <HelpTip label={'Ajuda sobre ' + title}>{help}</HelpTip></div>}

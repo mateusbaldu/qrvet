@@ -244,7 +244,16 @@ await page.route('**/qrvet/api/v1/**', async route => {
   } else {
     if (path === '/auth/csrf') return send({ token: 'csrf', headerName: 'X-XSRF-TOKEN' })
     if (path === '/auth/me') return loggedIn ? send(user()) : send({}, 401)
-    if (path === '/users') return send(paged(members, url))
+    if (path === '/users') {
+      const name = (url.searchParams.get('name') || '').toLocaleLowerCase('pt-BR')
+      const role = url.searchParams.get('role')
+      const confirmed = url.searchParams.get('confirmed')
+      return send(paged(members.filter(member =>
+        (!name || (member.name + ' ' + member.email).toLocaleLowerCase('pt-BR').includes(name)) &&
+        (!role || member.role === role) &&
+        (confirmed === null || member.confirmed === (confirmed === 'true'))
+      ), url))
+    }
     if (path.includes('/sessions'))
       return send(
         paged(
@@ -338,7 +347,7 @@ const shot = name => page.screenshot({ path: 'tests/artifacts/' + name + '.png',
 await mkdir('tests/artifacts', { recursive: true })
 try {
   await visit('/inicio')
-  await page.getByText('Nenhum paciente internado no momento.').waitFor()
+  await page.getByRole('heading', { name: 'Nenhum paciente internado', exact: true }).waitFor()
   await shot('dashboard-empty')
   await visit('/tutores')
   await page.getByRole('button', { name: 'Novo tutor', exact: true }).click()
