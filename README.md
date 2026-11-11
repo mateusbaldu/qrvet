@@ -10,9 +10,16 @@ Membros do grupo:
 
 ## MVP: rotina da clínica
 
+- **Evoluções da internação:** administradores, veterinários e auxiliares registram anotações com texto, horário e profissional. A autoria histórica é preservada após mudanças no nome do perfil. O histórico é paginado, permanece após alta/óbito e não permite alterar ou apagar registros anteriores.
+- **Alertas do paciente:** alergias, restrições alimentares e cuidados de manejo ficam em destaque na ficha, na internação e nos cuidados abertos pelo QR Code. Administradores e veterinários editam os alertas. As informações não são expostas no acompanhamento público.
+- **Nome do perfil:** em Meu perfil, edite o nome e use “Salvar nome”. Cabeçalho e menu refletem a alteração, sem encerrar a sessão.
+
+Contrato e regras desses endpoints: [evoluções, alertas e perfil](docs/clinical-records-api.md).
+
 - **Cadastro em uma tela:** em Pacientes → Cadastrar paciente, selecione um tutor existente (busca por nome/CPF) ou preencha um novo tutor. Tutor e paciente são gravados na mesma transação. A opção “Abrir internação após salvar” leva à internação com o paciente selecionado.
 - **Ficha editável:** altere dados do paciente e do tutor pela ficha, consulte internações anteriores e use os links de telefone/e-mail. Também é possível adicionar um paciente a partir do cartão do tutor.
 - **Foto do paciente:** envie, substitua ou remova uma foto na ficha; também é possível enviar durante o cadastro. Aceita JPG/PNG até 5 MB e 16 megapixels. O servidor valida o conteúdo e salva uma versão JPEG de até 1280 px. Se o envio falhar após o cadastro, a ficha permite tentar novamente sem duplicar o paciente.
+- **Identificação na internação:** a foto aparece no topo da internação, nos cartões da lista, no painel inicial e nos cuidados acessados pelo QR Code. Sem foto ou em caso de falha no carregamento, o nome e a identificação continuam visíveis. O cabeçalho mantém Ajuda e perfil; a consulta manual por QR fica no menu.
 - **Agenda de alimentação:** escolha uma internação ativa, alimento, quantidade e até oito horários por dia, por um período de até 31 dias. Horários que já passaram no dia inicial são ignorados. Os horários usam o fuso local do dispositivo e são enviados à API em UTC.
 - **Checklist geral:** o menu Alimentação reúne as refeições por horário, com busca, seleção de dia e filtros de pendentes, atrasadas, jejum, concluídas e canceladas. Pacientes internados sem refeições programadas no dia também são indicados. O painel inicial resume as refeições de hoje para a equipe clínica.
 - **Cuidados rastreáveis:** concluir uma refeição exige confirmação e gera um registro com profissional, horário real e observação de aceitação. A API impede concluir antes do horário ou durante jejum; repetir a conclusão não cria outro registro. Cancelamentos exigem motivo, e o horário cancelado pode receber um novo agendamento. Encerrar a internação cancela as refeições pendentes, encerra o jejum e libera a baia.
@@ -22,13 +29,13 @@ Configure `QRVET_FRONTEND_URL` com o endereço do frontend acessível pelos celu
 
 ### Fotos e persistência
 
-Por padrão, os arquivos ficam em `./uploads`, relativo à pasta de execução do backend. É possível alterar o diretório com `QRVET_UPLOAD_DIR`. As fotos só são entregues pela API autenticada aos perfis com acesso ao cadastro do paciente.
+Por padrão, os arquivos ficam em `./uploads`, relativo à pasta de execução do backend. É possível alterar o diretório com `QRVET_UPLOAD_DIR`. As fotos só são entregues pela API autenticada. Administradores, veterinários e recepcionistas acessam as fotos pela ficha; auxiliares técnicos também podem consultar a imagem pela internação, sem acesso ao cadastro ou aos dados do tutor.
 
 Os dois arquivos Compose usam o volume `patient_photos`, montado em `/opt/app/uploads`. Ele preserva as fotos ao recriar os contêineres; o volume do banco preserva os cadastros e horários. Para backup, guarde **o banco e o volume de fotos juntos**. A opção `docker compose down -v` remove os volumes e seus dados.
 
 ### Atualizar e demonstrar
 
-Na raiz do projeto, execute `docker compose up -d --build` para usar as alterações locais. O Flyway aplica a migração `V9__patient_photo_and_feeding_schedule.sql` ao iniciar o backend.
+Na raiz do projeto, execute `docker compose up -d --build` para usar as alterações locais. O Flyway aplica as migrações pendentes ao iniciar o backend, incluindo `V12__patient_alerts_and_evolution_notes.sql` para alertas e evoluções.
 
 Roteiro sugerido para a apresentação do TCC:
 

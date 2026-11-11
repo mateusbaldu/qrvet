@@ -1,0 +1,14 @@
+﻿INDEX=STATE.screenCount;
+const pfields=[['Nome do paciente','Luna'],['Espécie','Felina'],['Raça','SRD'],['Sexo','Fêmea'],['Data de nascimento','12/04/2021'],['Peso (kg)','4,5'],['Observações','Sensível a ruídos.',true]];
+modal('patient-create','patients','Cadastrar paciente',[['Tutor responsável','Ana Silva'],...pfields],'Salvar paciente','patient-detail',false,(p,w)=>{text(p,'Paciente e tutor em uma etapa. Campos com * são obrigatórios.',w,'Body','muted');button(p,'Cadastrar novo tutor','patient-create-new-tutor','secondary',w);});
+modal('patient-create-new-tutor','patients','Cadastrar paciente e tutor',[...pfields.slice(0,6),['Nome completo do tutor','Ana Silva'],['CPF','529.982.247-25'],['Telefone','(11) 99999-9999'],['E-mail','ana@example.com'],['Endereço','Rua das Flores, 120']],'Salvar cadastros','patient-detail');
+modal('patient-edit','patient-detail','Editar paciente',pfields,'Salvar alterações','patient-detail');
+modal('photo-edit','patient-detail','Foto do paciente',[],'Salvar foto','patient-detail',false,(p,w)=>{const r=row(p,w,16);photo(r,'luna',132);const c=col(r,w-148,12);text(c,'JPG ou PNG · até 5 MB',w-148,'Body');button(c,'Selecionar foto','photo-edit','secondary',w-148);text(p,'A foto será usada para identificar o paciente na internação e nos cuidados.',w,'Small','muted');});
+const tf=[['Nome completo','Ana Silva'],['CPF','529.982.247-25'],['Telefone','(11) 99999-9999'],['E-mail','ana@example.com'],['Endereço','Rua das Flores, 120']];
+modal('tutor-create','tutors','Cadastrar tutor',tf,'Salvar tutor','tutors');
+modal('tutor-edit','patient-detail','Editar tutor',tf,'Salvar alterações','patient-detail');
+modal('bay-create','bays','Nova baia',[['Identificação','A-09'],['Situação inicial','Disponível'],['Observação','Ala de observação']],'Salvar baia','bays');
+modal('bay-edit','bays','Editar baia',[['Identificação','A-08'],['Observação','Ala de observação']],'Salvar alterações','bays');
+modal('bay-status','bays','Alterar situação da baia',[['Situação','Manutenção']],'Confirmar alteração','bays');
+modal('admission-open','admissions','Abrir internação',[['Paciente','Luna · Felina (#1)'],['Baia disponível','A-01'],['Veterinário responsável','Marina Silva'],['Diagnóstico inicial','Avaliação e acompanhamento'],['Motivo da internação','Observação clínica',true],['Observações','Manter em ambiente tranquilo.',true]],'Abrir internação','admission-summary');
+return{createdNodeIds:[...new Set(createdNodeIds)],frames:madeFrames,links,screenCount:INDEX};

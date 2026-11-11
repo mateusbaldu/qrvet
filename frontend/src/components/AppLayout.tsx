@@ -1,5 +1,5 @@
 ﻿import { useEffect, useRef, useState } from 'react'
-import { ChevronLeft, ChevronRight, CircleHelp, HeartPulse, House, LayoutDashboard, LogOut, Menu, PawPrint, QrCode, ShieldCheck, Stethoscope, UserRound, Users, Utensils, X } from 'lucide-react'
+import { ChevronLeft, ChevronRight, CircleHelp, HeartPulse, House, LayoutDashboard, LogOut, Menu, PawPrint, ShieldCheck, Stethoscope, UserRound, Users, Utensils, X } from 'lucide-react'
 import { Link, NavLink, Outlet, useLocation, useNavigate } from 'react-router-dom'
 import { useAuth } from '../auth/useAuth'
 import type { Role } from '../services/api'
@@ -13,11 +13,11 @@ const roleLabels: Record<Role, string> = {
 const initials = (name: string) => name.trim().split(/\s+/).slice(0, 2).map(part => part[0]?.toUpperCase()).join('') || '—'
 const navIcons: Record<string, typeof House> = {
   '/inicio': LayoutDashboard, '/internacoes': HeartPulse, '/pacientes': PawPrint, '/tutores': Users, '/baias': House,
-  '/alimentacao': Utensils, '/cuidados': Stethoscope, '/sessoes': ShieldCheck, '/auditoria': ShieldCheck, '/consultar-qr': QrCode, '/equipe': Users,
+  '/alimentacao': Utensils, '/cuidados': Stethoscope, '/sessoes': ShieldCheck, '/auditoria': ShieldCheck, '/equipe': Users,
 }
 const groups = [
   { label: 'Rotina clínica', paths: ['/inicio', '/internacoes', '/alimentacao', '/cuidados'] },
-  { label: 'Cadastros e acesso', paths: ['/pacientes', '/tutores', '/baias', '/consultar-qr'] },
+  { label: 'Cadastros', paths: ['/pacientes', '/tutores', '/baias'] },
   { label: 'Administração', paths: ['/equipe', '/sessoes', '/auditoria'] },
 ]
 
@@ -76,7 +76,7 @@ export function AppLayout() {
       <div className="app-main">
         <header className="app-header">
           <div className="app-header-title"><button ref={menuButton} className="app-menu-button d-lg-none" type="button" onClick={() => setMenuAberto(true)} aria-label="Abrir menu" aria-controls="menu-principal" aria-expanded={menuAberto}><Menu size={22} /></button><div><small>Área da clínica <ChevronRight size={12} /></small><strong>{title === 'Início' ? 'Painel inicial' : title}</strong></div></div>
-          <div className="header-actions"><button type="button" className="onboarding-help-button" onClick={() => setGuideOpen(true)} aria-label="Ajuda: guia do QRVet"><CircleHelp size={18} aria-hidden="true" /><span>Ajuda</span></button><Link to="/consultar-qr" className="header-qr" aria-label="Consultar por QR"><QrCode size={18} /><span>Consultar por QR</span></Link><Link to="/meu-perfil" className="header-profile" aria-label="Abrir meu perfil"><span className="header-profile-text"><strong>{user.name}</strong><small>{roleLabels[user.role]}</small></span><span className="header-avatar">{initials(user.name)}</span></Link></div>
+          <div className="header-actions"><button type="button" className="onboarding-help-button" onClick={() => setGuideOpen(true)} aria-label="Ajuda: guia do QRVet"><CircleHelp size={18} aria-hidden="true" /><span>Ajuda</span></button><Link to="/meu-perfil" className="header-profile" aria-label="Abrir meu perfil"><span className="header-profile-text"><strong>{user.name}</strong><small>{roleLabels[user.role]}</small></span><span className="header-avatar">{initials(user.name)}</span></Link></div>
         </header>
         <div className="app-content" id="conteudo" tabIndex={-1}><Onboarding key={user.id + ':' + user.role} user={user} open={guideOpen} onOpen={() => setGuideOpen(true)} onClose={() => setGuideOpen(false)} /><Outlet /></div>
       </div>

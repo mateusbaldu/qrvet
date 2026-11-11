@@ -77,6 +77,11 @@ public class AuthController {
         return auth.currentUser();
     }
 
+    @PutMapping("/me")
+    public UserResponse updateProfile(@Valid @RequestBody PerfilRequest request) {
+        return auth.updateProfile(request);
+    }
+
     @PostMapping("/heartbeat")
     public ResponseEntity<Void> heartbeat() {
         auth.heartbeat();

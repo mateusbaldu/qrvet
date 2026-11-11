@@ -6,6 +6,7 @@ import { Page, ResourceState, EmptyState, StatusBadge } from '../components/Clin
 import { useResource } from '../hooks/useResource'
 import { allPages, clinicApi, dateTime, searchText, type Baia, type Internacao } from '../services/clinic'
 import { FeedingSummary } from './FeedingSummary'
+import { PatientAvatar } from '../components/PatientEditor'
 import '../styles/dashboard.css'
 
 export function Dashboard() {
@@ -70,7 +71,7 @@ export function Dashboard() {
             {admissions.length ? <>
               <div className="dashboard-list-labels" aria-hidden="true"><span>Paciente / baia</span><span>Responsável</span><span /></div>
               {admissions.slice(0, 6).map(i => <Link className="dashboard-patient-row" key={i.id} to={'/internacoes/' + i.id}>
-                <span className="dashboard-patient-identity"><span className="clinic-avatar"><PawPrint size={20} /></span><span><strong>{i.pacienteNome}</strong><small>Baia {i.baiaIdentificacao} · <StatusBadge status={i.status} /></small></span></span>
+                <span className="dashboard-patient-identity"><PatientAvatar patient={{ id: i.pacienteId, nome: i.pacienteNome, fotoVersao: i.fotoVersao ?? null }} photoPath={'/internacoes/' + i.id + '/foto'} compact /><span><strong>{i.pacienteNome}</strong><small>Baia {i.baiaIdentificacao} · <StatusBadge status={i.status} /></small></span></span>
                 <span className="dashboard-patient-vet"><strong>{i.veterinarioNome}</strong><small>Entrada {dateTime(i.entradaInternacao)}</small></span>
                 <ArrowRight size={18} />
               </Link>)}

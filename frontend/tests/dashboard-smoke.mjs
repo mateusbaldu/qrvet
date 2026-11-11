@@ -8,7 +8,7 @@ const base = process.env.TEST_BASE_URL || 'http://127.0.0.1:5173'
 const errors = [], unexpected = [], admissionPages = new Set()
 let role = 'VETERINARIO', fail = false
 const admissions = Array.from({ length: 115 }, (_, index) => ({
-  id: index + 1, pacienteId: index + 1, pacienteNome: index === 114 ? 'Érico' : ['Luna', 'Mel', 'Thor', 'Nina'][index % 4] + ' ' + (index + 1),
+  id: index + 1, pacienteId: index + 1, fotoVersao: index === 0 ? 'photo.jpg' : null, pacienteNome: index === 114 ? 'Érico' : ['Luna', 'Mel', 'Thor', 'Nina'][index % 4] + ' ' + (index + 1),
   baiaId: index + 1, baiaIdentificacao: 'A-' + (index + 1), veterinarioId: index % 2 ? 3 : 2,
   veterinarioNome: index % 2 ? 'Paulo Santos' : 'Marina Silva', status: 'ATIVA',
   entradaInternacao: new Date(Date.now() - index * 3600000).toISOString(), motivo: 'Observação',
@@ -36,6 +36,7 @@ await page.route('**/qrvet/api/v1/**', route => {
   if (path === '/auth/refresh') return send({ accessToken: 'test' })
   if (path === '/auth/me') return send({ id: 2, name: 'Marina Silva', email: 'marina@example.com', role, active: true, confirmed: true })
   if (path === '/auth/heartbeat') return send(null, 204)
+  if (path === '/internacoes/1/foto') return route.fulfill({ contentType: 'image/png', body: Buffer.from('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNk+A8AAQUBAScY42YAAAAASUVORK5CYII=', 'base64') })
   if (path === '/pacientes') return send({ ...paged([], url), total: 200 })
   if (path === '/tutores') return send({ ...paged([], url), total: 150 })
   if (path === '/baias') return send(paged(bays, url))
@@ -55,6 +56,7 @@ try {
   await page.goto(base + '/inicio')
   await stat('Internações ativas').getByText('115', { exact: true }).waitFor()
   assert.deepEqual([...admissionPages], [0, 1], 'Dashboard must load beyond the first admissions page')
+  await page.getByRole('img', { name: 'Foto de Luna 1', exact: true }).waitFor()
   assert.equal(await stat('Baias disponíveis').innerText(), '1')
   await metric('Concluídas').getByText('1', { exact: true }).waitFor()
   assert.equal(await metric('Pendentes').innerText(), '3')

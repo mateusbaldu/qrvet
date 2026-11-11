@@ -685,6 +685,14 @@
   height: auto;
   aspect-ratio: 1;
 }
+.clinic-avatar.clinic-patient-photo.compact { width: 42px; height: 42px; border-radius: 50%; }
+.clinic-patient-banner.hospitalization-banner .clinic-patient-photo.large { width: clamp(112px, 16vw, 160px); }
+.hospitalization-patient-name { display: block; font-size: 1.3rem; margin-bottom: .4rem; }
+.admission-card-identity { display: flex; align-items: center; gap: 1rem; width: 100%; margin: .35rem 0 1rem; text-decoration: none; }
+.admission-card-identity > span:last-child { min-width: 0; }
+.admission-card-identity .clinic-patient-photo { width: 88px; height: 88px; margin: 0; border-radius: .75rem; }
+.admission-card-identity h2 { color: var(--ink); margin: 0 0 .4rem; }
+.admission-card-identity small { color: var(--muted); font-size: .75rem; overflow-wrap: anywhere; }
 .clinic-photo-placeholder {
   display: grid;
   justify-items: center;

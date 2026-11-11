@@ -18,7 +18,9 @@ public record InternacaoResponse(
         String observacoes,
         String pacienteNome,
         String baiaIdentificacao,
-        String veterinarioNome) {
+        String veterinarioNome,
+        AlertasPacienteResponse alertas,
+        String fotoVersao) {
     public static InternacaoResponse from(Internacao internacao) {
         return new InternacaoResponse(
                 internacao.getId(),
@@ -34,6 +36,8 @@ public record InternacaoResponse(
                 internacao.getObservacoes(),
                 internacao.getPaciente().getNome(),
                 internacao.getBaia().getIdentificacao(),
-                internacao.getVeterinario().getName());
+                internacao.getVeterinario().getName(),
+                AlertasPacienteResponse.from(internacao.getPaciente()),
+                internacao.getPaciente().getFotoArquivo());
     }
 }

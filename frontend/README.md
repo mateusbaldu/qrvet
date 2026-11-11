@@ -5,6 +5,9 @@ Execute `npm ci` e `npm run dev` nesta pasta. O Vite atende em http://localhost:
 ## Fluxos disponíveis
 
 - Autenticação, convite, recuperação de senha e perfil.
+- Nome editável em Meu perfil, com atualização do cabeçalho e menu após salvar.
+- Alertas de alergias, restrições alimentares e manejo em destaque na ficha, internação e cuidados. Edição por administradores e veterinários.
+- Evoluções por internação, com horário e autoria preservados, cinco registros por página e histórico disponível após alta. Administradores, veterinários e auxiliares podem registrar durante a internação ativa.
 - Equipe e gestão de sessões (administrador).
 - Painel inicial com ocupação das baias, internações e resumo das refeições de hoje.
 - Cadastro conjunto de paciente e tutor, busca de tutor existente, edição de ambos e atalho para abrir internação.
@@ -14,6 +17,17 @@ Execute `npm ci` e `npm run dev` nesta pasta. O Vite atende em http://localhost:
 - Alimentação: agenda por data e horários, repetição diária limitada a 31 dias, checklist geral com filtros, conclusão com observação, cancelamento e indicação de pacientes sem horários.
 - Cuidados: agenda individual, histórico de alimentação e início/fim de jejum. O auxiliar escolhe um paciente no diretório de cuidados, sem acessar dados privados do tutor.
 - Consulta pública: `/public/internacoes/qr/:token`, sem login.
+
+## Navegação clínica
+
+- A internação tem abas **Resumo**, **Evoluções** e **Cuidados**, com identificação e alertas acima das abas. A recepção vê apenas o resumo. No acesso do auxiliar, ficam disponíveis Cuidados e Evoluções, sem dados privados do tutor.
+- As abas aceitam setas esquerda/direita e Home/End pelo teclado. A seleção fica na URL (`aba`) e os painéis permanecem montados para preservar o estado durante a troca.
+- O diretório de Cuidados usa cartões com foto, nome, baia e código, busca sem distinção de acentos e paginação. A consulta pelo código continua disponível para internações encerradas.
+- O checklist e as confirmações de alimentação exibem a foto e a identificação do paciente. As imagens usam os endpoints autenticados já existentes; a ausência de foto mantém a identificação textual.
+- Buscas, filtros e páginas dos cadastros, internações e cuidados ficam na URL (`busca`, `situacao`, `pagina`). Alimentação também preserva `dia` e `filtro`. Os links de retorno às listas preservam esse endereço.
+- A posição de rolagem é guardada em `sessionStorage`, por conta/perfil e endereço da lista. A restauração aguarda o carregamento dos dados e funciona tanto pelos links de retorno quanto pelo botão Voltar do navegador. Não depende de novos endpoints. Sem armazenamento disponível, a navegação e os filtros continuam funcionando.
+
+Com o Vite em execução, `npm run test:ux` verifica fotos nas refeições e confirmações, abas pelo teclado, busca dos cartões, retorno com filtros/paginação/rolagem, recuperação após falha e layouts de celular/tablet/computador. Essa verificação também integra `npm run test:e2e`.
 
 ## Permissões e integração
 
@@ -45,6 +59,6 @@ $env:PLAYWRIGHT_CHANNEL='msedge'
 npm run test:e2e
 ```
 
-Sem Edge, instale o Chromium com `npx playwright install chromium` e omita `PLAYWRIGHT_CHANNEL`. A suíte inclui `clinic-smoke.mjs` (fluxos anteriores e permissões) e `mvp-smoke.mjs` (cadastro conjunto, fotos, edição, agenda e checklist). Capturas ficam em `tests/artifacts/`.
+Sem Edge, instale o Chromium com `npx playwright install chromium` e omita `PLAYWRIGHT_CHANNEL`. A suíte inclui `clinic-smoke.mjs` (fluxos anteriores e permissões), `mvp-smoke.mjs` (cadastro conjunto, fotos, edição, agenda e checklist), `onboarding-smoke.mjs`, `dashboard-smoke.mjs` e `clinical-records-smoke.mjs` (perfil editável, alertas, evoluções e celular). Capturas regeneráveis ficam em `tests/artifacts/` e `test-results/`.
 
 Os testes de navegador usam respostas simuladas da API. A integração dos serviços com banco e autorização é verificada pelos testes Java; banco MySQL, volumes Docker e entrega de e-mails precisam de verificação no ambiente de execução.

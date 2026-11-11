@@ -135,6 +135,7 @@ await page.route('**/qrvet/api/v1/**', async route => {
     if (path === '/internacoes' || path === '/internacoes/ativas') return send(paged([]))
     if (path === '/internacoes/cuidados') return send(paged([care]))
     if (path === '/internacoes/1/cuidados') return send(care)
+    if (path === '/internacoes/1/evolucoes') return send(paged([]))
     if (
       path === '/internacoes/1/jejum' ||
       path === '/internacoes/1/alimentacao' ||
@@ -309,6 +310,7 @@ try {
   await page.getByText('Dieta revisada', { exact: true }).waitFor()
   await shot('checklist')
   await page.getByRole('button', { name: 'Concluídas', exact: true }).click()
+  await page.waitForFunction(() => document.querySelectorAll('.clinic-feeding-list > li').length === 1)
   assert.equal(await rows.count(), 1)
   await page.getByRole('button', { name: 'Todas', exact: true }).click()
   await page.getByLabel('Dia do checklist', { exact: true }).fill('2026-09-29')

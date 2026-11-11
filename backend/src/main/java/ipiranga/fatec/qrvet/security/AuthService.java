@@ -95,6 +95,16 @@ public class AuthService {
     }
 
     @Transactional
+    public UserResponse updateProfile(PerfilRequest request) {
+        User user = users.findUserByIdWithLock(current.getCurrent().getId())
+                .orElseThrow(() -> new ResourceNotFoundException("User not found"));
+        user.setName(request.name().strip());
+        UserResponse response = UserResponse.from(users.saveAndFlush(user));
+        audit.log(AuditAction.PROFILE_UPDATED, AuditResource.AUTH, String.valueOf(user.getId()), null);
+        return response;
+    }
+
+    @Transactional
     public void logout(String refreshToken) {
         if (refreshToken == null || refreshToken.isBlank()) return;
 

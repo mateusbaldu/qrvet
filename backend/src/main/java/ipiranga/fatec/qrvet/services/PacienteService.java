@@ -75,6 +75,21 @@ public class PacienteService {
     }
 
     @Transactional
+    @PreAuthorize("@qrvetSecurity.hasAnyRole('ADMIN', 'VETERINARIO')")
+    public PacienteResponse updateAlerts(Long id, ipiranga.fatec.qrvet.dtos.request.AlertasPacienteRequest request) {
+        Paciente paciente = pacienteRepository.findByIdForUpdate(id)
+                .orElseThrow(() -> new ResourceNotFoundException("Patient not found."));
+        paciente.setAlergias(cleanAlert(request.alergias()));
+        paciente.setRestricoesAlimentares(cleanAlert(request.restricoesAlimentares()));
+        paciente.setCuidadosManejo(cleanAlert(request.cuidadosManejo()));
+        var response = PacienteResponse.from(pacienteRepository.saveAndFlush(paciente));
+        auditService.log(AuditAction.PATIENT_ALERTS_UPDATED, AuditResource.PATIENT, String.valueOf(id), null);
+        return response;
+    }
+
+    private String cleanAlert(String value) { return value == null || value.isBlank() ? null : value.strip(); }
+
+    @Transactional
     public PacienteResponse update(Long id, PacienteRequest request) {
         logger.info("Updating patient {}", id);
         Paciente paciente = pacienteRepository.findByIdForUpdate(id)

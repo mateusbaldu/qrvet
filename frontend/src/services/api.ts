@@ -226,6 +226,7 @@ export const authApi = {
     return request<User>('/auth/me', { retryAuthentication: false })
   },
   me: () => request<User>('/auth/me'),
+  updateProfile: (name: string) => request<User>('/auth/me', { method: 'PUT', body: { name } }),
   async logout() {
     try {
       await rawRequest<void>('/auth/logout', {

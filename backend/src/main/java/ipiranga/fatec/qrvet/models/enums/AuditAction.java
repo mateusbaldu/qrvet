@@ -11,6 +11,9 @@ public enum AuditAction {
     PASSWORD_RESET("PASSWORD_RESET", "Senha redefinida"),
     PATIENT_CREATED("PATIENT_CREATED", "Paciente criado"),
     PATIENT_UPDATED("PATIENT_UPDATED", "Paciente atualizado"),
+    PATIENT_ALERTS_UPDATED("PATIENT_ALERTS_UPDATED", "Alertas do paciente atualizados"),
+    PROFILE_UPDATED("PROFILE_UPDATED", "Perfil atualizado"),
+    EVOLUTION_CREATED("EVOLUTION_CREATED", "Evolução registrada"),
     HOSPITALIZATION_CREATED("HOSPITALIZATION_CREATED", "Internação criada"),
     HOSPITALIZATION_UPDATED("HOSPITALIZATION_UPDATED", "Internação atualizada");
 

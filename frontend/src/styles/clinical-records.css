@@ -1,0 +1,20 @@
+.patient-alerts.has-alerts { border: 1px solid #ead29c; border-left: 4px solid #b98427; background: #fffbf2; }
+.patient-alerts h2, .evolution-notes h2 { display: flex; align-items: center; gap: .5rem; }
+.patient-alerts h2 svg { color: #92631d; flex-shrink: 0; }
+.patient-alerts .clinic-section-heading { flex-wrap: wrap; }
+.patient-alerts .clinic-section-heading > button { flex-shrink: 0; }
+.patient-alerts-list { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 230px), 1fr)); gap: 1rem; margin: 1rem 0 0; }
+.patient-alerts-list dt { font-size: .82rem; color: #79521c; margin-bottom: .4rem; }
+.patient-alerts-list dd { font-size: .85rem; margin: 0; color: #56442c; white-space: pre-wrap; overflow-wrap: anywhere; line-height: 1.6; }
+.evolution-notes .clinic-section-heading { flex-wrap: wrap; }
+.evolution-notes .clinic-section-heading > button { flex-shrink: 0; }
+.evolution-notes-list { list-style: none; padding: 0; margin: 1.25rem 0 0; }
+.evolution-notes-list li { padding: 1.1rem 0; border-top: 1px solid var(--border); }
+.evolution-notes-list header { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: .5rem; }
+.evolution-notes-list strong { font-size: .83rem; }
+.evolution-notes-list time { color: var(--muted); font-size: .75rem; }
+.evolution-notes-list p { margin: .65rem 0 0; white-space: pre-wrap; }
+.evolution-notes .clinic-empty { padding-block: 1.25rem; }
+@media (max-width: 575px) {
+  .evolution-notes .clinic-section-heading > button { width: 100%; }
+}
