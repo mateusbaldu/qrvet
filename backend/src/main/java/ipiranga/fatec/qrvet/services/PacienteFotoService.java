@@ -7,6 +7,7 @@ import ipiranga.fatec.qrvet.dtos.response.PacienteResponse;
 import ipiranga.fatec.qrvet.exceptions.InvalidRequestException;
 import ipiranga.fatec.qrvet.exceptions.ResourceNotFoundException;
 import ipiranga.fatec.qrvet.repositories.PacienteRepository;
+import ipiranga.fatec.qrvet.repositories.InternacaoRepository;
 import ipiranga.fatec.qrvet.models.Paciente;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.security.access.prepost.PreAuthorize;
@@ -37,10 +38,12 @@ import java.util.Iterator;
 public class PacienteFotoService {
     private static final Logger logger = LoggerFactory.getLogger(PacienteFotoService.class);
     private final PacienteRepository patients;
+    private final InternacaoRepository admissions;
     private final Path directory;
 
-    public PacienteFotoService(PacienteRepository patients, @Value("${qrvet.upload-dir:./uploads}") String directory) {
+    public PacienteFotoService(PacienteRepository patients, InternacaoRepository admissions, @Value("${qrvet.upload-dir:./uploads}") String directory) {
         this.patients = patients;
+        this.admissions = admissions;
         this.directory = Path.of(directory).toAbsolutePath().normalize();
     }
 
@@ -83,6 +86,17 @@ public class PacienteFotoService {
     @Transactional(readOnly = true)
     public byte[] read(Long id) {
         Paciente patient = patients.findById(id).orElseThrow(() -> new ResourceNotFoundException("Patient not found."));
+        return readPhoto(patient);
+    }
+
+    @Transactional(readOnly = true)
+    @PreAuthorize("@qrvetSecurity.hasAnyRole('ADMIN', 'VETERINARIO', 'RECEPCIONISTA', 'AUXILIAR_TECNICO')")
+    public byte[] readHospitalization(Long id) {
+        var admission = admissions.findById(id).orElseThrow(() -> new ResourceNotFoundException("Hospitalization not found."));
+        return readPhoto(admission.getPaciente());
+    }
+
+    private byte[] readPhoto(Paciente patient) {
         if (patient.getFotoArquivo() == null) throw new ResourceNotFoundException("Paciente sem foto.");
         try { return Files.readAllBytes(directory.resolve(patient.getFotoArquivo())); }
         catch (NoSuchFileException e) { throw new ResourceNotFoundException("Foto não encontrada no armazenamento local."); }

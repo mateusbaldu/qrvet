@@ -19,6 +19,20 @@ export type Paciente = {
   peso: number
   observacoes: string
   fotoVersao: string | null
+  alertas?: AlertasPaciente
+}
+export type AlertasPaciente = {
+  alergias: string | null
+  restricoesAlimentares: string | null
+  cuidadosManejo: string | null
+}
+export type Evolucao = {
+  id: number
+  internacaoId: number
+  profissionalId: number
+  profissionalNome: string
+  texto: string
+  dataHoraRegistro: string
 }
 export type AgendaAlimentacao = {
   id: number
@@ -61,10 +75,12 @@ export type Internacao = {
   id: number
   pacienteId: number
   pacienteNome: string
+  fotoVersao?: string | null
   baiaId: number
   baiaIdentificacao: string
   veterinarioId: number
   veterinarioNome: string
+  alertas?: AlertasPaciente
   uuidToken: string
   entradaInternacao: string
   saidaInternacao: string | null
@@ -74,7 +90,7 @@ export type Internacao = {
   observacoes: string
 }
 export type Veterinario = { id: number; name: string }
-export type Cuidado = Pick<Internacao, 'id' | 'pacienteNome' | 'baiaIdentificacao' | 'status'>
+export type Cuidado = Pick<Internacao, 'id' | 'pacienteNome' | 'baiaIdentificacao' | 'status' | 'alertas' | 'fotoVersao'>
 export type Jejum = {
   id: number
   motivo: string

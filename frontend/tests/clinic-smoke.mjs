@@ -270,6 +270,7 @@ await page.route('**/qrvet/api/v1/**', async route => {
         )
       )
     if (path === '/alimentacao/agenda') return send([])
+    if (/^\/internacoes\/\d+\/evolucoes$/.test(path)) return send(paged([], url))
     if (path === '/tutores') return send(paged(tutors, url))
     if (path === '/pacientes') {
       const active = url.searchParams.get('active')
@@ -426,6 +427,7 @@ try {
   assert(
     writes.some(w => w.path === '/internacoes/1/tutor/email' && w.method === 'POST' && !w.body)
   )
+  await page.getByRole('tab', { name: 'Cuidados', exact: true }).click()
   await page.getByRole('button', { name: 'Iniciar jejum', exact: true }).click()
   await fill({ motivo: 'Exame' })
   await save()

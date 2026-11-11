@@ -7,7 +7,9 @@
     "dev": "vite",
     "build": "tsc -b && vite build",
     "lint": "oxlint",
-    "test:e2e": "node tests/clinic-smoke.mjs && node tests/mvp-smoke.mjs && node tests/onboarding-smoke.mjs && node tests/dashboard-smoke.mjs",
+    "test:e2e": "node tests/clinic-smoke.mjs && node tests/mvp-smoke.mjs && node tests/onboarding-smoke.mjs && node tests/dashboard-smoke.mjs && node tests/clinical-records-smoke.mjs && node tests/frontend-ux-smoke.mjs",
+    "test:ux": "node tests/frontend-ux-smoke.mjs",
+    "test:clinical-records": "node tests/clinical-records-smoke.mjs",
     "test:dashboard": "node tests/dashboard-smoke.mjs",
     "test:onboarding": "node tests/onboarding-smoke.mjs",
     "preview": "vite preview"

@@ -374,9 +374,101 @@ class ClinicIntegrationTests {
     }
 
     @Test
+    void profileNameIsEditableOnlyForTheCurrentUserAndSurvivesReload() throws Exception {
+        String oldName = admin.getName();
+        perform(put("/v1/auth/me").content("{\"name\":\"  Marina Atualizada  \",\"role\":\"ADMIN\",\"id\":" + admin.getId() + "}"), vet)
+                .andExpect(status().isOk()).andExpect(jsonPath("$.name").value("Marina Atualizada"))
+                .andExpect(jsonPath("$.id").value(vet.getId())).andExpect(jsonPath("$.role").value("VETERINARIO"));
+        entities.flush(); entities.clear();
+        perform(get("/v1/auth/me"), vet).andExpect(status().isOk()).andExpect(jsonPath("$.name").value("Marina Atualizada"));
+        assertEquals(oldName, users.findById(admin.getId()).orElseThrow().getName());
+        perform(put("/v1/auth/me").content("{\"name\":\"   \"}"), vet).andExpect(status().isBadRequest());
+        perform(put("/v1/auth/me").content(json.writeValueAsString(java.util.Map.of("name", "n".repeat(121)))), vet)
+                .andExpect(status().isBadRequest());
+        perform(put("/v1/auth/me").content("{\"name\":\"Teste\"}"), null).andExpect(status().isUnauthorized());
+        perform(put("/v1/auth/me").content("{\"name\":\"Auxiliar Atualizado\"}"), assistant).andExpect(status().isOk());
+    }
+
+    @Test
+    void patientAlertsArePersistentPrivateAndEditableByClinicalLeads() throws Exception {
+        JsonNode admission = openHospitalization();
+        long patientId = admission.get("pacienteId").asLong(), id = admission.get("id").asLong();
+        String path = "/v1/pacientes/" + patientId + "/alertas";
+        String content = """
+                {"alergias":"  Alergia registrada  ","restricoesAlimentares":"Evitar frango","cuidadosManejo":"Sensível a ruídos"}
+                """;
+        perform(put(path).content(content), receptionist).andExpect(status().isForbidden());
+        perform(put(path).content(content), assistant).andExpect(status().isForbidden());
+        perform(put(path).content(content), null).andExpect(status().isUnauthorized());
+        perform(put(path).content(content), vet).andExpect(status().isOk()).andExpect(jsonPath("$.alertas.alergias").value("Alergia registrada"));
+        entities.flush(); entities.clear();
+        perform(get("/v1/pacientes/" + patientId), receptionist).andExpect(status().isOk()).andExpect(jsonPath("$.alertas.restricoesAlimentares").value("Evitar frango"));
+        perform(get("/v1/internacoes/" + id), vet).andExpect(status().isOk()).andExpect(jsonPath("$.alertas.cuidadosManejo").value("Sensível a ruídos"));
+        perform(get("/v1/internacoes/" + id + "/cuidados"), assistant).andExpect(status().isOk()).andExpect(jsonPath("$.alertas.alergias").value("Alergia registrada"));
+        JsonNode publicView = body(perform(get("/v1/public/internacoes/qr/" + admission.get("uuidToken").asText()), null).andExpect(status().isOk()));
+        assertFalse(publicView.has("alertas"));
+        perform(put(path).content(json.writeValueAsString(java.util.Map.of("alergias", "x".repeat(1001)))) , vet).andExpect(status().isBadRequest());
+        // Editing ordinary demographics must preserve clinical alerts.
+        perform(put("/v1/pacientes/" + patientId).content("""
+                {"tutorId":%d,"nome":"Luna","especie":"Felina","raca":"SRD","sexo":"Fêmea","peso":5,"dataNascimento":"2021-04-12"}
+                """.formatted(body(perform(get("/v1/pacientes/" + patientId), vet)).get("tutorId").asLong())), receptionist)
+                .andExpect(status().isOk()).andExpect(jsonPath("$.alertas.alergias").value("Alergia registrada"));
+        perform(put(path).content("{\"alergias\":\" \"}"), admin).andExpect(status().isOk()).andExpect(jsonPath("$.alertas.alergias").isEmpty())
+                .andExpect(jsonPath("$.alertas.restricoesAlimentares").isEmpty());
+        perform(put("/v1/pacientes/999999999/alertas").content("{}"), vet).andExpect(status().isNotFound());
+    }
+
+    @Test
+    void evolutionNotesKeepAuthorTextHistoryAndClosedAdmissionRules() throws Exception {
+        JsonNode admission = openHospitalization();
+        long id = admission.get("id").asLong();
+        String path = "/v1/internacoes/" + id + "/evolucoes";
+        String originalName = vet.getName();
+        JsonNode note = body(perform(post(path).content("""
+                {"texto":"  Paciente aceitou alimento.\\nManter acompanhamento.  ","profissionalId":99999,"profissionalNome":"Falso","dataHoraRegistro":"2000-01-01T00:00:00Z"}
+                """), vet).andExpect(status().isCreated()).andExpect(jsonPath("$.profissionalId").value(vet.getId()))
+                .andExpect(jsonPath("$.profissionalNome").value(originalName)));
+        assertEquals("Paciente aceitou alimento.\nManter acompanhamento.", note.get("texto").asText());
+        assertTrue(Instant.parse(note.get("dataHoraRegistro").asText()).isAfter(Instant.now().minusSeconds(60)));
+        perform(put("/v1/auth/me").content("{\"name\":\"Novo nome\"}"), vet).andExpect(status().isOk());
+        perform(post(path).content("{\"texto\":\"Tutor trouxe ração.\"}"), assistant).andExpect(status().isCreated());
+        entities.flush(); entities.clear();
+        perform(get(path).param("size", "1"), vet).andExpect(status().isOk()).andExpect(jsonPath("$.total").value(2))
+                .andExpect(jsonPath("$.pages").value(2)).andExpect(jsonPath("$.items[0].texto").value("Tutor trouxe ração."));
+        perform(get(path).param("size", "1").param("page", "1"), assistant).andExpect(status().isOk())
+                .andExpect(jsonPath("$.items[0].profissionalNome").value(originalName));
+        perform(put("/v1/internacoes/" + id + "/encerrar").content("{\"statusEncerramento\":\"ALTA\"}"), vet).andExpect(status().isOk());
+        perform(post(path).content("{\"texto\":\"Novo registro\"}"), vet).andExpect(status().isBadRequest());
+        perform(get(path), vet).andExpect(status().isOk()).andExpect(jsonPath("$.total").value(2));
+        perform(get("/v1/public/internacoes/qr/" + admission.get("uuidToken").asText()), null)
+                .andExpect(status().isOk()).andExpect(jsonPath("$.evolucoes").doesNotExist());
+    }
+
+    @Test
+    void evolutionNotesRejectInvalidDataAndUnauthorizedRoles() throws Exception {
+        long id = openHospitalization().get("id").asLong();
+        String path = "/v1/internacoes/" + id + "/evolucoes";
+        for (User user : List.of(receptionist, user(Role.TUTOR, true))) {
+            perform(get(path), user).andExpect(status().isForbidden());
+            perform(post(path).content("{\"texto\":\"Teste\"}"), user).andExpect(status().isForbidden());
+        }
+        perform(get(path), null).andExpect(status().isUnauthorized());
+        perform(post(path).content("{\"texto\":\"  \"}"), vet).andExpect(status().isBadRequest());
+        perform(post(path).content(json.writeValueAsString(java.util.Map.of("texto", "x".repeat(10001)))), vet).andExpect(status().isBadRequest());
+        perform(get(path).param("size", "101"), vet).andExpect(status().isBadRequest());
+        perform(get("/v1/internacoes/999999999/evolucoes"), vet).andExpect(status().isNotFound());
+        perform(post("/v1/internacoes/999999999/evolucoes").content("{\"texto\":\"Teste\"}"), vet).andExpect(status().isNotFound());
+        perform(get(path), admin).andExpect(status().isOk()).andExpect(jsonPath("$.total").value(0));
+    }
+
+    @Test
     void localPhotoUploadValidatesBytesAndRequiresPrivatePatientAccess() throws Exception {
-        long id = openHospitalization().get("pacienteId").asLong();
+        JsonNode admission = openHospitalization();
+        long id = admission.get("pacienteId").asLong();
+        long admissionId = admission.get("id").asLong();
+        String admissionPhotoPath = "/v1/internacoes/" + admissionId + "/foto";
         String path = "/v1/pacientes/" + id + "/foto";
+        perform(get(admissionPhotoPath), assistant).andExpect(status().isNotFound());
         ByteArrayOutputStream output = new ByteArrayOutputStream();
         ImageIO.write(new BufferedImage(24, 24, BufferedImage.TYPE_INT_RGB), "png", output);
         MockMultipartFile photo = new MockMultipartFile("foto", "../../foto.png", "image/png", output.toByteArray());
@@ -384,6 +476,16 @@ class ClinicIntegrationTests {
                 .cookie(new Cookie("XSRF-TOKEN", "test-csrf")).header("X-XSRF-TOKEN", "test-csrf"))
                 .andExpect(status().isOk()).andExpect(jsonPath("$.fotoVersao").isNotEmpty());
         perform(get(path), receptionist).andExpect(status().isOk()).andExpect(content().contentType("image/jpeg"));
+        for (User user : List.of(admin, vet, receptionist, assistant)) {
+            perform(get(admissionPhotoPath), user).andExpect(status().isOk())
+                    .andExpect(content().contentType("image/jpeg")).andExpect(header().string("Cache-Control", "no-store"));
+        }
+        perform(get("/v1/internacoes/" + admissionId), vet).andExpect(status().isOk()).andExpect(jsonPath("$.fotoVersao").isNotEmpty());
+        perform(get("/v1/internacoes/" + admissionId + "/cuidados"), assistant).andExpect(status().isOk()).andExpect(jsonPath("$.fotoVersao").isNotEmpty());
+        perform(get("/v1/internacoes"), vet).andExpect(status().isOk()).andExpect(jsonPath("$.items[0].fotoVersao").isNotEmpty());
+        perform(get(admissionPhotoPath), null).andExpect(status().isUnauthorized());
+        perform(get(admissionPhotoPath), user(Role.TUTOR, true)).andExpect(status().isForbidden());
+        perform(get("/v1/internacoes/999999999/foto"), vet).andExpect(status().isNotFound());
         perform(get(path), assistant).andExpect(status().isForbidden());
         perform(get(path), null).andExpect(status().isUnauthorized());
         mvc.perform(multipart(path).file(new MockMultipartFile("foto", "fake.png", "image/png", "<svg>fake</svg>".getBytes()))
@@ -392,6 +494,8 @@ class ClinicIntegrationTests {
                 .andExpect(status().isBadRequest());
         perform(delete(path), receptionist).andExpect(status().isNoContent());
         perform(get(path), vet).andExpect(status().isNotFound());
+        perform(get(admissionPhotoPath), assistant).andExpect(status().isNotFound());
+        perform(get("/v1/internacoes/" + admissionId), vet).andExpect(jsonPath("$.fotoVersao").isEmpty());
         perform(get("/v1/pacientes/" + id), vet).andExpect(jsonPath("$.fotoVersao").isEmpty());
     }
 }

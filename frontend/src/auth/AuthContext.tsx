@@ -73,6 +73,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       async reloadUser() {
         setUser(await authApi.me())
       },
+      async updateProfile(name) {
+        setUser(await authApi.updateProfile(name))
+      },
     }),
     [loading, user]
   )

@@ -1,8 +1,10 @@
 import { useState } from 'react'
-import { Link, useLocation, useNavigate, useParams, useSearchParams } from 'react-router-dom'
+import { Link, useLocation, useNavigate, useParams } from 'react-router-dom'
 import { ArrowRight, Plus, Search, UserRound } from 'lucide-react'
 import { useAuth } from '../auth/useAuth'
+import { PatientAlerts } from '../components/PatientAlerts'
 import { useResource } from '../hooks/useResource'
+import { queryPage, returnToList, useListNavigation, useListScroll } from '../hooks/useListNavigation'
 import {
   Editor,
   EmptyState,
@@ -29,11 +31,12 @@ import {
 
 export function Registry({ kind }: { kind: 'tutores' | 'pacientes' | 'baias' }) {
   const { user } = useAuth()
-  const [params] = useSearchParams()
+  const { params, updateQuery, listLocation } = useListNavigation()
   const navigate = useNavigate()
-  const [page, setPage] = useState(0)
-  const [filter, setFilter] = useState('')
-  const [search, setSearch] = useState('')
+  const page = queryPage(params)
+  const requestedFilter = params.get('situacao') ?? ''
+  const filter = ['ATIVA', 'SEM', 'DISPONIVEL', 'OCUPADA', 'MANUTENCAO'].includes(requestedFilter) ? requestedFilter : ''
+  const search = params.get('busca') ?? ''
   const [success, setSuccess] = useState('')
   const [editing, setEditing] = useState<Baia | Tutor | 'new' | null>(
     params.has('novo') ? 'new' : null
@@ -102,6 +105,7 @@ export function Registry({ kind }: { kind: 'tutores' | 'pacientes' | 'baias' }) 
             : []),
         ]
   const result = resource.data
+  useListScroll(!resource.loading && !!result)
   const canCreate = editable && !!resource.data
   return (
     <Page
@@ -145,11 +149,11 @@ export function Registry({ kind }: { kind: 'tutores' | 'pacientes' | 'baias' }) 
           tutorId={tutorId ?? ''}
           onClose={() => {
             setEditing(null)
-            navigate(tutorId ? '/pacientes?tutor=' + tutorId : '/pacientes', { replace: true })
+            updateQuery({ novo: null })
           }}
           onSaved={(patient, admit, warning) =>
             navigate(admit ? '/internacoes?paciente=' + patient.id : '/pacientes/' + patient.id, {
-              state: { warning },
+              state: { warning, returnTo: listLocation },
             })
           }
         />
@@ -211,8 +215,7 @@ export function Registry({ kind }: { kind: 'tutores' | 'pacientes' | 'baias' }) 
               type="search"
               value={search}
               onChange={e => {
-                setSearch(e.target.value)
-                setPage(0)
+                updateQuery({ busca: e.target.value, pagina: 0 })
               }}
               placeholder={
                 kind === 'pacientes'
@@ -244,8 +247,7 @@ export function Registry({ kind }: { kind: 'tutores' | 'pacientes' | 'baias' }) 
                 className={filter === value ? 'selected' : ''}
                 aria-pressed={filter === value}
                 onClick={() => {
-                  setFilter(value)
-                  setPage(0)
+                  updateQuery({ situacao: value, pagina: 0 })
                 }}
               >
                 {label}
@@ -266,7 +268,7 @@ export function Registry({ kind }: { kind: 'tutores' | 'pacientes' | 'baias' }) 
                   const admission = resource.data!.admissions.find(i => i.pacienteId === p.id)
                   return (
                     <article className="clinic-card clinic-patient-card" key={p.id}>
-                      <Link className="clinic-patient-card-identity" to={'/pacientes/' + p.id}>
+                      <Link className="clinic-patient-card-identity" to={'/pacientes/' + p.id} state={{ returnTo: listLocation }}>
                         <PatientAvatar patient={p} />
                         <h2>{p.nome}</h2>
                         <small>{p.especie} · {p.raca}</small>
@@ -281,6 +283,7 @@ export function Registry({ kind }: { kind: 'tutores' | 'pacientes' | 'baias' }) 
                         className="clinic-card-link"
                         aria-label={'Ver detalhes de ' + p.nome}
                         to={'/pacientes/' + p.id}
+                        state={{ returnTo: listLocation }}
                       >
                         Ver paciente <ArrowRight size={18} />
                       </Link>
@@ -357,7 +360,7 @@ export function Registry({ kind }: { kind: 'tutores' | 'pacientes' | 'baias' }) 
               <p>Os novos cadastros aparecerão aqui.</p>
             </EmptyState>
           )}
-          <Pagination {...result} onChange={setPage} />
+          <Pagination {...result} onChange={page => { updateQuery({ pagina: page }); window.scrollTo({ top: 0, behavior: 'instant' }) }} />
         </>
       )}
     </Page>
@@ -388,7 +391,7 @@ export function PatientDetail() {
       title={data?.patient.nome ?? 'Detalhes do paciente'}
       description="Identificação, responsável e histórico de internações."
       action={
-        <Link className="clinic-button" to="/pacientes">
+        <Link className="clinic-button" to={returnToList(location.state, '/pacientes')}>
           Voltar aos pacientes
         </Link>
       }
@@ -421,6 +424,7 @@ export function PatientDetail() {
               <ArrowRight size={16} />
             </Link>
           </section>
+          <PatientAlerts alerts={data.patient.alertas} patientId={data.patient.id} onSaved={resource.reload} />
           <div className="clinic-detail-grid">
             <div>
               <section className="clinic-panel">

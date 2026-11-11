@@ -30,6 +30,12 @@ public class PacienteController {
         return service.update(id, request);
     }
 
+    @PutMapping("/{id}/alertas")
+    public PacienteResponse updateAlerts(@PathVariable Long id,
+            @Valid @RequestBody ipiranga.fatec.qrvet.dtos.request.AlertasPacienteRequest request) {
+        return service.updateAlerts(id, request);
+    }
+
     @PostMapping(value = "/{id}/foto", consumes = "multipart/form-data")
     public PacienteResponse upload(@PathVariable Long id, @RequestParam("foto") org.springframework.web.multipart.MultipartFile foto) {
         return photos.upload(id, foto);

@@ -40,8 +40,6 @@
 .app-header-title small { display: flex; align-items: center; gap: .35rem; color: var(--muted); font-size: .67rem; }
 .app-header-title strong { color: var(--ink); font-size: .9rem; font-weight: 600; }
 .header-actions { display: flex; align-items: center; gap: 1rem; }
-.header-qr { display: inline-flex; min-height: 42px; align-items: center; gap: .5rem; padding: .55rem .8rem; border: 1px solid var(--border); border-radius: .5rem; color: var(--green-700); text-decoration: none; font-size: .75rem; font-weight: 600; }
-.header-qr:hover { background: #f0f7f3; }
 .header-profile { display: flex; align-items: center; gap: .7rem; padding-left: 1rem; color: inherit; text-decoration: none; border-left: 1px solid var(--border); }
 .header-profile-text { display: flex; flex-direction: column; align-items: flex-end; line-height: 1.3; }
 .header-profile-text strong { color: var(--ink); font-size: .77rem; }
@@ -61,11 +59,10 @@
   .sidebar-overlay { position: fixed; z-index: 90; inset: 0; background: #183d3566; border: 0; }
 }
 @media (max-width: 575.98px) {
-  .header-qr span, .header-profile-text, .header-actions .onboarding-help-button span { display: none; }
+  .header-profile-text, .header-actions .onboarding-help-button span { display: none; }
   .header-actions { gap: .45rem; }
   .header-profile { padding-left: .5rem; }
   .app-header { gap: .4rem; min-height: 4.2rem; padding-inline: .85rem; }
-  .header-qr { padding: .55rem; }
   .app-header-title strong { font-size: .8rem; }
 }
 @media (prefers-reduced-motion: reduce) { .app-sidebar { transition: none; } }

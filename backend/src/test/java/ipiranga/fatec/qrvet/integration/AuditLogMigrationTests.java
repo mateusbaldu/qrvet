@@ -36,6 +36,14 @@ class AuditLogMigrationTests {
                 .migrate();
 
         try (Connection connection = mysql.createConnection("")) {
+            try (ResultSet alertColumns = connection.getMetaData().getColumns(null, null, "paciente", "alergias")) {
+                assertTrue(alertColumns.next());
+                assertEquals(1000, alertColumns.getInt("COLUMN_SIZE"));
+            }
+            try (ResultSet noteColumns = connection.getMetaData().getColumns(null, null, "evolucao", "profissional_nome")) {
+                assertTrue(noteColumns.next());
+                assertEquals(DatabaseMetaData.columnNoNulls, noteColumns.getInt("NULLABLE"));
+            }
             assertEquals("audit_logs", tableName(connection));
 
             Map<String, ColumnMetadata> columns = columns(connection);
