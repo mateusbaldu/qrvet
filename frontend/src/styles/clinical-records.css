@@ -15,6 +15,16 @@
 .evolution-notes-list time { color: var(--muted); font-size: .75rem; }
 .evolution-notes-list p { margin: .65rem 0 0; white-space: pre-wrap; }
 .evolution-notes .clinic-empty { padding-block: 1.25rem; }
+.public-refresh { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: .75rem; margin-bottom: 1.5rem; }
+.public-refresh p { margin: 0; font-size: .75rem; color: var(--muted); }
+.public-content .clinic-panel { margin-bottom: 1rem; overflow-wrap: anywhere; }
+.public-content .clinic-details dd { white-space: pre-wrap; }
+.public-content .evolution-notes-list { border-left: 2px solid var(--border); padding-left: 1rem; }
+.public-content .evolution-notes-list li:first-child { border-top: 0; padding-top: 0; }
+@media (max-width: 575px) {
+  .public-refresh .clinic-button { width: 100%; }
+  .public-brand { flex-wrap: wrap; }
+}
 @media (max-width: 575px) {
   .evolution-notes .clinic-section-heading > button { width: 100%; }
 }

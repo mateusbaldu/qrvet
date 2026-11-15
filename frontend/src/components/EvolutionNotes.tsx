@@ -23,7 +23,7 @@ export function EvolutionNotes({ admissionId, active }: { admissionId: string; a
       </li>)}</ol> : <EmptyState title="Nenhuma evolução registrada"><p>As anotações desta internação aparecerão aqui.</p></EmptyState>}
       {resource.data.pages > 1 && <Pagination {...resource.data} onChange={setPage} />}
     </>}
-    {creating && <Editor title="Adicionar evolução" description="Registre observações sobre este paciente. O horário e a autoria serão salvos automaticamente. Após salvar, o registro é preservado; correções devem ser feitas em uma nova anotação."
+    {creating && <Editor title="Adicionar evolução" description="Registre observações sobre este paciente. A evolução também estará disponível no link de acompanhamento do tutor. O horário e a autoria serão salvos automaticamente. Após salvar, o registro é preservado; correções devem ser feitas em uma nova anotação."
       fields={[{ name: 'texto', label: 'Anotação de evolução', type: 'textarea', maxLength: 10000 }]}
       submitLabel="Salvar evolução" onCancel={() => setCreating(false)} onSave={async data => {
         await clinicApi.save('/internacoes/' + admissionId + '/evolucoes', data)

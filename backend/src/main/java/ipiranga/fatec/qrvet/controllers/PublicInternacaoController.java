@@ -4,6 +4,8 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import ipiranga.fatec.qrvet.dtos.response.InternacaoPublicResponse;
+import ipiranga.fatec.qrvet.dtos.request.PaginationRequest;
+import jakarta.validation.Valid;
 import ipiranga.fatec.qrvet.services.InternacaoService;
 import java.util.UUID;
 import org.springframework.web.bind.annotation.*;
@@ -19,7 +21,7 @@ public class PublicInternacaoController {
     }
 
     @GetMapping("/{uuidToken}")
-    public InternacaoPublicResponse findByToken(@PathVariable UUID uuidToken) {
-        return service.publicDetails(uuidToken);
+    public InternacaoPublicResponse findByToken(@PathVariable UUID uuidToken, @Valid @ModelAttribute PaginationRequest pagination) {
+        return service.publicDetails(uuidToken, pagination);
     }
 }

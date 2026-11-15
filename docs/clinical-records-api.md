@@ -1,6 +1,6 @@
 # Evoluções, alertas e perfil
 
-Base: `/qrvet/api/v1` no navegador; `/v1` nos controllers. Todos os endpoints abaixo exigem autenticação. Escritas exigem o token CSRF existente.
+Base: `/qrvet/api/v1` no navegador; `/v1` nos controllers. Os endpoints da equipe exigem autenticação. Escritas exigem o token CSRF existente. O acompanhamento do tutor usa o token do link, sem login.
 
 ## Perfil
 
@@ -20,7 +20,7 @@ Base: `/qrvet/api/v1` no navegador; `/v1` nos controllers. Todos os endpoints ab
 
 Cada campo é opcional e aceita até 1.000 caracteres. A operação substitui os três campos: valores ausentes, nulos ou vazios removem o alerta correspondente. Retorna `PacienteResponse`, incluindo `alertas`. Alterar dados cadastrais ou fotos não remove os alertas. A alteração gera auditoria sem copiar o texto clínico para o log.
 
-Os alertas também aparecem em `InternacaoResponse` e `CuidadoResponse`, permitindo a consulta pelo auxiliar nos cuidados sem liberar dados do tutor. Recepcionistas consultam os alertas na ficha/internação, mas não podem editá-los. O acompanhamento público do tutor não inclui alertas.
+Os alertas também aparecem em `InternacaoResponse` e `CuidadoResponse`, permitindo a consulta pelo auxiliar nos cuidados sem liberar dados do tutor. Recepcionistas consultam os alertas na ficha/internação, mas não podem editá-los. O acompanhamento do tutor inclui os três campos de alertas.
 
 ## Evoluções da internação
 
@@ -43,7 +43,15 @@ O texto é obrigatório, aceita até 10.000 caracteres e preserva quebras de lin
 
 `GET /internacoes/{id}/evolucoes?page=0&size=5` retorna o envelope existente `items`, `page`, `size`, `total`, `pages`. Os registros são ordenados por horário decrescente e ID decrescente para desempate. `page` deve ser não negativo; `size` deve estar entre 1 e 100. A interface apresenta cinco registros por página.
 
-O histórico continua consultável após alta/óbito. Não há edição ou exclusão de evoluções; correções são novas anotações na internação ativa. O acompanhamento público não inclui esse histórico.
+O histórico continua consultável após alta/óbito. Não há edição ou exclusão de evoluções; correções são novas anotações na internação ativa. O acompanhamento do tutor também inclui esse histórico.
+
+## Acompanhamento do tutor
+
+`GET /public/internacoes/qr/{uuidToken}?page=0&size=5` mantém o acesso sem login pelo token da internação. Além de nome, espécie, raça, sexo, baia, motivo, situação, jejum e entrada, retorna `saidaInternacao` (nula enquanto ativa), `veterinarioNome`, `alertas` e `evolucoes`.
+
+`evolucoes` usa o envelope `items`, `page`, `size`, `total`, `pages`. Cada item contém somente `profissionalNome`, `texto` e `dataHoraRegistro`, preservando a autoria histórica. Ordenação: data e ID decrescentes. A paginação afeta somente as evoluções: `page >= 0`, `1 <= size <= 100`, padrões 0 e 20; a interface solicita cinco registros por página. O histórico é limitado à internação do token e continua disponível após o encerramento. Sem evoluções, `items` é vazio e `total` é zero.
+
+O retorno não inclui IDs de profissionais, dados de contato do tutor ou entidades internas. Token desconhecido retorna 404; paginação inválida retorna 400. A tela é somente consulta; os formulários da equipe informam que alertas e evoluções são compartilhados no link do tutor.
 
 ## Foto na internação
 
@@ -62,4 +70,4 @@ A migração Flyway `V12__patient_alerts_and_evolution_notes.sql` adiciona os ca
 
 `backend/mvnw.cmd test` executa os testes reais de controllers, serviços, autorização e banco H2. `AuditLogMigrationTests` aplica as migrações no MySQL 8.4 via Testcontainers, exigindo Docker disponível. `ClinicIntegrationTests` cobre persistência, autoria histórica, validação, alta, paginação e permissões dos novos endpoints.
 
-Com o Vite em execução, `npm run test:clinical-records` em `frontend` verifica os fluxos de interface com respostas HTTP simuladas: salvar/recarregar perfil, falhas e nova tentativa, alertas, remoção de alertas, anotações, paginação, perfis e celular. `npm run test:e2e` inclui esse cenário nas regressões existentes.
+Com o Vite em execução, `npm run test:clinical-records` em `frontend` verifica os fluxos de interface com respostas HTTP simuladas: salvar/recarregar perfil, falhas e nova tentativa, alertas, remoção de alertas, anotações, paginação, perfis e celular. Inclui `public-hospitalization-smoke.mjs`, que verifica o acompanhamento do tutor, paginação, atualização, alta, estados vazios, erro/nova tentativa, consulta sem escrita e layout no celular. `npm run test:e2e` inclui esses cenários nas regressões existentes.

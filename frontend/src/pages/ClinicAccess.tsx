@@ -4,10 +4,12 @@ import {
   ArrowRight,
   Download,
   HeartPulse,
+  NotebookPen,
   PawPrint,
   QrCode as QrIcon,
   RefreshCw,
   ShieldCheck,
+  ShieldAlert,
 } from 'lucide-react'
 import { useResource } from '../hooks/useResource'
 import {
@@ -21,11 +23,19 @@ import {
 } from '../components/ClinicUI'
 import { readableError, request, type User } from '../services/api'
 import { allPages, clinicApi, dateTime, type AuditLog, type Session } from '../services/clinic'
+import '../styles/clinical-records.css'
 
 export function PublicHospitalization() {
   const { token = '' } = useParams()
-  const resource = useResource(() => clinicApi.publicDetails(token), [token])
+  const [evolutionPage, setEvolutionPage] = useState(0)
+  const resource = useResource(async () => ({ ...await clinicApi.publicDetails(token, evolutionPage), consultadoEm: new Date().toISOString() }), [token, evolutionPage])
   const i = resource.data
+  const alertFields = [
+    ['alergias', 'Alergias'],
+    ['restricoesAlimentares', 'Restrições alimentares'],
+    ['cuidadosManejo', 'Cuidados de manejo'],
+  ] as const
+  const activeAlerts = alertFields.filter(([key]) => i?.alertas?.[key]?.trim())
   return (
     <main className="clinic-public">
       <header className="public-brand">
@@ -38,11 +48,17 @@ export function PublicHospitalization() {
         </div>
         <span className="public-readonly">
           <ShieldCheck size={15} />
-          Consulta pública
+          Acompanhamento do tutor
         </span>
       </header>
       <div className="clinic-page public-content">
         <p className="clinic-eyebrow">ACOMPANHAMENTO DA INTERNAÇÃO</p>
+        <div className="public-refresh">
+          <p>{i ? <>Consultado em <time dateTime={i.consultadoEm}>{dateTime(i.consultadoEm)}</time></> : 'Informações registradas pela equipe da clínica.'}</p>
+          <button className="clinic-button" disabled={resource.loading} onClick={resource.reload}>
+            <RefreshCw size={16} aria-hidden="true" />{resource.loading ? 'Atualizando...' : 'Atualizar informações'}
+          </button>
+        </div>
         <ResourceState {...resource} />
         {i && (
           <>
@@ -69,6 +85,12 @@ export function PublicHospitalization() {
                 Não oferecer alimento. A equipe está acompanhando os cuidados.
               </p>
             )}
+            <section className={'clinic-panel patient-alerts' + (activeAlerts.length ? ' has-alerts' : '')} aria-labelledby="public-alerts-title">
+              <h2 id="public-alerts-title"><ShieldAlert size={20} aria-hidden="true" />Alertas e restrições</h2>
+              {activeAlerts.length ? <dl className="patient-alerts-list">
+                {activeAlerts.map(([key, label]) => <div key={key}><dt>{label}</dt><dd>{i.alertas[key]}</dd></div>)}
+              </dl> : <p className="clinic-muted">Nenhum alerta ou restrição registrado. Confirme as orientações com a equipe da clínica.</p>}
+            </section>
             <section className="clinic-panel">
               <h2>
                 <HeartPulse size={20} />
@@ -80,6 +102,14 @@ export function PublicHospitalization() {
                   <dd>{i.motivo}</dd>
                 </div>
                 <div>
+                  <dt>Veterinário responsável</dt>
+                  <dd>{i.veterinarioNome || 'Não informado'}</dd>
+                </div>
+                {i.saidaInternacao && <div>
+                  <dt>Encerramento da internação</dt>
+                  <dd>{dateTime(i.saidaInternacao)}</dd>
+                </div>}
+                <div>
                   <dt>Situação</dt>
                   <dd>
                     {i.status === 'ATIVA'
@@ -90,14 +120,21 @@ export function PublicHospitalization() {
                   </dd>
                 </div>
               </dl>
-              <button className="clinic-button" onClick={resource.reload}>
-                <RefreshCw size={16} />
-                Atualizar informações
-              </button>
+            </section>
+            <section className="clinic-panel evolution-notes" aria-labelledby="public-evolutions-title">
+              <h2 id="public-evolutions-title"><NotebookPen size={20} aria-hidden="true" />Evoluções do paciente</h2>
+              <p className="clinic-muted">Acompanhe as anotações da equipe, da mais recente à mais antiga.</p>
+              {i.evolucoes?.items.length ? <>
+                <p className="clinic-muted">{i.evolucoes.total} {i.evolucoes.total === 1 ? 'evolução registrada' : 'evoluções registradas'}</p>
+                <ol className="evolution-notes-list">{i.evolucoes.items.map((note, index) => <li key={index}>
+                  <header><strong>{note.profissionalNome}</strong><time dateTime={note.dataHoraRegistro}>{dateTime(note.dataHoraRegistro)}</time></header>
+                  <p>{note.texto}</p>
+                </li>)}</ol>
+                {i.evolucoes.pages > 1 && <Pagination {...i.evolucoes} onChange={setEvolutionPage} />}
+              </> : <EmptyState title="Nenhuma evolução registrada"><p>As atualizações desta internação aparecerão aqui assim que forem registradas pela equipe.</p></EmptyState>}
             </section>
             <p className="public-note">
-              Para informações detalhadas sobre a evolução do paciente, entre em contato com a
-              equipe da clínica.
+              As informações refletem os registros da equipe. Para esclarecer dúvidas sobre os cuidados e a evolução do paciente, entre em contato com a clínica.
             </p>
           </>
         )}
