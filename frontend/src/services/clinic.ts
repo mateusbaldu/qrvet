@@ -129,6 +129,10 @@ export type PublicInternacao = {
   status: string
   jejumAtivo: boolean
   entradaInternacao: string
+  saidaInternacao: string | null
+  veterinarioNome: string
+  alertas: AlertasPaciente
+  evolucoes: PageResponse<Pick<Evolucao, 'profissionalNome' | 'texto' | 'dataHoraRegistro'>>
 }
 export type QrCode = {
   uuidToken: string
@@ -169,8 +173,8 @@ export const clinicApi = {
     return request<PageResponse<T>>(`${path}?${query}`)
   },
   save: <T>(path: string, body: unknown, method = 'POST') => request<T>(path, { method, body }),
-  publicDetails: (token: string) =>
-    request<PublicInternacao>(`/public/internacoes/qr/${encodeURIComponent(token)}`, {
+  publicDetails: (token: string, page = 0) =>
+    request<PublicInternacao>(`/public/internacoes/qr/${encodeURIComponent(token)}?page=${page}&size=5`, {
       retryAuthentication: false,
       authenticated: false,
     }),

@@ -27,7 +27,7 @@ export function PatientAlerts({ alerts, patientId, onSaved }: {
     </div>
     {success && <Notice>{success}</Notice>}
     {active.length > 0 && <dl className="patient-alerts-list">{active.map(field => <div key={field.name}><dt>{field.label}</dt><dd>{alerts?.[field.name]}</dd></div>)}</dl>}
-    {editing && <Editor title="Editar alertas do paciente" description="Os alertas ficam visíveis à equipe na ficha e nos cuidados. Para remover um alerta, deixe o campo vazio."
+    {editing && <Editor title="Editar alertas do paciente" description="Os alertas ficam visíveis à equipe na ficha e nos cuidados, e ao tutor no link de acompanhamento. Para remover um alerta, deixe o campo vazio."
       fields={fields.map(field => ({ ...field, type: 'textarea', required: false, maxLength: 1000, value: alerts?.[field.name] ?? '' }))}
       onCancel={() => setEditing(false)} onSave={async data => {
         await clinicApi.save('/pacientes/' + patientId + '/alertas', data, 'PUT')
