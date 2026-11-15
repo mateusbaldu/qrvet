@@ -17,6 +17,10 @@ public interface UserRepository
 
     long countByRole(Role role);
 
+    @Lock(LockModeType.PESSIMISTIC_WRITE)
+    @Query("select u from User u where u.role = ipiranga.fatec.qrvet.models.enums.Role.ADMIN order by u.id")
+    List<User> findAdministratorsForUpdate();
+
     List<User> findAllByRoleAndActiveTrueAndConfirmedTrueOrderByNameAsc(Role role);
 
     Optional<User> findByIdAndRoleAndActiveTrue(Long id, Role role);

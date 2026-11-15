@@ -8,6 +8,7 @@ import java.util.List;
 
 public interface AlimentacaoAgendadaRepository extends JpaRepository<AlimentacaoAgendada, Long> {
     boolean existsByInternacaoIdAndHorarioAndStatusNot(Long internacaoId, Instant horario, AlimentacaoAgendada.Status status);
+    boolean existsByInternacaoIdAndHorarioAndStatusNotAndIdNot(Long internacaoId, Instant horario, AlimentacaoAgendada.Status status, Long id);
     List<AlimentacaoAgendada> findAllByInternacaoIdAndStatus(Long internacaoId, AlimentacaoAgendada.Status status);
     @Query("select a from AlimentacaoAgendada a join fetch a.internacao i join fetch i.paciente join fetch i.baia "
             + "left join fetch a.registro r left join fetch r.usuario "

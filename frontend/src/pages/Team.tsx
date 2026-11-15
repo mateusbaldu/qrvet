@@ -5,6 +5,7 @@ import { useResource } from '../hooks/useResource'
 import { Editor, EmptyState, Notice, Page, Pagination, ResourceState } from '../components/ClinicUI'
 import { usersApi, type Role, type User } from '../services/api'
 import { clinicApi, dateTime } from '../services/clinic'
+import { useAuth } from '../auth/useAuth'
 
 const roleLabels: Record<Role, string> = {
   ADMIN: 'Administrador',
@@ -31,6 +32,8 @@ const initials = (name: string) =>
     .join('')
 
 export function Team() {
+  const { user } = useAuth()
+  const [editing, setEditing] = useState<User | null>(null)
   const [search, setSearch] = useState('')
   const [filter, setFilter] = useState('')
   const [page, setPage] = useState(0)
@@ -173,6 +176,14 @@ export function Team() {
                       <td>{new Date(member.createdAt).toLocaleDateString('pt-BR')}</td>
                       <td>
                         <div className="clinic-table-actions">
+                          <button
+                            disabled={member.id === user?.id}
+                            title={member.id === user?.id ? 'Peça a outro administrador para alterar sua permissão.' : undefined}
+                            aria-label={'Editar permissão de ' + member.name}
+                            onClick={() => setEditing(member)}
+                          >
+                            Editar permissão
+                          </button>
                           {!member.confirmed ? (
                             <button
                               aria-label={'Reenviar convite para ' + member.name}
@@ -231,6 +242,20 @@ export function Team() {
           }}
         />
       )}
+      {editing && <Editor
+        title="Editar permissão"
+        description={<><p>{editing.name} · {editing.email}</p><p>A alteração será aplicada no próximo acesso às funções do sistema.</p>
+          <p>Administrador: gestão completa. Veterinário: atendimento clínico. Auxiliar técnico: cuidados e evoluções. Recepcionista: cadastros e internações. Tutor: sem acesso à área da equipe.</p></>}
+        fields={[{ name: 'role', label: 'Permissão', value: editing.role, wide: true,
+          options: Object.entries(roleLabels).map(([value, label]) => ({ value, label })) }]}
+        submitLabel="Salvar permissão"
+        onCancel={() => setEditing(null)}
+        onSave={async data => {
+          await usersApi.updateRole(editing.id, data.role as Role)
+          setSuccess('Permissão de ' + editing.name + ' atualizada.')
+          resource.reload()
+        }}
+      />}
       {resending && (
         <Editor
           title="Reenviar convite?"
