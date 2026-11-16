@@ -4,6 +4,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import ipiranga.fatec.qrvet.dtos.request.AgendaAlimentacaoRequest;
+import ipiranga.fatec.qrvet.dtos.request.AgendaAlimentacaoUpdateRequest;
 import ipiranga.fatec.qrvet.dtos.response.AgendaAlimentacaoResponse;
 import ipiranga.fatec.qrvet.services.NutricaoClinicaService;
 import jakarta.validation.Valid;
@@ -30,6 +31,11 @@ public class AgendaAlimentacaoController {
     @PostMapping("/internacoes/{id}/alimentacao/agenda") @ResponseStatus(HttpStatus.CREATED)
     public List<AgendaAlimentacaoResponse> create(@PathVariable Long id, @Valid @RequestBody AgendaAlimentacaoRequest request) {
         return service.createSchedule(id, request);
+    }
+    @PutMapping("/internacoes/{id}/alimentacao/agenda/{agendaId}")
+    public AgendaAlimentacaoResponse update(@PathVariable Long id, @PathVariable Long agendaId,
+                                            @Valid @RequestBody AgendaAlimentacaoUpdateRequest request) {
+        return service.updateSchedule(id, agendaId, request);
     }
     @PutMapping("/internacoes/{id}/alimentacao/agenda/{agendaId}/concluir")
     public AgendaAlimentacaoResponse complete(@PathVariable Long id, @PathVariable Long agendaId, @Valid @RequestBody ConclusaoRequest request) {

@@ -6,6 +6,7 @@ import org.slf4j.LoggerFactory;
 import ipiranga.fatec.qrvet.dtos.request.PaginationRequest;
 import ipiranga.fatec.qrvet.dtos.request.ResetPasswordRequest;
 import ipiranga.fatec.qrvet.dtos.request.UserRequest;
+import ipiranga.fatec.qrvet.dtos.request.UserRoleRequest;
 import ipiranga.fatec.qrvet.dtos.filter.UserSearchFilter;
 import ipiranga.fatec.qrvet.dtos.response.*;
 import ipiranga.fatec.qrvet.services.UserService;
@@ -35,6 +36,11 @@ public class UserController {
     public ResponseEntity<UserResponse> create(@Valid @RequestBody UserRequest r) {
         logger.info("Processing user creation request");
         return ResponseEntity.status(HttpStatus.CREATED).body(service.createUser(r));
+    }
+
+    @PutMapping("/users/{id}/role")
+    public UserResponse updateRole(@PathVariable Long id, @Valid @RequestBody UserRoleRequest request) {
+        return service.updateRole(id, request);
     }
 
     @PostMapping("/auth/confirm-invitation")

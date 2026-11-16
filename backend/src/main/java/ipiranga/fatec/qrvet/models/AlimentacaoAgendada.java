@@ -34,4 +34,7 @@ public class AlimentacaoAgendada {
     public String getMotivoCancelamento() { return motivoCancelamento; }
     public void complete(RegistroAlimentacao registro) { this.registro = registro; status = Status.CONCLUIDA; }
     public void cancel(String reason) { motivoCancelamento = reason; status = Status.CANCELADA; }
+    public void update(String alimento, String quantidade, Instant horario) {
+        this.alimento = alimento; this.quantidade = quantidade; this.horario = horario;
+    }
 }

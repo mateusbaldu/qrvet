@@ -3,6 +3,7 @@ package ipiranga.fatec.qrvet.models.enums;
 import java.util.Arrays;
 
 public enum AuditAction {
+    USER_ROLE_UPDATED("USER_ROLE_UPDATED", "Permissão da equipe alterada"),
     LOGIN_SUCCESS("LOGIN_SUCCESS", "Login realizado"),
     LOGIN_FAILED("LOGIN_FAILED", "Falha no login"),
     LOGOUT("LOGOUT", "Logout realizado"),

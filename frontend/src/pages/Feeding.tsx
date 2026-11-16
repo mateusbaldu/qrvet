@@ -21,6 +21,11 @@ import {
 const timeLabel = (value: string) =>
   new Date(value).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })
 
+const localDateTime = (value: string) => {
+  const date = new Date(value)
+  return localDate(date) + 'T' + String(date.getHours()).padStart(2, '0') + ':' + String(date.getMinutes()).padStart(2, '0')
+}
+
 function ScheduleEditor({
   admissions,
   admissionId,
@@ -191,6 +196,7 @@ export function FeedingChecklist({
   const requestedFilter = params.get('filtro') ?? initialFilter
   const filter = ['PENDENTE', 'ATRASADA', 'JEJUM', 'CONCLUIDA', 'CANCELADA'].includes(requestedFilter) ? requestedFilter : 'TODAS'
   const [creating, setCreating] = useState(false)
+  const [editing, setEditing] = useState<AgendaAlimentacao | null>(null)
   const [schedulePatient, setSchedulePatient] = useState<string>()
   const [action, setAction] = useState<{
     item: AgendaAlimentacao
@@ -391,6 +397,11 @@ export function FeedingChecklist({
                       {item.status === 'PENDENTE' && (
                         <>
                           <button
+                            disabled={!active || item.internacaoStatus !== 'ATIVA'}
+                            aria-label={'Editar alimentação de ' + item.pacienteNome + ' às ' + timeLabel(item.horario)}
+                            onClick={() => setEditing(item)}
+                          >Editar</button>
+                          <button
                             className="feeding-check"
                             disabled={
                               item.jejumAtivo || future || item.internacaoStatus !== 'ATIVA'
@@ -487,6 +498,29 @@ export function FeedingChecklist({
           }}
         />
       )}
+      {editing && <Editor
+        title="Editar alimentação programada"
+        description={<><p>{editing.pacienteNome} · Baia {editing.baiaIdentificacao}</p><p>Altere esta refeição. Para mudar o horário, selecione uma data futura. As demais refeições da programação permanecem como estão.</p></>}
+        fields={[
+          { name: 'alimento', label: 'Alimento', value: editing.alimento, maxLength: 100 },
+          { name: 'quantidade', label: 'Quantidade (inclua a unidade)', value: editing.quantidade, maxLength: 50 },
+          { name: 'horario', label: 'Data e horário', type: 'datetime-local', value: localDateTime(editing.horario), wide: true },
+        ]}
+        submitLabel="Salvar programação"
+        onCancel={() => setEditing(null)}
+        onSave={async data => {
+          const unchangedTime = String(data.horario) === localDateTime(editing.horario)
+          const horario = unchangedTime ? editing.horario : new Date(String(data.horario)).toISOString()
+          if (!unchangedTime && Date.parse(horario) <= Date.now()) throw new ApiError(400, 'Selecione um horário futuro para reagendar.')
+          await clinicApi.save('/internacoes/' + editing.internacaoId + '/alimentacao/agenda/' + editing.id,
+            { alimento: data.alimento, quantidade: data.quantidade, horario }, 'PUT')
+          const newDay = localDate(new Date(horario))
+          if (newDay !== date) updateQuery({ dia: newDay })
+          setSuccess('Programação da alimentação atualizada.')
+          refresh()
+          onChanged?.()
+        }}
+      />}
       {action && (
         <Editor
           title={action.kind === 'concluir' ? 'Concluir alimentação' : 'Cancelar alimentação'}

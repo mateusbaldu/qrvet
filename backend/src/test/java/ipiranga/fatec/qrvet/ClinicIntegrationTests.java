@@ -313,6 +313,69 @@ class ClinicIntegrationTests {
                 .andExpect(status().isBadRequest());
     }
 
+    @Test
+    void administratorsCanChangeTeamRolesAndOldTokensUseCurrentPermissions() throws Exception {
+        String path = "/v1/users/" + vet.getId() + "/role";
+        String oldAccessToken = tokens.generateAccessToken(vet, Instant.now());
+        perform(put(path).content("{\"role\":\"ADMIN\"}"), vet).andExpect(status().isForbidden());
+        perform(put(path).content("{\"role\":null}"), admin).andExpect(status().isBadRequest());
+        perform(put(path).content("{\"role\":\"UNKNOWN\"}"), admin).andExpect(status().isBadRequest());
+        perform(put("/v1/users/999999/role").content("{\"role\":\"ADMIN\"}"), admin).andExpect(status().isNotFound());
+        perform(put("/v1/users/" + admin.getId() + "/role").content("{\"role\":\"TUTOR\"}"), admin)
+                .andExpect(status().isConflict());
+        perform(put(path).content("{\"role\":\"ADMIN\"}"), admin).andExpect(status().isOk())
+                .andExpect(jsonPath("$.role").value("ADMIN"));
+        entities.flush(); entities.clear();
+        mvc.perform(get("/v1/users").header("Authorization", "Bearer " + oldAccessToken)).andExpect(status().isOk());
+        perform(put(path).content("{\"role\":\"RECEPCIONISTA\"}"), admin).andExpect(status().isOk());
+        entities.flush(); entities.clear();
+        mvc.perform(get("/v1/users").header("Authorization", "Bearer " + oldAccessToken)).andExpect(status().isForbidden());
+        assertEquals(Role.RECEPCIONISTA, users.findById(vet.getId()).orElseThrow().getRole());
+        User pending = user(Role.AUXILIAR_TECNICO, false);
+        perform(put("/v1/users/" + pending.getId() + "/role").content("{\"role\":\"VETERINARIO\"}"), admin)
+                .andExpect(status().isOk()).andExpect(jsonPath("$.confirmed").value(false));
+    }
+
+    @Test
+    void pendingMealsCanBeEditedWithoutChangingOtherMealsOrCompletedHistory() throws Exception {
+        long id = openHospitalization().get("id").asLong();
+        Instant time = Instant.now().plusSeconds(3600).truncatedTo(java.time.temporal.ChronoUnit.SECONDS);
+        JsonNode item = schedule(id, time);
+        JsonNode other = schedule(id, time.plusSeconds(3600));
+        String path = "/v1/internacoes/" + id + "/alimentacao/agenda/" + item.get("id").asLong();
+        String data = "{\"alimento\":\" Dieta pastosa \",\"quantidade\":\" 50 ml \",\"horario\":\"%s\"}";
+        perform(put(path).content(data.formatted(time)), receptionist).andExpect(status().isForbidden());
+        perform(put(path).content(data.formatted(time)), null).andExpect(status().isUnauthorized());
+        perform(put(path).content(data.formatted(time).replace("Dieta pastosa", " ")), vet).andExpect(status().isBadRequest());
+        perform(put(path).content(data.formatted(time.plusSeconds(3600))), vet).andExpect(status().isConflict());
+        perform(put(path).content(data.formatted(Instant.now().minusSeconds(3600))), vet).andExpect(status().isBadRequest());
+        perform(post("/v1/internacoes/" + id + "/jejum").content("{\"motivo\":\"Exame\"}"), vet).andExpect(status().isCreated());
+        Instant changed = time.plusSeconds(7200);
+        perform(put(path).content(data.formatted(changed)), assistant).andExpect(status().isOk())
+                .andExpect(jsonPath("$.alimento").value("Dieta pastosa"))
+                .andExpect(jsonPath("$.quantidade").value("50 ml"))
+                .andExpect(jsonPath("$.jejumAtivo").value(true));
+        entities.flush(); entities.clear();
+        perform(get("/v1/alimentacao/agenda").param("inicio", time.toString()).param("fim", changed.plusSeconds(1).toString()), vet)
+                .andExpect(status().isOk()).andExpect(jsonPath("$[0].id").value(other.get("id").asLong()))
+                .andExpect(jsonPath("$[0].quantidade").value("40 g"))
+                .andExpect(jsonPath("$[1].alimento").value("Dieta pastosa"));
+        Instant due = Instant.now().minusSeconds(120).truncatedTo(java.time.temporal.ChronoUnit.SECONDS);
+        jdbc.update("update alimentacao_agendada set horario = ? where id = ?", Timestamp.from(due), item.get("id").asLong());
+        entities.clear();
+        perform(put(path).content(data.formatted(due)), vet).andExpect(status().isOk());
+        perform(put("/v1/internacoes/" + id + "/jejum/encerrar"), vet).andExpect(status().isOk());
+        perform(put(path + "/concluir").content("{}"), assistant).andExpect(status().isOk());
+        perform(put(path).content(data.formatted(changed)), vet).andExpect(status().isConflict());
+        String otherPath = "/v1/internacoes/" + id + "/alimentacao/agenda/" + other.get("id").asLong();
+        perform(put(otherPath + "/cancelar").content("{\"motivo\":\"Mudança\"}"), vet).andExpect(status().isOk());
+        perform(put(otherPath).content(data.formatted(changed)), vet).andExpect(status().isConflict());
+        perform(put("/v1/internacoes/999999/alimentacao/agenda/" + item.get("id").asLong()).content(data.formatted(changed)), vet)
+                .andExpect(status().isNotFound());
+        perform(put("/v1/internacoes/" + id + "/encerrar").content("{\"statusEncerramento\":\"ALTA\"}"), receptionist).andExpect(status().isOk());
+        perform(put(otherPath).content(data.formatted(changed)), vet).andExpect(status().isBadRequest());
+    }
+
     private JsonNode schedule(long admissionId, Instant at) throws Exception {
         return body(perform(post("/v1/internacoes/" + admissionId + "/alimentacao/agenda").content("""
                 {"alimento":"Ração úmida","quantidade":"40 g","horarios":["%s"]}

@@ -26,6 +26,11 @@ public class GlobalExceptionHandler {
     private static final Pattern SENSITIVE_LOG_VALUE = Pattern.compile(
             "(?i)(password|senha|token|secret|segredo|credential|credencial)\\s*[:=]\\s*[^\\s,;]+");
 
+    @ExceptionHandler(org.springframework.http.converter.HttpMessageNotReadableException.class)
+    ResponseEntity<ErrorResponse> unreadableRequest() {
+        return errorResponse(HttpStatus.BAD_REQUEST, "Confira o formato e os valores dos campos informados.", Map.of());
+    }
+
     @ExceptionHandler(MethodArgumentNotValidException.class)
     ResponseEntity<ErrorResponse> validation(MethodArgumentNotValidException e) {
         logger.warn("Validation failed for request: {}", e.getMessage());

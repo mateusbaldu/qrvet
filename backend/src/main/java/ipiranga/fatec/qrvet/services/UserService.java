@@ -6,6 +6,9 @@ import org.slf4j.LoggerFactory;
 import ipiranga.fatec.qrvet.dtos.request.PaginationRequest;
 import ipiranga.fatec.qrvet.dtos.request.ResetPasswordRequest;
 import ipiranga.fatec.qrvet.dtos.request.UserRequest;
+import ipiranga.fatec.qrvet.dtos.request.UserRoleRequest;
+import ipiranga.fatec.qrvet.models.enums.Role;
+import org.springframework.security.core.context.SecurityContextHolder;
 import ipiranga.fatec.qrvet.dtos.filter.UserSearchFilter;
 import ipiranga.fatec.qrvet.dtos.response.*;
 import ipiranga.fatec.qrvet.models.User;
@@ -97,6 +100,30 @@ public class UserService {
         String token = UUID.randomUUID().toString();
         invitations.save(token, id);
         events.publishEvent(new InvitationEmailRequested(dbUser.getEmail(), dbUser.getName(), token));
+    }
+
+    @Transactional
+    public UserResponse updateRole(Long id, UserRoleRequest request) {
+        Long actorId = Long.valueOf(SecurityContextHolder.getContext().getAuthentication().getName());
+        if (actorId.equals(id)) {
+            throw new OperationConflictException("Peça a outro administrador para alterar sua permissão.");
+        }
+        // Serialize administrative changes and recheck the actor after obtaining the lock.
+        var admins = repository.findAdministratorsForUpdate();
+        if (admins.stream().noneMatch(u -> u.getId().equals(actorId) && u.isActive() && u.isConfirmed())) {
+            throw new org.springframework.security.access.AccessDeniedException("Apenas administradores podem alterar permissões.");
+        }
+        User member = repository.findUserByIdWithLock(id)
+                .orElseThrow(() -> new ResourceNotFoundException("User not found."));
+        if (member.getRole() == request.role()) return UserResponse.from(member);
+        Role previous = member.getRole();
+        member.setRole(request.role());
+        repository.saveAndFlush(member);
+        events.publishEvent(new ipiranga.fatec.qrvet.event.AuditEvent(actorId,
+                admins.stream().filter(u -> u.getId().equals(actorId)).findFirst().orElseThrow().getEmail(), null,
+                "USER_ROLE_UPDATED", "auth", id.toString(),
+                java.util.Map.of("previousRole", previous.name(), "role", request.role().name())));
+        return UserResponse.from(member);
     }
 
     @Transactional
