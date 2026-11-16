@@ -16,7 +16,7 @@ Execute `npm ci` e `npm run dev` nesta pasta. O Vite atende em http://localhost:
 - Internações: abertura com seleção de paciente/baia/veterinário, filtros, histórico, encerramento, QR Code para o vidro da clínica e envio do link de acompanhamento ao tutor por e-mail.
 - Alimentação: agenda por data e horários, repetição diária limitada a 31 dias, checklist geral com filtros, conclusão com observação, cancelamento e indicação de pacientes sem horários.
 - Cuidados: agenda individual, histórico de alimentação e início/fim de jejum. O auxiliar escolhe um paciente no diretório de cuidados, sem acessar dados privados do tutor.
-- Consulta pública: `/public/internacoes/qr/:token`, sem login.
+- Consulta do tutor: `/public/internacoes/qr/:token`, sem login, com alertas, restrições, cuidados de manejo, jejum, veterinário responsável, encerramento e evoluções paginadas com data e autoria. O botão de atualização mostra o horário da consulta.
 
 ## Navegação clínica
 

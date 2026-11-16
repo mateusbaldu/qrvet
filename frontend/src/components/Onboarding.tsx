@@ -32,7 +32,7 @@ const qr: Step = {
 function stepsFor(role: Role): Step[] {
   if (role === 'TUTOR') return [{
     title: 'Acompanhe seu animal', text: 'A clínica envia por e-mail um link de acompanhamento da internação.',
-    items: ['Abra o link recebido para consultar a situação e as informações disponíveis, sem precisar entrar no sistema.', 'Use “Atualizar informações” para buscar os dados mais recentes.', 'Para detalhes sobre a evolução do paciente, entre em contato com a equipe da clínica.'],
+    items: ['Abra o link recebido para consultar a situação, os alertas e as restrições do paciente, sem precisar entrar no sistema.', 'Use “Atualizar informações” para buscar os dados mais recentes.', 'Consulte as evoluções com data e autoria. Use a paginação para ler os registros anteriores e entre em contato com a clínica para esclarecer dúvidas.'],
     tip: 'O QR Code afixado na clínica é destinado à equipe. Para acompanhar seu animal, use o link enviado a você.',
   }]
   if (role === 'AUXILIAR_TECNICO') return [care, {

@@ -469,7 +469,11 @@ class ClinicIntegrationTests {
         perform(get("/v1/internacoes/" + id), vet).andExpect(status().isOk()).andExpect(jsonPath("$.alertas.cuidadosManejo").value("Sensível a ruídos"));
         perform(get("/v1/internacoes/" + id + "/cuidados"), assistant).andExpect(status().isOk()).andExpect(jsonPath("$.alertas.alergias").value("Alergia registrada"));
         JsonNode publicView = body(perform(get("/v1/public/internacoes/qr/" + admission.get("uuidToken").asText()), null).andExpect(status().isOk()));
-        assertFalse(publicView.has("alertas"));
+        assertEquals("Alergia registrada", publicView.path("alertas").path("alergias").asText());
+        assertEquals("Evitar frango", publicView.path("alertas").path("restricoesAlimentares").asText());
+        assertEquals("Sensível a ruídos", publicView.path("alertas").path("cuidadosManejo").asText());
+        assertFalse(publicView.has("tutorId"));
+        assertFalse(publicView.has("tutorEmail"));
         perform(put(path).content(json.writeValueAsString(java.util.Map.of("alergias", "x".repeat(1001)))) , vet).andExpect(status().isBadRequest());
         // Editing ordinary demographics must preserve clinical alerts.
         perform(put("/v1/pacientes/" + patientId).content("""
@@ -504,7 +508,25 @@ class ClinicIntegrationTests {
         perform(post(path).content("{\"texto\":\"Novo registro\"}"), vet).andExpect(status().isBadRequest());
         perform(get(path), vet).andExpect(status().isOk()).andExpect(jsonPath("$.total").value(2));
         perform(get("/v1/public/internacoes/qr/" + admission.get("uuidToken").asText()), null)
-                .andExpect(status().isOk()).andExpect(jsonPath("$.evolucoes").doesNotExist());
+                .andExpect(status().isOk()).andExpect(jsonPath("$.evolucoes.total").value(2))
+                .andExpect(jsonPath("$.saidaInternacao").isNotEmpty());
+        String publicPath = "/v1/public/internacoes/qr/" + admission.get("uuidToken").asText();
+        perform(get(publicPath).param("size", "1"), null).andExpect(status().isOk())
+                .andExpect(jsonPath("$.evolucoes.pages").value(2))
+                .andExpect(jsonPath("$.evolucoes.items[0].texto").value("Tutor trouxe ração."))
+                .andExpect(jsonPath("$.evolucoes.items[0].profissionalId").doesNotExist())
+                .andExpect(jsonPath("$.evolucoes.items[0].internacaoId").doesNotExist());
+        perform(get(publicPath).param("size", "1").param("page", "1"), null).andExpect(status().isOk())
+                .andExpect(jsonPath("$.evolucoes.items[0].profissionalNome").value(originalName));
+        perform(get(publicPath).param("page", "-1"), null).andExpect(status().isBadRequest());
+        perform(get(publicPath).param("size", "101"), null).andExpect(status().isBadRequest());
+        perform(get("/v1/public/internacoes/qr/" + UUID.randomUUID()), null).andExpect(status().isNotFound());
+        JsonNode otherAdmission = body(perform(post("/v1/internacoes").content("""
+                {"pacienteId":%d,"baiaId":%d,"veterinarioId":%d,"motivo":"Nova internação","diagnosticoInicial":"Avaliação"}
+                """.formatted(admission.get("pacienteId").asLong(), admission.get("baiaId").asLong(), vet.getId())), receptionist)
+                .andExpect(status().isCreated()));
+        perform(get("/v1/public/internacoes/qr/" + otherAdmission.get("uuidToken").asText()), null)
+                .andExpect(status().isOk()).andExpect(jsonPath("$.evolucoes.total").value(0));
     }
 
     @Test

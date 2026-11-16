@@ -57,6 +57,8 @@ services:
       SPRING_PROFILES_ACTIVE: ${SPRING_PROFILE:-${SPRING_PROFILES:-prod}}
       SPRING_DATA_REDIS_HOST: ${REDIS_HOST:-redis}
       SPRING_DATA_REDIS_PORT: ${REDIS_PORT:-6379}
+      # SMTP da conta de demonstracao, pronto para a entrega sem arquivo .env.
+      # As variaveis MAIL_* permitem substituir os dados em outro ambiente.
       SPRING_MAIL_HOST: ${MAIL_HOST:-smtp.gmail.com}
       SPRING_MAIL_PORT: ${MAIL_PORT:-587}
       SPRING_MAIL_USERNAME: ${MAIL_USERNAME:-naorespondaqrvet@gmail.com}
@@ -74,7 +76,7 @@ services:
       QRVET_BOOTSTRAP_ADMIN_NAME: ${QRVET_BOOTSTRAP_ADMIN_NAME:-${BOOTSTRAP_ADMIN_NAME:-Administrador QRVet}}
       QRVET_BOOTSTRAP_ADMIN_EMAIL: ${QRVET_BOOTSTRAP_ADMIN_EMAIL:-${BOOTSTRAP_ADMIN_EMAIL:-admin@qrvet.com}}
       QRVET_BOOTSTRAP_ADMIN_PASSWORD: ${QRVET_BOOTSTRAP_ADMIN_PASSWORD:-${BOOTSTRAP_ADMIN_PASSWORD:-teste@123}}
-      QRVET_MAIL_FROM: ${QRVET_MAIL_FROM:-${MAIL_FROM:-naoresponda@qrvet.com}}
+      QRVET_MAIL_FROM: ${QRVET_MAIL_FROM:-${MAIL_FROM:-${MAIL_USERNAME:-naorespondaqrvet@gmail.com}}}
     depends_on:
       database:
         condition: service_healthy

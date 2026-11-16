@@ -91,7 +91,7 @@ A interface mostra as ferramentas do perfil, e a API aplica as regras de autoriz
 | Gerenciar equipe, sessões e auditoria | Sim | — | — | — |
 | Atualizar o próprio perfil | Sim | Sim | Sim | Sim |
 
-O **tutor** consulta o resumo pelo link recebido por e-mail. Esse acesso não expõe as anotações internas, os alertas ou os dados privados de contato. O auxiliar pode consultar a foto pela internação sem acessar o cadastro do tutor.
+O **tutor** consulta o resumo pelo link recebido por e-mail, incluindo alertas e evoluções com data, horário e autoria, da mais recente à mais antiga. Esse acesso é somente para leitura e não expõe os dados privados de contato. O auxiliar pode consultar a foto pela internação sem acessar o cadastro do tutor.
 
 ## Tecnologias
 
@@ -188,7 +188,9 @@ O último comando precisa conseguir se comunicar com o Docker Engine. No Windows
 
 ### 3. Preparar as configurações
 
-Crie o arquivo local somente se ainda não existir:
+Na entrega ao professor, o Compose já tem valores de demonstração, incluindo o envio real de e-mails. O arquivo `.env` é opcional; para usar os padrões, siga diretamente para a etapa 4.
+
+Se quiser personalizar as configurações, crie o arquivo local somente se ainda não existir:
 
 ```powershell
 Copy-Item .env.example .env
@@ -213,7 +215,11 @@ $jwtBytes = New-Object byte[] 32
 
 Copie o resultado para `JWT_SECRET`. Não compartilhe o arquivo `.env`; ele já é ignorado pelo Git.
 
-**E-mail no ambiente principal:** o `.env.example` contém `MAIL_HOST=mailpit` como exemplo. O `docker-compose.yml` principal **não inclui um serviço Mailpit**. Configure um servidor SMTP alcançável ou use o ambiente de desenvolvimento descrito adiante. Uma configuração de e-mail incorreta impede o envio das mensagens, embora as demais telas possam iniciar.
+**E-mail na entrega ao professor:** o `docker-compose.yml` já inclui a conta remetente de demonstração, sua credencial SMTP e os parâmetros do Gmail, com autenticação e STARTTLS na porta `587`. O envio real funciona sem fornecer um arquivo `.env`: os convites, a recuperação de senha e o acompanhamento são enviados ao e-mail cadastrado de cada destinatário. Para iniciar a entrega, execute `docker compose up -d`; use `docker compose up -d --build` se também precisar construir as imagens a partir do código.
+
+O `.env` é opcional e permite substituir os valores de demonstração. Para usar outra conta Gmail, configure `MAIL_USERNAME`, `MAIL_PASSWORD` com uma [senha de app do Google](https://support.google.com/accounts/answer/185833?hl=pt-BR) e `MAIL_FROM` com a conta remetente ou um alias autorizado. Para outro provedor, ajuste também servidor, porta e opções de autenticação/TLS.
+
+Após alterar o `.env`, aplique a configuração com `docker compose up -d --no-deps --force-recreate backend`; apenas reiniciar o contêiner não atualiza suas variáveis de ambiente. O `docker-compose.yml` principal **não inclui um serviço Mailpit**. Para capturar mensagens de teste sem entrega a uma caixa real, use o Compose de desenvolvimento descrito adiante.
 
 O Compose tem valores padrão para demonstração e pode iniciar sem `.env`. Este passo a passo usa o arquivo local para deixar explícitas as configurações e as credenciais escolhidas. Não reutilize os valores de demonstração em uma publicação externa.
 
@@ -617,7 +623,7 @@ O workflow de produção atual constrói a imagem; ele não executa publicação
 4. Agende refeições e localize as pendências no checklist.
 5. Inicie jejum e demonstre o bloqueio de alimentação.
 6. Encerre o jejum e confirme uma refeição cujo horário já chegou.
-7. Abra o acesso da equipe pela etiqueta e o resumo público pelo link do tutor.
+7. Abra o acesso da equipe pela etiqueta e o acompanhamento pelo link do tutor, com alertas, restrições e evoluções com data e autoria.
 8. Encerre a internação e confira a liberação da baia e a preservação do histórico.
 
 A agenda é consultada na aplicação e atualizada periodicamente; ela não envia notificações automáticas de horário. O envio de e-mails ocorre nas ações específicas da equipe.

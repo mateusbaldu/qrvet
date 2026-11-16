@@ -46,6 +46,7 @@ public class InternacaoService {
     private final JavaMailSender mail;
     private final String mailFrom;
     private final AuditService auditService;
+    private final EvolucaoRepository evolucaoRepository;
 
     public InternacaoService(
             InternacaoRepository internacaoRepository,
@@ -54,7 +55,8 @@ public class InternacaoService {
             UserRepository userRepository,
             QrCodeService qrCodeService,
             NutricaoClinicaService nutricaoClinicaService,
-            JavaMailSender mail, @Value("${qrvet.mail-from}") String mailFrom, AuditService auditService) {
+            JavaMailSender mail, @Value("${qrvet.mail-from}") String mailFrom, AuditService auditService,
+            EvolucaoRepository evolucaoRepository) {
         this.internacaoRepository = internacaoRepository;
         this.pacienteRepository = pacienteRepository;
         this.baiaRepository = baiaRepository;
@@ -64,6 +66,7 @@ public class InternacaoService {
         this.mail = mail;
         this.mailFrom = mailFrom;
         this.auditService = auditService;
+        this.evolucaoRepository = evolucaoRepository;
     }
 
     @Transactional
@@ -178,11 +181,15 @@ public class InternacaoService {
     }
 
     @Transactional(readOnly = true)
-    public InternacaoPublicResponse publicDetails(UUID uuidToken) {
+    public InternacaoPublicResponse publicDetails(UUID uuidToken, PaginationRequest pagination) {
         Internacao internacao = internacaoRepository.findByUuidToken(uuidToken)
                 .orElseThrow(() -> new ResourceNotFoundException("Hospitalization not found."));
         boolean jejumAtivo = nutricaoClinicaService.isFastingActive(internacao.getId());
-        return InternacaoPublicResponse.from(internacao, jejumAtivo);
+        var pageable = org.springframework.data.domain.PageRequest.of(pagination.page(), pagination.size(),
+                org.springframework.data.domain.Sort.by(org.springframework.data.domain.Sort.Direction.DESC, "dataHoraRegistro", "id"));
+        var evolucoes = PageResponse.from(evolucaoRepository.findAllByInternacaoId(internacao.getId(), pageable)
+                .map(EvolucaoPublicResponse::from));
+        return InternacaoPublicResponse.from(internacao, jejumAtivo, evolucoes);
     }
 
     @Transactional
