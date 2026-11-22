@@ -11,7 +11,7 @@ import { Registry, PatientDetail } from './pages/Registry'
 import { Feeding } from './pages/Feeding'
 import { Dashboard } from './pages/Dashboard'
 import { Hospitalizations, HospitalizationDetail, CareLookup } from './pages/Hospitalizations'
-import { PublicHospitalization, QrLookup, Sessions, AuditLogs, Bootstrap } from './pages/ClinicAccess'
+import { PublicHospitalization, Sessions, AuditLogs, Bootstrap } from './pages/ClinicAccess'
 
 export default function App() {
   return (
@@ -57,7 +57,6 @@ export default function App() {
             <Route element={<RouteAccess path="/cuidados" />}>
               <Route path="/cuidados" element={<CareLookup />} />
             </Route>
-            <Route path="/consultar-qr" element={<QrLookup />} />
             <Route path="/meu-perfil" element={<Profile />} />
           </Route>
         </Route>
@@ -81,7 +80,7 @@ function HospitalizationAccess() {
 function HomeRedirect() {
   const { user } = useAuth()
 
-  let destination = '/consultar-qr'
+  let destination = '/meu-perfil'
 
   if (user && ['ADMIN', 'VETERINARIO', 'RECEPCIONISTA'].includes(user.role)) {
     destination = '/inicio'

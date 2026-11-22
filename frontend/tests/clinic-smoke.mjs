@@ -405,6 +405,7 @@ try {
     'http://localhost:5173/public/internacoes/qr/' + token
   )
   assert.equal(await page.locator('.clinic-print-label img').count(), 1)
+  assert.equal(await page.getByRole('link', { name: 'Baixar QR' }).getAttribute('download'), 'internacao-1.png')
   await page.emulateMedia({ media: 'print' })
   assert.equal(
     await page.locator('.clinic-print-label').evaluate(el => getComputedStyle(el).visibility),
@@ -510,26 +511,13 @@ try {
     await page.getByRole('button', { name: 'Registrar alimentação', exact: true }).count(),
     0
   )
-  await visit('/consultar-qr')
-  await page.locator('[name="token"]').fill('inválido')
-  await page.getByRole('button', { name: 'Consultar internação' }).click()
-  await page.getByRole('alert').waitFor()
-  await page
-    .locator('[name="token"]')
-    .fill('https://clinic.example/public/internacoes/qr/' + token + '?origem=qr#paciente')
-  await page.getByRole('button', { name: 'Consultar internação' }).click()
-  await page.waitForURL('**/public/internacoes/qr/' + token)
+  await visit('/public/internacoes/qr/' + token)
   await page.setViewportSize({ width: 390, height: 844 })
   await page.getByRole('heading', { name: 'Luna', exact: true }).waitFor()
   assert(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth))
   await shot('public-mobile')
   role = 'ADMIN'
-  await visit('/consultar-qr')
-  await page
-    .locator('[name="token"]')
-    .fill('https://clinic.example/internacoes/1?origem=qr#paciente')
-  await page.getByRole('button', { name: 'Consultar internação' }).click()
-  await page.waitForURL('**/internacoes/1')
+  await visit('/internacoes/1')
   await page.getByRole('heading', { name: 'Luna', exact: true }).waitFor()
   for (const path of ['/inicio', '/pacientes', '/equipe', '/internacoes/1', '/meu-perfil']) {
     await visit(path)
@@ -587,6 +575,8 @@ try {
   await page.getByRole('heading', { name: 'Luna', exact: true }).waitFor()
   role = 'TUTOR'
   await visit('/internacoes/1')
+  await page.waitForURL('**/meu-perfil')
+  await visit('/')
   await page.waitForURL('**/meu-perfil')
   loggedIn = false
   await visit('/public/internacoes/qr/' + token)

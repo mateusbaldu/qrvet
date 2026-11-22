@@ -1,5 +1,5 @@
 ﻿import { useEffect, useRef, useState } from 'react'
-import { ChevronLeft, ChevronRight, CircleHelp, HeartPulse, House, LayoutDashboard, LogOut, Menu, PawPrint, ShieldCheck, Stethoscope, UserRound, Users, Utensils, X } from 'lucide-react'
+import { ChevronLeft, ChevronRight, CircleHelp, Fence, HeartPulse, LayoutDashboard, LogOut, Menu, PawPrint, ShieldCheck, Stethoscope, UserRound, Users, Utensils, X, type LucideIcon } from 'lucide-react'
 import { Link, NavLink, Outlet, useLocation, useNavigate } from 'react-router-dom'
 import { useAuth } from '../auth/useAuth'
 import type { Role } from '../services/api'
@@ -11,8 +11,8 @@ const roleLabels: Record<Role, string> = {
   ADMIN: 'Administrador(a)', VETERINARIO: 'Veterinário(a)', RECEPCIONISTA: 'Recepcionista', AUXILIAR_TECNICO: 'Auxiliar técnico(a)', TUTOR: 'Tutor(a)',
 }
 const initials = (name: string) => name.trim().split(/\s+/).slice(0, 2).map(part => part[0]?.toUpperCase()).join('') || '—'
-const navIcons: Record<string, typeof House> = {
-  '/inicio': LayoutDashboard, '/internacoes': HeartPulse, '/pacientes': PawPrint, '/tutores': Users, '/baias': House,
+const navIcons: Record<string, LucideIcon> = {
+  '/inicio': LayoutDashboard, '/internacoes': HeartPulse, '/pacientes': PawPrint, '/tutores': Users, '/baias': Fence,
   '/alimentacao': Utensils, '/cuidados': Stethoscope, '/sessoes': ShieldCheck, '/auditoria': ShieldCheck, '/equipe': Users,
 }
 const groups = [

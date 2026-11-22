@@ -26,7 +26,7 @@ const care: Step = {
 const qr: Step = {
   title: 'Dois acessos, cada um com seu propósito',
   text: 'O QR Code da internação é usado pela equipe. O tutor recebe outro link para acompanhar o paciente.',
-  items: ['A equipe aponta a câmera do celular para a etiqueta e entra com sua conta para abrir a internação.', 'Em “Consultar QR Code”, também é possível colar o endereço ou digitar o número da internação.', 'Na internação, “Enviar link por e-mail” envia o acompanhamento ao e-mail cadastrado do tutor, sem exigir login.'],
+  items: ['No resumo da internação, use “Baixar QR” para salvar a imagem ou “Imprimir” para gerar a etiqueta.', 'A equipe aponta a câmera do celular para a etiqueta e entra com sua conta para abrir a internação.', 'Na internação, “Enviar link por e-mail” envia o acompanhamento ao e-mail cadastrado do tutor, sem exigir login.'],
   tip: 'O acesso público mostra um resumo. Os registros detalhados ficam no acesso da equipe, conforme as permissões.',
 }
 function stepsFor(role: Role): Step[] {
@@ -36,7 +36,7 @@ function stepsFor(role: Role): Step[] {
     tip: 'O QR Code afixado na clínica é destinado à equipe. Para acompanhar seu animal, use o link enviado a você.',
   }]
   if (role === 'AUXILIAR_TECNICO') return [care, {
-    ...qr, items: [qr.items[0], qr.items[1], 'Ao abrir o QR Code da internação, você será direcionado aos cuidados daquele paciente.'],
+    ...qr, items: ['Aponte a câmera do celular para a etiqueta e abra o link.', 'Entre com sua conta para acessar os cuidados daquele paciente.'],
   }]
   const steps = [registration, admission]
   if (role !== 'RECEPCIONISTA') steps.push(care)
