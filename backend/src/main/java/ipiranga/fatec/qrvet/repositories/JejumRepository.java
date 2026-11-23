@@ -2,6 +2,7 @@ package ipiranga.fatec.qrvet.repositories;
 
 import ipiranga.fatec.qrvet.models.Jejum;
 import jakarta.persistence.LockModeType;
+import java.time.Instant;
 import java.util.List;
 import java.util.Optional;
 import org.springframework.data.jpa.repository.JpaRepository;
@@ -19,4 +20,15 @@ public interface JejumRepository extends JpaRepository<Jejum, Long> {
     @Lock(LockModeType.PESSIMISTIC_WRITE)
     @Query("select j from Jejum j where j.internacao.id = :internacaoId and j.ativo = true")
     Optional<Jejum> findActiveForUpdate(@Param("internacaoId") Long internacaoId);
+
+    @Query("""
+            SELECT COUNT(j) FROM Jejum j
+            WHERE (:startDate IS NULL OR j.dataHoraInicio >= :startDate)
+              AND (:endDate IS NULL OR j.dataHoraInicio <= :endDate)
+              AND (:veterinarioId IS NULL OR j.internacao.veterinario.id = :veterinarioId)
+            """)
+    long countForReport(
+            @Param("startDate") Instant startDate,
+            @Param("endDate") Instant endDate,
+            @Param("veterinarioId") Long veterinarioId);
 }

@@ -102,7 +102,11 @@ public class InternacaoService {
         InternacaoResponse response = InternacaoResponse.from(internacaoRepository.saveAndFlush(internacao));
         logger.info("Hospitalization {} opened for patient {}", response.id(), request.pacienteId());
         auditService.log(AuditAction.HOSPITALIZATION_CREATED, AuditResource.HOSPITALIZATION, String.valueOf(response.id()),
-                Map.of("patientId", request.pacienteId(), "bayId", request.baiaId()));
+                Map.of(
+                        "patientId", request.pacienteId(),
+                        "bayId", request.baiaId(),
+                        "veterinarioId", veterinario.getId(),
+                        "veterinarioNome", veterinario.getName()));
         return response;
     }
 
