@@ -162,6 +162,9 @@ class AuditFlowIntegrationTests {
                 """.formatted(patientId, bayId, veterinarian.getId())), receptionist)
                 .andExpect(status().isCreated())).get("id").asLong();
         assertTrue(awaitAction("HOSPITALIZATION_CREATED", hospitalizationId));
+        AuditLog hospitalizationCreated = await("HOSPITALIZATION_CREATED");
+        assertTrue(hospitalizationCreated.getDetails().contains("\"veterinarioId\":" + veterinarian.getId()));
+        assertTrue(hospitalizationCreated.getDetails().contains(veterinarian.getName()));
 
         perform(put("/v1/internacoes/" + hospitalizationId + "/encerrar")
                 .content("{\"statusEncerramento\":\"ALTA\"}"), receptionist)

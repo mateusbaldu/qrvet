@@ -583,4 +583,114 @@ class ClinicIntegrationTests {
         perform(get("/v1/internacoes/" + admissionId), vet).andExpect(jsonPath("$.fotoVersao").isEmpty());
         perform(get("/v1/pacientes/" + id), vet).andExpect(jsonPath("$.fotoVersao").isEmpty());
     }
+
+    @Test
+    void clinicPerformanceReportRanksVeterinariansFiltersByPeriodAndExportsCsvForAdminOnly() throws Exception {
+        User secondVet = users.saveAndFlush(User.builder()
+                .name("Dra. Helena Costa")
+                .email(UUID.randomUUID() + "@qrvet.test")
+                .role(Role.VETERINARIO)
+                .active(true)
+                .confirmed(true)
+                .passwordHash(passwords.encode("Test-only-123!"))
+                .build());
+
+        long tutor = body(perform(post("/v1/tutores").content("""
+                {"nome":"Carlos Souza","cpf":"52998224725","telefone":"11999999999","email":"carlos@qrvet.test","endereco":"Rua B"}
+                """), receptionist).andExpect(status().isCreated())).get("id").asLong();
+
+        long patient1 = body(perform(post("/v1/pacientes").content("""
+                {"tutorId":%d,"nome":"Thor","especie":"Canina","raca":"SRD","sexo":"Macho","peso":12.0,"dataNascimento":"2020-01-10","observacoes":""}
+                """.formatted(tutor)), receptionist).andExpect(status().isCreated())).get("id").asLong();
+        long patient2 = body(perform(post("/v1/pacientes").content("""
+                {"tutorId":%d,"nome":"Mel","especie":"Felina","raca":"SRD","sexo":"Fêmea","peso":3.8,"dataNascimento":"2022-03-15","observacoes":""}
+                """.formatted(tutor)), receptionist).andExpect(status().isCreated())).get("id").asLong();
+        long patient3 = body(perform(post("/v1/pacientes").content("""
+                {"tutorId":%d,"nome":"Max","especie":"Canina","raca":"SRD","sexo":"Macho","peso":9.5,"dataNascimento":"2019-07-20","observacoes":""}
+                """.formatted(tutor)), receptionist).andExpect(status().isCreated())).get("id").asLong();
+
+        long bay1 = body(perform(post("/v1/baias").content("{\"identificacao\":\"REP-B1-" + UUID.randomUUID() + "\"}"), admin)
+                .andExpect(status().isCreated())).get("id").asLong();
+        long bay2 = body(perform(post("/v1/baias").content("{\"identificacao\":\"REP-B2-" + UUID.randomUUID() + "\"}"), admin)
+                .andExpect(status().isCreated())).get("id").asLong();
+
+        // secondVet attends 2 hospitalizations (1 ALTA, 1 ATIVA on bay1 after release)
+        long adm1 = body(perform(post("/v1/internacoes").content("""
+                {"pacienteId":%d,"baiaId":%d,"veterinarioId":%d,"motivo":"Gastroenterite","diagnosticoInicial":"Suspeita viral","observacoes":""}
+                """.formatted(patient1, bay1, secondVet.getId())), receptionist).andExpect(status().isCreated())).get("id").asLong();
+
+        perform(post("/v1/internacoes/" + adm1 + "/evolucoes").content("{\"texto\":\"Evolução Dra. Helena\"}"), secondVet)
+                .andExpect(status().isCreated());
+        perform(post("/v1/internacoes/" + adm1 + "/medicacao").content("""
+                {"medicamento":"Ondansetrona","dose":"2","unidade":"mg","via":"IV","prescricao":"12/12h","observacoes":""}
+                """), assistant).andExpect(status().isCreated());
+        perform(post("/v1/internacoes/" + adm1 + "/alimentacao").content("""
+                {"alimento":"Dieta leve","quantidade":"80g","aceitacaoObservacao":"Boa aceitação"}
+                """), assistant).andExpect(status().isCreated());
+        perform(put("/v1/internacoes/" + adm1 + "/encerrar").content("{\"statusEncerramento\":\"ALTA\"}"), secondVet)
+                .andExpect(status().isOk());
+
+        long adm2 = body(perform(post("/v1/internacoes").content("""
+                {"pacienteId":%d,"baiaId":%d,"veterinarioId":%d,"motivo":"Pós-operatório","diagnosticoInicial":"Recuperação","observacoes":""}
+                """.formatted(patient2, bay1, secondVet.getId())), receptionist).andExpect(status().isCreated())).get("id").asLong();
+        perform(post("/v1/internacoes/" + adm2 + "/jejum").content("{\"motivo\":\"Exame laboratorial\"}"), secondVet)
+                .andExpect(status().isCreated());
+
+        // first vet attends 1 hospitalization on bay2
+        body(perform(post("/v1/internacoes").content("""
+                {"pacienteId":%d,"baiaId":%d,"veterinarioId":%d,"motivo":"Observação clínica","diagnosticoInicial":"Hidratação","observacoes":""}
+                """.formatted(patient3, bay2, vet.getId())), receptionist).andExpect(status().isCreated()));
+
+        for (User forbiddenUser : List.of(vet, receptionist, assistant, user(Role.TUTOR, true))) {
+            perform(get("/v1/relatorios/clinica"), forbiddenUser).andExpect(status().isForbidden());
+            perform(get("/v1/relatorios/clinica/export"), forbiddenUser).andExpect(status().isForbidden());
+        }
+        perform(get("/v1/relatorios/clinica"), null).andExpect(status().isUnauthorized());
+
+        perform(get("/v1/relatorios/clinica")
+                .param("startDate", "2026-05-10T00:00:00Z")
+                .param("endDate", "2026-05-01T00:00:00Z"), admin)
+                .andExpect(status().isBadRequest());
+
+        JsonNode report = body(perform(get("/v1/relatorios/clinica"), admin)
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.resumoInternacoes.totalNoPeriodo").value(3))
+                .andExpect(jsonPath("$.resumoInternacoes.ativas").value(2))
+                .andExpect(jsonPath("$.resumoInternacoes.altas").value(1))
+                .andExpect(jsonPath("$.resumoInternacoes.obitos").value(0))
+                .andExpect(jsonPath("$.resumoCuidados.evolucoesRegistradas").value(1))
+                .andExpect(jsonPath("$.resumoCuidados.medicacoesAplicadas").value(1))
+                .andExpect(jsonPath("$.resumoCuidados.alimentacoesRegistradas").value(1))
+                .andExpect(jsonPath("$.resumoCuidados.jejunsIniciados").value(1))
+                .andExpect(jsonPath("$.atendimentosPorVeterinario[0].veterinarioId").value(secondVet.getId()))
+                .andExpect(jsonPath("$.atendimentosPorVeterinario[0].veterinarioNome").value("Dra. Helena Costa"))
+                .andExpect(jsonPath("$.atendimentosPorVeterinario[0].totalInternacoes").value(2))
+                .andExpect(jsonPath("$.atendimentosPorVeterinario[0].altas").value(1))
+                .andExpect(jsonPath("$.atendimentosPorVeterinario[0].ativas").value(1))
+                .andExpect(jsonPath("$.atendimentosPorVeterinario[1].veterinarioId").value(vet.getId()))
+                .andExpect(jsonPath("$.atendimentosPorVeterinario[1].totalInternacoes").value(1)));
+
+        assertEquals(2L, report.path("utilizacaoBaias").get(0).path("totalInternacoesNoPeriodo").asLong());
+        assertEquals(bay1, report.path("utilizacaoBaias").get(0).path("baiaId").asLong());
+
+        // Filter by specific veterinarian
+        perform(get("/v1/relatorios/clinica").param("veterinarioId", String.valueOf(vet.getId())), admin)
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.resumoInternacoes.totalNoPeriodo").value(1))
+                .andExpect(jsonPath("$.atendimentosPorVeterinario.length()").value(1))
+                .andExpect(jsonPath("$.atendimentosPorVeterinario[0].veterinarioId").value(vet.getId()));
+
+        // Export CSV
+        String csv = perform(get("/v1/relatorios/clinica/export"), admin)
+                .andExpect(status().isOk())
+                .andExpect(header().string("Content-Disposition", "attachment; filename=\"relatorio-performance-clinica.csv\""))
+                .andExpect(content().contentTypeCompatibleWith("text/csv"))
+                .andReturn().getResponse().getContentAsString( java.nio.charset.StandardCharsets.UTF_8);
+
+        assertTrue(csv.contains("RESUMO DE INTERNAÇÕES"));
+        assertTrue(csv.contains("ATENDIMENTOS POR VETERINÁRIO"));
+        assertTrue(csv.contains("Dra. Helena Costa"));
+        assertTrue(csv.contains("PRODUTIVIDADE DA EQUIPE"));
+        assertTrue(csv.contains("UTILIZAÇÃO DE BAIAS"));
+    }
 }
