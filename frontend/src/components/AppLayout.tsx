@@ -1,5 +1,5 @@
 ﻿import { useEffect, useRef, useState } from 'react'
-import { ChevronLeft, ChevronRight, CircleHelp, Fence, HeartPulse, LayoutDashboard, LogOut, Menu, PawPrint, ShieldCheck, Stethoscope, UserRound, Users, Utensils, X, type LucideIcon } from 'lucide-react'
+import { ChartColumn, ChevronLeft, ChevronRight, CircleHelp, Fence, HeartPulse, LayoutDashboard, LogOut, Menu, PawPrint, ShieldCheck, Stethoscope, UserRound, Users, Utensils, X, type LucideIcon } from 'lucide-react'
 import { Link, NavLink, Outlet, useLocation, useNavigate } from 'react-router-dom'
 import { useAuth } from '../auth/useAuth'
 import type { Role } from '../services/api'
@@ -14,11 +14,12 @@ const initials = (name: string) => name.trim().split(/\s+/).slice(0, 2).map(part
 const navIcons: Record<string, LucideIcon> = {
   '/inicio': LayoutDashboard, '/internacoes': HeartPulse, '/pacientes': PawPrint, '/tutores': Users, '/baias': Fence,
   '/alimentacao': Utensils, '/cuidados': Stethoscope, '/sessoes': ShieldCheck, '/auditoria': ShieldCheck, '/equipe': Users,
+  '/relatorios': ChartColumn,
 }
 const groups = [
   { label: 'Rotina clínica', paths: ['/inicio', '/internacoes', '/alimentacao', '/cuidados'] },
   { label: 'Cadastros', paths: ['/pacientes', '/tutores', '/baias'] },
-  { label: 'Administração', paths: ['/equipe', '/sessoes', '/auditoria'] },
+  { label: 'Administração', paths: ['/equipe', '/relatorios', '/sessoes', '/auditoria'] },
 ]
 
 export function AppLayout() {

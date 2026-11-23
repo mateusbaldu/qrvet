@@ -20,7 +20,7 @@ import {
   StatusBadge,
 } from '../components/ClinicUI'
 import { readableError, request, type User } from '../services/api'
-import { allPages, clinicApi, dateTime, type AuditLog, type Session } from '../services/clinic'
+import { allPages, clinicApi, dateTime, downloadBlob, toEndOfDayIso, toStartOfDayIso, type AuditLog, type Session } from '../services/clinic'
 import '../styles/clinical-records.css'
 
 export function PublicHospitalization() {
@@ -268,20 +268,6 @@ export function Sessions() {
   )
 }
 
-function toStartOfDayIso(dateValue: string): string | undefined {
-  if (!dateValue) {
-    return undefined
-  }
-  return new Date(dateValue + 'T00:00:00').toISOString()
-}
-
-function toEndOfDayIso(dateValue: string): string | undefined {
-  if (!dateValue) {
-    return undefined
-  }
-  return new Date(dateValue + 'T23:59:59.999').toISOString()
-}
-
 function formatResourceCell(item: AuditLog): string {
   if (!item.resourceId) {
     return item.resourceName
@@ -334,14 +320,7 @@ export function AuditLogs() {
       const blob = await request<Blob>(exportPath, {
         responseType: 'blob',
       })
-      const url = URL.createObjectURL(blob)
-      const link = document.createElement('a')
-      link.href = url
-      link.download = 'relatorio-auditoria.csv'
-      document.body.appendChild(link)
-      link.click()
-      link.remove()
-      URL.revokeObjectURL(url)
+      downloadBlob(blob, 'relatorio-auditoria.csv')
     } catch (error) {
       setDownloadError(readableError(error))
     } finally {
