@@ -21,6 +21,10 @@ import java.util.Base64;
 import java.util.List;
 import java.util.stream.Stream;
 import java.sql.Timestamp;
+import java.time.LocalDate;
+import org.apache.poi.ss.usermodel.CellType;
+import org.apache.poi.ss.usermodel.DateUtil;
+import org.apache.poi.xssf.usermodel.XSSFWorkbook;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.Test;
@@ -585,7 +589,7 @@ class ClinicIntegrationTests {
     }
 
     @Test
-    void clinicPerformanceReportRanksVeterinariansFiltersByPeriodAndExportsCsvForAdminOnly() throws Exception {
+    void clinicPerformanceReportFiltersAndExportsForAdminOnly() throws Exception {
         User secondVet = users.saveAndFlush(User.builder()
                 .name("Dra. Helena Costa")
                 .email(UUID.randomUUID() + "@qrvet.test")
@@ -644,6 +648,7 @@ class ClinicIntegrationTests {
         for (User forbiddenUser : List.of(vet, receptionist, assistant, user(Role.TUTOR, true))) {
             perform(get("/v1/relatorios/clinica"), forbiddenUser).andExpect(status().isForbidden());
             perform(get("/v1/relatorios/clinica/export"), forbiddenUser).andExpect(status().isForbidden());
+            perform(get("/v1/relatorios/clinica/export/xlsx"), forbiddenUser).andExpect(status().isForbidden());
         }
         perform(get("/v1/relatorios/clinica"), null).andExpect(status().isUnauthorized());
 
@@ -692,5 +697,45 @@ class ClinicIntegrationTests {
         assertTrue(csv.contains("Dra. Helena Costa"));
         assertTrue(csv.contains("PRODUTIVIDADE DA EQUIPE"));
         assertTrue(csv.contains("UTILIZAÇÃO DE BAIAS"));
+
+        perform(get("/v1/relatorios/clinica/export/xlsx").param("fuso", "Fuso/Inválido"), admin)
+                .andExpect(status().isBadRequest());
+        byte[] excel = perform(get("/v1/relatorios/clinica/export/xlsx")
+                .param("startDate", "2020-01-01T03:00:00Z")
+                .param("endDate", "2099-01-01T02:59:59.999Z")
+                .param("veterinarioId", String.valueOf(secondVet.getId()))
+                .param("fuso", "America/Sao_Paulo"), admin)
+                .andExpect(status().isOk())
+                .andExpect(header().string("Content-Disposition", "attachment; filename=\"relatorio-performance-clinica.xlsx\""))
+                .andExpect(content().contentType("application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"))
+                .andReturn().getResponse().getContentAsByteArray();
+
+        try (var workbook = new XSSFWorkbook(new ByteArrayInputStream(excel))) {
+            assertEquals(4, workbook.getNumberOfSheets());
+            var resumo = workbook.getSheetAt(0);
+            assertEquals("Resumo", resumo.getSheetName());
+            var dataFinal = resumo.getRow(5).getCell(1);
+            assertTrue(DateUtil.isCellDateFormatted(dataFinal));
+            assertEquals(LocalDate.of(2098, 12, 31), dataFinal.getLocalDateTimeCellValue().toLocalDate());
+            assertEquals("Dra. Helena Costa", resumo.getRow(5).getCell(3).getStringCellValue());
+            assertEquals(2, resumo.getRow(9).getCell(1).getNumericCellValue());
+            assertEquals(1, resumo.getRow(9).getCell(4).getNumericCellValue());
+
+            var veterinarios = workbook.getSheet("Veterinários");
+            assertTrue(veterinarios.getPaneInformation().isFreezePane());
+            assertEquals("A5:H6", veterinarios.getCTWorksheet().getAutoFilter().getRef());
+            assertEquals(5, veterinarios.getLastRowNum());
+            assertEquals("Dra. Helena Costa", veterinarios.getRow(5).getCell(0).getStringCellValue());
+            assertEquals(CellType.NUMERIC, veterinarios.getRow(5).getCell(2).getCellType());
+            assertEquals(String.valueOf(secondVet.getId()), veterinarios.getRow(5).getCell(7).getStringCellValue());
+
+            var equipe = workbook.getSheet("Equipe");
+            assertEquals("Auxiliar técnico", equipe.getRow(5).getCell(2).getStringCellValue());
+            assertEquals(2, equipe.getRow(5).getCell(6).getNumericCellValue());
+
+            var baias = workbook.getSheet("Baias");
+            assertEquals("Ocupada", baias.getRow(5).getCell(1).getStringCellValue());
+            assertEquals(2, baias.getRow(5).getCell(2).getNumericCellValue());
+        }
     }
 }

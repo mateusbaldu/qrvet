@@ -71,6 +71,9 @@ export function clinicalReportQuery(filters: ReportFilters) {
 
 export const reportsApi = {
   clinical: (query: string) => request<ClinicalReport>('/relatorios/clinica' + query),
-  exportClinical: (query: string) =>
-    request<Blob>('/relatorios/clinica/export' + query, { responseType: 'blob' }),
+  exportClinical: (query: string) => {
+    const params = new URLSearchParams(query)
+    params.set('fuso', Intl.DateTimeFormat().resolvedOptions().timeZone)
+    return request<Blob>('/relatorios/clinica/export/xlsx?' + params, { responseType: 'blob' })
+  },
 }

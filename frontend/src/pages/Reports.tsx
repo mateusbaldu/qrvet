@@ -64,13 +64,13 @@ export function Reports() {
     setDownloadError('')
   }
 
-  async function downloadCsv() {
+  async function downloadExcel() {
     if (!report || hasDraftChanges || downloading) return
     setDownloading(true)
     setDownloadError('')
     try {
       const file = await reportsApi.exportClinical(query)
-      downloadBlob(file, 'relatorio-performance-clinica.csv')
+      downloadBlob(file, 'relatorio-performance-clinica.xlsx')
     } catch (error) {
       setDownloadError(readableError(error))
     } finally {
@@ -83,9 +83,9 @@ export function Reports() {
       title="Relatórios"
       description="Acompanhe as internações, os cuidados da equipe e o uso das baias da clínica."
       action={
-        <button type="button" onClick={downloadCsv} disabled={!report || hasDraftChanges || downloading}>
+        <button type="button" onClick={downloadExcel} disabled={!report || hasDraftChanges || downloading}>
           <Download size={17} aria-hidden="true" />
-          {downloading ? 'Gerando CSV…' : 'Baixar relatório (CSV)'}
+          {downloading ? 'Gerando planilha…' : 'Baixar Excel'}
         </button>
       }
     >
@@ -124,7 +124,7 @@ export function Reports() {
         {veterinarios.error && (
           <ResourceState loading={false} error={'Falha ao carregar os veterinários. ' + veterinarios.error} reload={veterinarios.reload} />
         )}
-        {hasDraftChanges && !dateError && <p className="report-filter-hint">Aplique os filtros para atualizar os dados e baixar o CSV.</p>}
+        {hasDraftChanges && !dateError && <p className="report-filter-hint">Aplique os filtros para atualizar os dados e baixar a planilha.</p>}
       </form>
 
       {downloadError && <p className="clinic-error" role="alert">Falha ao baixar o relatório. {downloadError}</p>}

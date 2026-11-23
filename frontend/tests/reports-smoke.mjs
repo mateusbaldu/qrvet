@@ -32,7 +32,8 @@ const bay = { baiaId: 1, identificacao: 'B-01', statusAtual: 'OCUPADA', totalInt
 const appliedQuery = {
   startDate: '2026-11-01T03:00:00.000Z', endDate: '2026-12-01T02:59:59.999Z', veterinarioId: '2',
 }
-const csv = '\uFEFFPERÍODO DO RELATÓRIO\r\nIndicador,Valor\r\n'
+const exportQuery = { ...appliedQuery, fuso: 'America/Sao_Paulo' }
+const mockWorkbook = Buffer.from([0x50, 0x4b, 0x03, 0x04, 0x00, 0xff])
 
 page.on('pageerror', error => errors.push(error.message))
 await page.addInitScript(() => {
@@ -70,11 +71,14 @@ await page.route('**/qrvet/api/v1/**', route => {
       utilizacaoBaias: empty ? [{ ...bay, totalInternacoesNoPeriodo: 0 }] : [bay],
     })
   }
-  if (path === '/relatorios/clinica/export') {
+  if (path === '/relatorios/clinica/export/xlsx') {
     exportQueries.push(Object.fromEntries(url.searchParams))
     assert.equal(route.request().headers().authorization, 'Bearer test')
     if (failExport) return send({ message: 'Exportação indisponível.' }, 503)
-    return route.fulfill({ contentType: 'text/csv; charset=UTF-8', body: csv })
+    return route.fulfill({
+      contentType: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+      body: mockWorkbook,
+    })
   }
   return send({}, 404)
 })
@@ -96,7 +100,7 @@ try {
   const end = page.getByLabel('Data final')
   const vetFilter = page.getByLabel('Veterinário responsável')
   const apply = page.getByRole('button', { name: 'Aplicar filtros' })
-  const downloadButton = page.getByRole('button', { name: 'Baixar relatório (CSV)' })
+  const downloadButton = page.getByRole('button', { name: 'Baixar Excel' })
   await start.fill('2026-11-01')
   await end.fill('2026-10-31')
   await vetFilter.selectOption('2')
@@ -115,12 +119,12 @@ try {
   await page.getByRole('alert').getByText(/Exportação indisponível/).waitFor()
   failExport = false
   const [download] = await Promise.all([page.waitForEvent('download'), downloadButton.click()])
-  assert.equal(download.suggestedFilename(), 'relatorio-performance-clinica.csv')
+  assert.equal(download.suggestedFilename(), 'relatorio-performance-clinica.xlsx')
   const stream = await download.createReadStream()
   const buffers = []
   for await (const chunk of stream) buffers.push(chunk)
-  assert.equal(Buffer.concat(buffers).toString('utf8'), csv)
-  assert.deepEqual(exportQueries, [appliedQuery, appliedQuery])
+  assert.deepEqual(Buffer.concat(buffers), mockWorkbook)
+  assert.deepEqual(exportQueries, [exportQuery, exportQuery])
 
   await mkdir('tests/artifacts', { recursive: true })
   for (const width of [1440, 1024, 768, 390, 320]) {
@@ -156,7 +160,7 @@ try {
   assert.equal(await page.getByRole('link', { name: 'Relatórios', exact: true }).count(), 0)
   assert.equal(reportQueries.length, reportCount)
   assert.deepEqual(errors, [])
-  console.log('Relatórios: consultas, filtros, horários, CSV, falhas, permissões e layout responsivo verificados.')
+  console.log('Relatórios: consultas, filtros, horários, Excel, falhas, permissões e layout responsivo verificados.')
 } finally {
   await browser.close()
 }
