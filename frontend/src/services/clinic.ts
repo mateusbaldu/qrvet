@@ -184,6 +184,22 @@ export const dateTime = (value: string | null) =>
     ? new Date(value).toLocaleString('pt-BR', { dateStyle: 'short', timeStyle: 'short' })
     : '—'
 export const dateOnly = (value: string) => (value ? value.split('-').reverse().join('/') : '—')
+export const toStartOfDayIso = (date: string) =>
+  date ? new Date(date + 'T00:00:00').toISOString() : undefined
+export const toEndOfDayIso = (date: string) =>
+  date ? new Date(date + 'T23:59:59.999').toISOString() : undefined
+
+export function downloadBlob(blob: Blob, filename: string) {
+  const url = URL.createObjectURL(blob)
+  const link = document.createElement('a')
+  link.href = url
+  link.download = filename
+  document.body.appendChild(link)
+  link.click()
+  link.remove()
+  window.setTimeout(() => URL.revokeObjectURL(url), 1000)
+}
+
 export const searchText = (value: string) =>
   value
     .normalize('NFD')

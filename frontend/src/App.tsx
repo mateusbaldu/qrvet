@@ -10,6 +10,7 @@ import { AdminRoute, ProtectedRoute, RouteAccess } from './auth/RouteGuards'
 import { Registry, PatientDetail } from './pages/Registry'
 import { Feeding } from './pages/Feeding'
 import { Dashboard } from './pages/Dashboard'
+import { Reports } from './pages/Reports'
 import { Hospitalizations, HospitalizationDetail, CareLookup } from './pages/Hospitalizations'
 import { PublicHospitalization, Sessions, AuditLogs, Bootstrap } from './pages/ClinicAccess'
 
@@ -29,6 +30,7 @@ export default function App() {
             <Route path="/" element={<HomeRedirect />} />
             <Route element={<AdminRoute />}>
               <Route path="/equipe" element={<Team />} />
+              <Route path="/relatorios" element={<Reports />} />
               <Route path="/sessoes" element={<Sessions />} />
               <Route path="/auditoria" element={<AuditLogs />} />
             </Route>

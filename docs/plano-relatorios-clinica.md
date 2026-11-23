@@ -118,7 +118,13 @@ Aceita os mesmos parâmetros de query (`startDate`, `endDate`, `veterinarioId`) 
 5. `PRODUTIVIDADE DA EQUIPE`
 6. `UTILIZAÇÃO DE BAIAS`
 
-### 2.3. Enriquecimento da Auditoria (`HOSPITALIZATION_CREATED`)
+### 2.3. `GET /v1/relatorios/clinica/export/xlsx`
+
+É o download usado pela tela de Relatórios. Aceita os mesmos filtros e retorna **`relatorio-performance-clinica.xlsx`** (`application/vnd.openxmlformats-officedocument.spreadsheetml.sheet`) com as abas **Resumo**, **Veterinários**, **Equipe** e **Baias**. As abas de detalhamento têm filtros e cabeçalhos fixos quando há registros.
+
+O parâmetro opcional `fuso` (por exemplo, `America/Sao_Paulo`) define como as datas são exibidas na aba Resumo. O padrão é `UTC`. O filtro continua usando os instantes informados.
+
+### 2.4. Enriquecimento da Auditoria (`HOSPITALIZATION_CREATED`)
 Em `InternacaoService.open(...)`, o evento de auditoria `HOSPITALIZATION_CREATED` agora também registra `"veterinarioId"` e `"veterinarioNome"` no JSON `details`.
 
 ---
@@ -134,7 +140,7 @@ Em `InternacaoService.open(...)`, o evento de auditoria `HOSPITALIZATION_CREATED
      - Dentro de `<Route element={<AdminRoute />}>`, registrar `<Route path="/relatorios" element={<Reports />} />`.
 2. **Página `frontend/src/pages/Reports.tsx`:**
    - **Filtros:** `Data inicial`, `Data final` e seletor opcional de `Veterinário` (`/internacoes/veterinarios`), convertendo datas para ISO (`toStartOfDayIso` / `toEndOfDayIso` como em `AuditLogs` de `ClinicAccess.tsx`).
-   - **Botão de exportação:** `Baixar relatório (CSV)` consumindo `/relatorios/clinica/export` com `responseType: 'blob'`.
+   - **Botão de exportação:** `Baixar Excel` consumindo `/relatorios/clinica/export/xlsx` com `responseType: 'blob'`.
    - **Cards de resumo (`clinic-stats`):** Total no período, Ativas, Altas, Óbitos, Tempo médio (h), Refeições concluídas e Medicações aplicadas.
    - **Tabelas (`clinic-table`):**
      1. *Atendimentos por Veterinário* (`atendimentosPorVeterinario`)

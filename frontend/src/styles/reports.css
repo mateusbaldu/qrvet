@@ -1,0 +1,197 @@
+.clinic-panel .report-section-title,
+.report-section-title {
+  display: flex;
+  align-items: center;
+  gap: .55rem;
+  margin: 0 0 .75rem;
+  color: var(--ink);
+  font-size: 1.05rem;
+  font-weight: 700;
+  letter-spacing: -.02em;
+}
+.report-section-title svg,
+.report-period svg {
+  flex-shrink: 0;
+  color: var(--green-700);
+}
+.report-filter-panel {
+  container-type: inline-size;
+}
+.report-fields {
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  align-items: end;
+  gap: .8rem;
+}
+.report-fields label {
+  min-width: 0;
+}
+.report-filter-actions {
+  grid-column: 1 / -1;
+  display: flex;
+  flex-wrap: wrap;
+  gap: .55rem;
+}
+.report-filter-actions button {
+  min-height: 44px;
+}
+.report-filter-panel .report-filter-hint,
+.report-filter-panel .report-date-error {
+  margin: .85rem 0 0;
+  font-size: .8rem;
+}
+.report-filter-panel .report-date-error {
+  color: #9c3021;
+}
+.report-period {
+  display: flex;
+  align-items: center;
+  gap: .55rem;
+  margin: 1.35rem 0 1.05rem;
+  color: var(--muted);
+  font-size: .82rem;
+}
+.report-period strong {
+  color: var(--green-700);
+}
+.report-section-note {
+  color: var(--muted);
+  font-size: .79rem;
+  line-height: 1.5;
+  margin: -.35rem 0 .9rem;
+}
+.clinic-stats.report-stats {
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: .8rem;
+  margin-bottom: 1.25rem;
+}
+.report-stat {
+  padding: .95rem 1rem;
+}
+.report-stat:first-child {
+  background: #e9f5ee;
+  border-color: #cae2d4;
+}
+.report-stat dt {
+  display: flex;
+  justify-content: space-between;
+  gap: .4rem;
+  color: #4f6860;
+  font-size: .8rem;
+  font-weight: 600;
+  line-height: 1.4;
+}
+.report-stat dt svg {
+  flex-shrink: 0;
+  color: var(--green-700);
+}
+.report-stat dd,
+.report-care-stats dd {
+  margin: .42rem 0 0;
+  color: var(--ink);
+  font-size: clamp(1.3rem, 2.8vw, 1.8rem);
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+  letter-spacing: -.035em;
+  line-height: 1.15;
+}
+.report-stat dd span {
+  color: #4f6860;
+  font-size: .95rem;
+  margin-left: .2rem;
+}
+.report-care-stats {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: .6rem;
+  margin: 0;
+}
+.report-care-stats > div {
+  padding: .7rem .8rem;
+  border: 1px solid #e4ede8;
+  border-radius: .6rem;
+  background: #f7faf8;
+}
+.report-care-stats dt {
+  color: #4f6860;
+  font-size: .78rem;
+  font-weight: 600;
+  line-height: 1.4;
+}
+.report-care-stats dd {
+  font-size: 1.15rem;
+}
+.report-table-panel {
+  container-type: inline-size;
+}
+.report-table-panel h2 {
+  margin-bottom: .35rem;
+}
+.report-table {
+  min-width: 0;
+  font-variant-numeric: tabular-nums;
+}
+.report-table:has(thead th:nth-child(6)) {
+  min-width: 37rem;
+}
+.report-table thead th {
+  padding-block: .75rem;
+  line-height: 1.35;
+}
+.report-table tbody :is(th, td) {
+  padding-block: .85rem;
+}
+.report-table tbody th[scope='row'] {
+  border-top: 1px solid #e8eeea;
+  color: var(--ink);
+  font-size: .82rem;
+  font-weight: 600;
+  text-transform: none;
+  letter-spacing: normal;
+}
+.report-table tbody th small {
+  font-weight: 400;
+}
+.report-table .clinic-badge {
+  white-space: nowrap;
+}
+.report-table-panel .report-table-empty {
+  margin: .7rem 0 0;
+}
+.report-table-panel .report-table-hint {
+  display: none;
+  margin: .45rem 0 0;
+  font-size: .75rem;
+}
+@container (width < 37rem) {
+  .report-table-panel .report-table-hint {
+    display: block;
+  }
+  .report-table:has(thead th:nth-child(6)) th:first-child {
+    position: sticky;
+    left: 0;
+  }
+}
+@container (min-width: 53rem) {
+  .report-fields {
+    grid-template-columns: minmax(0, 1fr) minmax(0, 1fr) minmax(0, 1.35fr) auto;
+  }
+  .report-filter-actions {
+    grid-column: auto;
+  }
+}
+@media (max-width: 639px) {
+  .report-fields,
+  .clinic-stats.report-stats,
+  .report-care-stats {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+  .report-fields > label:nth-child(3) {
+    grid-column: 1 / -1;
+  }
+  .report-filter-actions button {
+    flex: 1;
+  }
+  .report-stat {
+    padding: .8rem;
+  }
+}

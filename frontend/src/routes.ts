@@ -14,6 +14,7 @@ export const appRoutes: AppRoute[] = [
   { path: '/baias', label: 'Baias', roles: ['ADMIN', 'VETERINARIO', 'RECEPCIONISTA'] },
   { path: '/alimentacao', label: 'Alimentação', roles: ['ADMIN', 'VETERINARIO', 'AUXILIAR_TECNICO'] },
   { path: '/cuidados', label: 'Cuidados', roles: ['ADMIN', 'VETERINARIO', 'AUXILIAR_TECNICO'] },
+  { path: '/relatorios', label: 'Relatórios', roles: ['ADMIN'] },
   { path: '/sessoes', label: 'Sessões', roles: ['ADMIN'] },
   { path: '/auditoria', label: 'Auditoria', roles: ['ADMIN'] },
 ]
