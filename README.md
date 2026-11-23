@@ -295,7 +295,7 @@ docker compose up -d backend
 
 No celular, `localhost` aponta para o próprio celular. Por isso, os links precisam usar o IP ou domínio do servidor. Confira também a liberação da porta pelo firewall e pela rede.
 
-A etiqueta abre `/internacoes/:id` e exige a sessão da equipe. O auxiliar técnico é direcionado a `/cuidados?internacao=:id`. O acompanhamento do tutor usa `/public/internacoes/qr/:token`, enviado por e-mail, sem exigir login. A consulta manual em `/consultar-qr` continua disponível como apoio, sem item no menu lateral ou no cabeçalho.
+A etiqueta abre `/internacoes/:id` e exige a sessão da equipe. O auxiliar técnico é direcionado a `/cuidados?internacao=:id`. O acompanhamento do tutor usa `/public/internacoes/qr/:token`, enviado por e-mail, sem exigir login.
 
 ## Configurações do ambiente
 

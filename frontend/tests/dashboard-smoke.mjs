@@ -58,6 +58,13 @@ try {
   assert.deepEqual([...admissionPages], [0, 1], 'Dashboard must load beyond the first admissions page')
   await page.getByRole('img', { name: 'Foto de Luna 1', exact: true }).waitFor()
   assert.equal(await stat('Baias disponíveis').innerText(), '1')
+  const feeding = page.getByRole('region', { name: 'Alimentação de hoje' })
+  const occupancy = page.getByRole('region', { name: 'Ocupação das baias' })
+  const patients = page.getByRole('region', { name: /Pacientes internados/ })
+  assert.equal(await page.getByRole('heading', { name: 'Acesso rápido' }).count(), 0)
+  assert.equal(await page.getByRole('link', { name: 'Consultar QR Code' }).count(), 0)
+  assert.equal(await occupancy.getByRole('heading').locator('svg.lucide-fence').count(), 1)
+  assert.equal(await patients.locator('.dashboard-patient-row').first().getByText('Observação', { exact: true }).count(), 1)
   await metric('Concluídas').getByText('1', { exact: true }).waitFor()
   assert.equal(await metric('Pendentes').innerText(), '3')
   assert.equal(await metric('Atrasadas').innerText(), '1', 'Fasting meals must not count as late')
@@ -78,12 +85,21 @@ try {
   for (const width of [360, 768, 1280, 1440]) {
     await page.setViewportSize({ width, height: 900 })
     assert(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth), 'Dashboard overflow at ' + width)
+    const [feedingBox, occupancyBox, patientsBox] = await Promise.all([feeding.boundingBox(), occupancy.boundingBox(), patients.boundingBox()])
+    assert.equal(patientsBox.x, feedingBox.x)
+    assert(Math.abs((patientsBox.x + patientsBox.width) - (occupancyBox.x + occupancyBox.width)) < 1)
+    assert(patientsBox.y >= occupancyBox.y + occupancyBox.height)
     if (width === 360) {
+      assert.equal(feedingBox.x, occupancyBox.x)
+      assert(occupancyBox.y >= feedingBox.y + feedingBox.height)
       await page.screenshot({ path: 'tests/artifacts/dashboard-vet-mobile.png', fullPage: true, animations: 'disabled' })
       await page.getByRole('button', { name: 'Abrir menu', exact: true }).click()
       await page.keyboard.press('Escape')
       assert.equal(await page.locator('.app-sidebar.open').count(), 0)
       assert(await page.getByRole('button', { name: 'Abrir menu', exact: true }).evaluate(el => el === document.activeElement))
+    } else {
+      assert.equal(feedingBox.y, occupancyBox.y)
+      assert(occupancyBox.x >= feedingBox.x + feedingBox.width)
     }
   }
   await page.getByRole('button', { name: 'Recolher menu lateral' }).click()
@@ -106,6 +122,7 @@ try {
   await page.reload()
   await stat('Internações ativas').getByText('115', { exact: true }).waitFor()
   assert.equal(await page.locator('.dashboard-feeding').count(), 0)
+  assert(await occupancy.isVisible())
   assert.equal(await page.getByRole('button', { name: 'Meus pacientes', exact: true }).count(), 0)
   assert.equal(await page.locator('.sidebar-nav').getByRole('link', { name: 'Cuidados', exact: true }).count(), 0)
   assert.deepEqual(unexpected, [])

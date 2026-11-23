@@ -16,11 +16,6 @@ export const appRoutes: AppRoute[] = [
   { path: '/cuidados', label: 'Cuidados', roles: ['ADMIN', 'VETERINARIO', 'AUXILIAR_TECNICO'] },
   { path: '/sessoes', label: 'Sessões', roles: ['ADMIN'] },
   { path: '/auditoria', label: 'Auditoria', roles: ['ADMIN'] },
-  {
-    path: '/consultar-qr',
-    label: 'Consultar QR Code',
-    roles: ['ADMIN', 'VETERINARIO', 'RECEPCIONISTA', 'AUXILIAR_TECNICO', 'TUTOR'],
-  },
 ]
 
 export const adminRoutes: AppRoute[] = [

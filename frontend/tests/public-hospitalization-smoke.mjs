@@ -33,6 +33,7 @@ try {
   assert.equal(await page.locator('.evolution-notes-list li').count(), 5)
   assert.match(await page.locator('.evolution-notes-list li').first().innerText(), /Evolução 7/)
   assert.equal(await page.getByRole('button', { name: /Editar|Adicionar|Salvar/ }).count(), 0)
+  assert.equal(await page.locator('a[href="/login"]').count(), 0)
   await page.screenshot({ path: 'tests/artifacts/public-hospitalization-desktop.png', fullPage: true })
   await page.getByRole('button', { name: 'Próxima', exact: true }).click()
   await page.getByText('Evolução 2', { exact: false }).waitFor()
