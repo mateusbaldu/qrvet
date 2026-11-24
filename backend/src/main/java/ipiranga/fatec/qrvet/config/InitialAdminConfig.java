@@ -5,6 +5,7 @@ import org.slf4j.LoggerFactory;
 
 import ipiranga.fatec.qrvet.dtos.request.BootstrapAdminRequest;
 import ipiranga.fatec.qrvet.services.BootstrapService;
+import ipiranga.fatec.qrvet.services.DemoDataSeeder;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.ApplicationRunner;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
@@ -21,9 +22,12 @@ public class InitialAdminConfig {
             havingValue = "true")
     ApplicationRunner initialAdminRunner(
             BootstrapService bootstrapService,
+            DemoDataSeeder demoDataSeeder,
             @Value("${qrvet.bootstrap-admin.name}") String name,
             @Value("${qrvet.bootstrap-admin.email}") String email,
-            @Value("${qrvet.bootstrap-admin.password}") String password) {
+            @Value("${qrvet.bootstrap-admin.password}") String password,
+            @Value("${qrvet.demo-seed.enabled:true}") boolean demoSeedEnabled,
+            @Value("${qrvet.demo-seed.password:teste@123}") String demoPassword) {
         return arguments -> {
             boolean created = bootstrapService.createInitialAdmin(
                     new BootstrapAdminRequest(name, email, password));
@@ -31,6 +35,9 @@ public class InitialAdminConfig {
                 log.info("Initial administrator account created for {}", email);
             } else {
                 log.info("An administrator already exists; initial account creation was skipped");
+            }
+            if (demoSeedEnabled) {
+                demoDataSeeder.seed(demoPassword);
             }
         };
     }

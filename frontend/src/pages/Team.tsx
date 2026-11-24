@@ -22,6 +22,7 @@ const filters = [
   ['AUXILIAR_TECNICO', 'Auxiliares'],
   ['TUTOR', 'Tutores'],
   ['PENDING', 'Pendentes'],
+  ['INACTIVE', 'Inativos'],
 ]
 const initials = (name: string) =>
   name
@@ -34,6 +35,7 @@ const initials = (name: string) =>
 export function Team() {
   const { user } = useAuth()
   const [editing, setEditing] = useState<User | null>(null)
+  const [togglingStatus, setTogglingStatus] = useState<User | null>(null)
   const [search, setSearch] = useState('')
   const [filter, setFilter] = useState('')
   const [page, setPage] = useState(0)
@@ -44,8 +46,9 @@ export function Team() {
     () =>
       clinicApi.list<User>('/users', page, {
         name: search.trim() || undefined,
-        role: filter && filter !== 'PENDING' ? filter : undefined,
-        confirmed: filter === 'PENDING' ? false : undefined,
+        role: filter && filter !== 'PENDING' && filter !== 'INACTIVE' ? filter : undefined,
+        confirmed: filter === 'PENDING' ? false : filter === 'INACTIVE' ? true : undefined,
+        active: filter === 'INACTIVE' ? false : undefined,
       }),
     [page, search, filter]
   )
@@ -193,10 +196,27 @@ export function Team() {
                               Reenviar
                             </button>
                           ) : (
-                            <Link className="clinic-button" to={'/sessoes?usuario=' + member.id}>
-                              <ShieldCheck size={15} />
-                              Sessões
-                            </Link>
+                            <>
+                              <button
+                                disabled={member.id === user?.id}
+                                title={
+                                  member.id === user?.id
+                                    ? 'Peça a outro administrador para alterar o status da sua conta.'
+                                    : undefined
+                                }
+                                aria-label={
+                                  (member.active ? 'Desativar conta de ' : 'Ativar conta de ') +
+                                  member.name
+                                }
+                                onClick={() => setTogglingStatus(member)}
+                              >
+                                {member.active ? 'Desativar' : 'Ativar'}
+                              </button>
+                              <Link className="clinic-button" to={'/sessoes?usuario=' + member.id}>
+                                <ShieldCheck size={15} />
+                                Sessões
+                              </Link>
+                            </>
                           )}
                         </div>
                       </td>
@@ -266,6 +286,35 @@ export function Team() {
           onSave={async () => {
             await usersApi.resendInvitation(resending.id)
             setSuccess('Novo convite enviado para ' + resending.email + '.')
+            resource.reload()
+          }}
+        />
+      )}
+      {togglingStatus && (
+        <Editor
+          title={(togglingStatus.active ? 'Desativar' : 'Ativar') + ' conta?'}
+          description={
+            togglingStatus.active
+              ? 'Ao desativar ' +
+                togglingStatus.name +
+                ', todas as sessões ativas serão encerradas e o acesso ficará bloqueado até a conta ser reativada.'
+              : 'Ao ativar ' +
+                togglingStatus.name +
+                ', o membro voltará a acessar o sistema com a permissão ' +
+                roleLabels[togglingStatus.role] +
+                '.'
+          }
+          fields={[]}
+          submitLabel={togglingStatus.active ? 'Desativar conta' : 'Ativar conta'}
+          onCancel={() => setTogglingStatus(null)}
+          onSave={async () => {
+            const nextActive = !togglingStatus.active
+            await usersApi.updateStatus(togglingStatus.id, nextActive)
+            setSuccess(
+              'Conta de ' +
+                togglingStatus.name +
+                (nextActive ? ' ativada.' : ' desativada.')
+            )
             resource.reload()
           }}
         />

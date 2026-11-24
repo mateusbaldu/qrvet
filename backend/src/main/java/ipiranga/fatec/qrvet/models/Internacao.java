@@ -56,7 +56,7 @@ public class Internacao {
 
     @PrePersist
     void initializeEntry() {
-        entradaInternacao = Instant.now();
+        if (entradaInternacao == null) entradaInternacao = Instant.now();
         if (uuidToken == null) uuidToken = UUID.randomUUID();
         if (status == null) status = InternacaoStatus.ATIVA;
     }

@@ -7,6 +7,7 @@ import ipiranga.fatec.qrvet.dtos.request.PaginationRequest;
 import ipiranga.fatec.qrvet.dtos.request.ResetPasswordRequest;
 import ipiranga.fatec.qrvet.dtos.request.UserRequest;
 import ipiranga.fatec.qrvet.dtos.request.UserRoleRequest;
+import ipiranga.fatec.qrvet.dtos.request.UserStatusRequest;
 import ipiranga.fatec.qrvet.dtos.filter.UserSearchFilter;
 import ipiranga.fatec.qrvet.dtos.response.*;
 import ipiranga.fatec.qrvet.services.UserService;
@@ -41,6 +42,11 @@ public class UserController {
     @PutMapping("/users/{id}/role")
     public UserResponse updateRole(@PathVariable Long id, @Valid @RequestBody UserRoleRequest request) {
         return service.updateRole(id, request);
+    }
+
+    @PutMapping("/users/{id}/status")
+    public UserResponse updateStatus(@PathVariable Long id, @Valid @RequestBody UserStatusRequest request) {
+        return service.updateStatus(id, request);
     }
 
     @PostMapping("/auth/confirm-invitation")

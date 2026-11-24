@@ -275,6 +275,8 @@ export const authApi = {
 
 export const usersApi = {
   updateRole: (id: number, role: Role) => request<User>(`/users/${id}/role`, { method: 'PUT', body: { role } }),
+  updateStatus: (id: number, active: boolean) =>
+    request<User>(`/users/${id}/status`, { method: 'PUT', body: { active } }),
   list: () => request<PageResponse<User>>('/users?page=0&size=100'),
   create: (data: { name: string; email: string; role: Role }) =>
     request<User>('/users', {

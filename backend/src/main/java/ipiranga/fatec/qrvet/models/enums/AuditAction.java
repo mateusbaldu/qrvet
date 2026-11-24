@@ -4,6 +4,7 @@ import java.util.Arrays;
 
 public enum AuditAction {
     USER_ROLE_UPDATED("USER_ROLE_UPDATED", "Permissão da equipe alterada"),
+    USER_STATUS_UPDATED("USER_STATUS_UPDATED", "Status da conta alterado"),
     LOGIN_SUCCESS("LOGIN_SUCCESS", "Login realizado"),
     LOGIN_FAILED("LOGIN_FAILED", "Falha no login"),
     LOGOUT("LOGOUT", "Logout realizado"),

@@ -4,7 +4,7 @@ Sistema web para apoiar a rotina de internação veterinária, desenvolvido como
 
 O QRVET reúne pacientes, tutores, baias, internações, alimentação, jejum e registros da equipe. A identificação por foto ajuda a localizar o paciente, e a etiqueta com QR Code abre sua internação no celular. O tutor recebe um link separado para acompanhar um resumo do atendimento.
 
-[Como executar](#como-executar-com-docker) · [Primeiro acesso](#primeiro-acesso-e-preparação-da-clínica) · [Tecnologias](#tecnologias) · [Desenvolvimento](#desenvolvimento) · [Testes](#testes-e-verificações) · [Docker Hub](#publicar-e-atualizar-no-docker-hub) · [Protótipo](#protótipo-e-documentação)
+[Como executar](#como-executar-com-docker) · [Usuários de teste](#primeiro-acesso-e-usuários-de-teste-carga-inicial--seed) · [Tecnologias](#tecnologias) · [Desenvolvimento](#desenvolvimento) · [Testes](#testes-e-verificações) · [Docker Hub](#publicar-e-atualizar-no-docker-hub) · [Protótipo](#protótipo-e-documentação)
 
 ## Conheça a aplicação
 
@@ -264,11 +264,34 @@ docker compose up -d
 
 `docker compose down -v` remove os volumes, incluindo banco e fotos. Use essa opção somente quando a intenção for apagar os dados do ambiente.
 
-## Primeiro acesso e preparação da clínica
+## Primeiro acesso e usuários de teste (Carga Inicial / Seed)
 
-1. Entre em `/login` com o e-mail e a senha definidos em `BOOTSTRAP_ADMIN_EMAIL` e `BOOTSTRAP_ADMIN_PASSWORD` no `.env`.
-2. Em **Equipe**, convide os profissionais e escolha os perfis. O veterinário precisa aceitar o convite para estar disponível na abertura de internação.
-3. Em **Baias**, cadastre os espaços disponíveis.
+Ao iniciar a aplicação com `docker compose up -d --build` (ou `docker compose up -d`), o sistema executa automaticamente a **carga inicial de demonstração (`DemoDataSeeder`)**, disponibilizando usuários ativos para todos os perfis e dados fictícios prontos para avaliação.
+
+### Usuários e senhas de teste por perfil
+
+| Perfil | Nome | E-mail (Login) | Senha | Principais acessos |
+| --- | --- | --- | --- | --- |
+| **Administrador** (`ADMIN`) | Administrador QRVet | `admin@qrvet.com` | `teste@123` | Gestão completa, equipe (ativar/desativar/permissões), sessões, auditoria, relatórios, baias, pacientes e internações. |
+| **Veterinário** (`VETERINARIO`) | Dra. Helena Prado | `veterinario@qrvet.com` | `teste@123` | Painel, pacientes, tutores, internações, alertas clínicos, evoluções, alimentação, medicação e jejum. |
+| **Recepcionista** (`RECEPCIONISTA`) | Lucas Andrade | `recepcao@qrvet.com` | `teste@123` | Painel, cadastro de tutores e pacientes, consulta de baias, abertura/encerramento de internações e emissão de QR Code. |
+| **Auxiliar técnico** (`AUXILIAR_TECNICO`) | Camila Souza | `auxiliar@qrvet.com` | `teste@123` | Consulta de pacientes internados via cuidados/QR Code, registro de alimentação, medicação, jejum e evoluções. |
+
+> O **Tutor** não realiza login com senha: ele acessa o resumo público da internação pelo link exclusivo (`/public/internacoes/qr/:token`) enviado ao seu e-mail a partir da ficha da internação.
+
+### Dados fictícios pré-carregados no banco
+
+- **Baias**: `B-01` (Ocupada — Thor), `B-02` (Ocupada — Luna), `B-03` (Disponível para nova internação) e `B-04` (Em manutenção).
+- **Tutores e Pacientes**:
+  - **Thor** (*Canino, Golden Retriever*, tutor Carlos Eduardo Mendes) — Internação ativa na baia `B-01`, com alertas de alergia/dieta, evoluções, medicação aplicada e checklist de alimentação do dia (incluindo refeição pendente pronta para confirmação).
+  - **Luna** (*Felino, Siamês*, tutora Mariana Costa) — Internação ativa na baia `B-02`, com **jejum ativo** para demonstrar o bloqueio automático de alimentação (`RN025`).
+  - **Bento** (*Canino, Beagle*, tutora Patrícia Almeida) — Internação anterior encerrada por **Alta**, populando o histórico clínico e os indicadores da tela de **Relatórios**.
+
+### Fluxo manual de preparação da clínica
+
+1. Entre em `/login` com uma das contas acima (ou com o e-mail e a senha definidos em `BOOTSTRAP_ADMIN_EMAIL` e `BOOTSTRAP_ADMIN_PASSWORD` no `.env`).
+2. Em **Equipe**, convide novos profissionais, altere perfis ou ative/desative contas existentes.
+3. Em **Baias**, cadastre ou gerencie os espaços disponíveis.
 4. Em **Pacientes**, cadastre um paciente, vincule um tutor e adicione a foto. É possível criar o tutor na mesma tela.
 5. Abra a internação e selecione o paciente, uma baia disponível e o veterinário responsável.
 6. Registre os alertas e a primeira evolução; programe a alimentação conforme a orientação da equipe.
@@ -630,10 +653,14 @@ A agenda é consultada na aplicação e atualizada periodicamente; ela não envi
 
 ## Equipe
 
-- Mateus Balduino da Silva
-- Anthony Akio Neves
-- Vitor Vieira da Hora
-- Kauan Torres
-- Washington Luis
+**Instituição:** Fatec Ipiranga — Pastor Enéas Tognini  
+**Curso:** Tecnologia em Análise e Desenvolvimento de Sistemas (Laboratório de Engenharia de Software)  
+**Equipe:** Equipe 14 — **Turno:** Noturno
 
-Projeto acadêmico da Fatec Ipiranga.
+| Nome Completo | RA | Turno |
+| --- | --- | --- |
+| Anthony Akio Neves Schiguematu | `2040482413014` | Noturno |
+| Kauan Torres | `2040482513052` | Noturno |
+| Mateus Balduino da Silva | `2040482413026` | Noturno |
+| Vitor Vieira da Hora | `2040482413043` | Noturno |
+| Washington Luis Carneiro Vieira | `2040482413012` | Noturno |

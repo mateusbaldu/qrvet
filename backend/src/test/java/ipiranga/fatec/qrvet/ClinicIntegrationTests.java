@@ -79,6 +79,7 @@ class ClinicIntegrationTests {
     @Autowired JdbcTemplate jdbc;
     @Autowired EntityManager entities;
     @Autowired TutorRepository tutors;
+    @Autowired ipiranga.fatec.qrvet.services.DemoDataSeeder demoDataSeeder;
     private static final Path photoDirectory = temporaryPhotoDirectory();
     private static Path temporaryPhotoDirectory() {
         try { return Files.createTempDirectory("qrvet-photo-tests-"); }
@@ -737,5 +738,39 @@ class ClinicIntegrationTests {
             assertEquals("Ocupada", baias.getRow(5).getCell(1).getStringCellValue());
             assertEquals(2, baias.getRow(5).getCell(2).getNumericCellValue());
         }
+    }
+
+    @Test
+    void adminCanDeactivateAndReactivateUserAndDemoSeederIsIdempotent() throws Exception {
+        perform(put("/v1/users/" + vet.getId() + "/status")
+                        .contentType("application/json")
+                        .content("{\"active\":false}"),
+                admin)
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.active").value(false));
+
+        verify(sessions).revokeAllSessions(vet.getId());
+
+        // Deactivated user cannot access endpoints protected by @qrvetSecurity.hasAnyRole(...)
+        perform(get("/v1/pacientes"), vet)
+                .andExpect(status().isUnauthorized());
+
+        perform(put("/v1/users/" + vet.getId() + "/status")
+                        .contentType("application/json")
+                        .content("{\"active\":true}"),
+                admin)
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.active").value(true));
+
+        perform(get("/v1/pacientes"), vet)
+                .andExpect(status().isOk());
+
+        // DemoDataSeeder creates all 4 test users and clinical data idempotently
+        demoDataSeeder.seed("teste@123");
+        demoDataSeeder.seed("teste@123");
+
+        assertTrue(users.findByEmailIgnoreCase("veterinario@qrvet.com").orElseThrow().isActive());
+        assertTrue(users.findByEmailIgnoreCase("recepcao@qrvet.com").orElseThrow().isActive());
+        assertTrue(users.findByEmailIgnoreCase("auxiliar@qrvet.com").orElseThrow().isActive());
     }
 }
