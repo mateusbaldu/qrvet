@@ -3,6 +3,8 @@ package ipiranga.fatec.qrvet.models.enums;
 import java.util.Arrays;
 
 public enum AuditAction {
+    USER_ROLE_UPDATED("USER_ROLE_UPDATED", "Permissão da equipe alterada"),
+    USER_STATUS_UPDATED("USER_STATUS_UPDATED", "Status da conta alterado"),
     LOGIN_SUCCESS("LOGIN_SUCCESS", "Login realizado"),
     LOGIN_FAILED("LOGIN_FAILED", "Falha no login"),
     LOGOUT("LOGOUT", "Logout realizado"),
@@ -11,6 +13,9 @@ public enum AuditAction {
     PASSWORD_RESET("PASSWORD_RESET", "Senha redefinida"),
     PATIENT_CREATED("PATIENT_CREATED", "Paciente criado"),
     PATIENT_UPDATED("PATIENT_UPDATED", "Paciente atualizado"),
+    PATIENT_ALERTS_UPDATED("PATIENT_ALERTS_UPDATED", "Alertas do paciente atualizados"),
+    PROFILE_UPDATED("PROFILE_UPDATED", "Perfil atualizado"),
+    EVOLUTION_CREATED("EVOLUTION_CREATED", "Evolução registrada"),
     HOSPITALIZATION_CREATED("HOSPITALIZATION_CREATED", "Internação criada"),
     HOSPITALIZATION_UPDATED("HOSPITALIZATION_UPDATED", "Internação atualizada");
 

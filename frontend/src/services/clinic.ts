@@ -19,6 +19,20 @@ export type Paciente = {
   peso: number
   observacoes: string
   fotoVersao: string | null
+  alertas?: AlertasPaciente
+}
+export type AlertasPaciente = {
+  alergias: string | null
+  restricoesAlimentares: string | null
+  cuidadosManejo: string | null
+}
+export type Evolucao = {
+  id: number
+  internacaoId: number
+  profissionalId: number
+  profissionalNome: string
+  texto: string
+  dataHoraRegistro: string
 }
 export type AgendaAlimentacao = {
   id: number
@@ -61,10 +75,12 @@ export type Internacao = {
   id: number
   pacienteId: number
   pacienteNome: string
+  fotoVersao?: string | null
   baiaId: number
   baiaIdentificacao: string
   veterinarioId: number
   veterinarioNome: string
+  alertas?: AlertasPaciente
   uuidToken: string
   entradaInternacao: string
   saidaInternacao: string | null
@@ -74,7 +90,7 @@ export type Internacao = {
   observacoes: string
 }
 export type Veterinario = { id: number; name: string }
-export type Cuidado = Pick<Internacao, 'id' | 'pacienteNome' | 'baiaIdentificacao' | 'status'>
+export type Cuidado = Pick<Internacao, 'id' | 'pacienteNome' | 'baiaIdentificacao' | 'status' | 'alertas' | 'fotoVersao'>
 export type Jejum = {
   id: number
   motivo: string
@@ -90,6 +106,19 @@ export type Alimentacao = {
   dataHoraRegistro: string
   usuarioId: number
 }
+export type Medicacao = {
+  id: number
+  internacaoId: number
+  usuarioId: number
+  responsavelNome: string
+  medicamento: string
+  dose: string
+  unidade: string
+  via: string
+  prescricao: string
+  observacoes: string | null
+  dataHoraRegistro: string
+}
 export type PublicInternacao = {
   pacienteNome: string
   especie: string
@@ -100,6 +129,10 @@ export type PublicInternacao = {
   status: string
   jejumAtivo: boolean
   entradaInternacao: string
+  saidaInternacao: string | null
+  veterinarioNome: string
+  alertas: AlertasPaciente
+  evolucoes: PageResponse<Pick<Evolucao, 'profissionalNome' | 'texto' | 'dataHoraRegistro'>>
 }
 export type QrCode = {
   uuidToken: string
@@ -109,6 +142,17 @@ export type QrCode = {
   tutorEmail: string
 }
 export type Session = { jti: string; createdAt: string; expiresAt: string }
+export type AuditLog = {
+  id: number
+  timestamp: string
+  userId: number | null
+  userEmail: string | null
+  ipAddress: string | null
+  action: string
+  resourceName: string
+  resourceId: string | null
+  details: string | null
+}
 export async function allPages<T>(path: string): Promise<T[]> {
   const items: T[] = []
   let page = 0
@@ -129,8 +173,8 @@ export const clinicApi = {
     return request<PageResponse<T>>(`${path}?${query}`)
   },
   save: <T>(path: string, body: unknown, method = 'POST') => request<T>(path, { method, body }),
-  publicDetails: (token: string) =>
-    request<PublicInternacao>(`/public/internacoes/qr/${encodeURIComponent(token)}`, {
+  publicDetails: (token: string, page = 0) =>
+    request<PublicInternacao>(`/public/internacoes/qr/${encodeURIComponent(token)}?page=${page}&size=5`, {
       retryAuthentication: false,
       authenticated: false,
     }),
@@ -140,6 +184,22 @@ export const dateTime = (value: string | null) =>
     ? new Date(value).toLocaleString('pt-BR', { dateStyle: 'short', timeStyle: 'short' })
     : '—'
 export const dateOnly = (value: string) => (value ? value.split('-').reverse().join('/') : '—')
+export const toStartOfDayIso = (date: string) =>
+  date ? new Date(date + 'T00:00:00').toISOString() : undefined
+export const toEndOfDayIso = (date: string) =>
+  date ? new Date(date + 'T23:59:59.999').toISOString() : undefined
+
+export function downloadBlob(blob: Blob, filename: string) {
+  const url = URL.createObjectURL(blob)
+  const link = document.createElement('a')
+  link.href = url
+  link.download = filename
+  document.body.appendChild(link)
+  link.click()
+  link.remove()
+  window.setTimeout(() => URL.revokeObjectURL(url), 1000)
+}
+
 export const searchText = (value: string) =>
   value
     .normalize('NFD')

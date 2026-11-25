@@ -34,8 +34,9 @@ public class BaiaController {
     @GetMapping
     public PageResponse<BaiaResponse> list(
             @Valid @ModelAttribute PaginationRequest pagination,
-            @RequestParam(required = false) BaiaStatus status) {
-        return service.list(pagination, status);
+            @RequestParam(required = false) BaiaStatus status,
+            @RequestParam(required = false) String q) {
+        return service.list(pagination, status, q);
     }
 
     @GetMapping("/{id}")

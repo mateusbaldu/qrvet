@@ -61,6 +61,8 @@ const translations: Record<string, string> = {
     'Paciente em jejum. Encerre o jejum antes de registrar alimentação.',
   'Food can only be recorded for an active hospitalization.':
     'A internação foi encerrada. Não é possível registrar alimentação.',
+  'Medication can only be recorded for an active hospitalization.':
+    'A internação foi encerrada. Não é possível registrar medicação.',
   'Fasting can only be changed for an active hospitalization.':
     'A internação foi encerrada. Não é possível alterar o jejum.',
   'The hospitalization already has an active fasting period.': 'Este paciente já está em jejum.',
@@ -224,6 +226,7 @@ export const authApi = {
     return request<User>('/auth/me', { retryAuthentication: false })
   },
   me: () => request<User>('/auth/me'),
+  updateProfile: (name: string) => request<User>('/auth/me', { method: 'PUT', body: { name } }),
   async logout() {
     try {
       await rawRequest<void>('/auth/logout', {
@@ -271,6 +274,9 @@ export const authApi = {
 }
 
 export const usersApi = {
+  updateRole: (id: number, role: Role) => request<User>(`/users/${id}/role`, { method: 'PUT', body: { role } }),
+  updateStatus: (id: number, active: boolean) =>
+    request<User>(`/users/${id}/status`, { method: 'PUT', body: { active } }),
   list: () => request<PageResponse<User>>('/users?page=0&size=100'),
   create: (data: { name: string; email: string; role: Role }) =>
     request<User>('/users', {

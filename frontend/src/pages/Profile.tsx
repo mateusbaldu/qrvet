@@ -25,13 +25,17 @@ function initials(name: string) {
 }
 
 export function Profile() {
-  const { user, clearSession } = useAuth()
+  const { user, clearSession, updateProfile } = useAuth()
   const navigate = useNavigate()
   const [currentPassword, setCurrentPassword] = useState('')
   const [newPassword, setNewPassword] = useState('')
   const [confirmation, setConfirmation] = useState('')
   const [error, setError] = useState('')
   const [submitting, setSubmitting] = useState(false)
+  const [name, setName] = useState(user?.name ?? '')
+  const [profileBusy, setProfileBusy] = useState(false)
+  const [profileError, setProfileError] = useState('')
+  const [profileSuccess, setProfileSuccess] = useState('')
 
   if (!user) return null
 
@@ -44,6 +48,23 @@ export function Profile() {
   ]
   const matching = confirmation.length > 0 && newPassword === confirmation
   const canChange = currentPassword.length > 0 && requirements.every(item => item.met) && matching
+
+  async function saveProfile(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault()
+    if (profileBusy || !name.trim()) return
+    setProfileError('')
+    setProfileSuccess('')
+    setProfileBusy(true)
+    try {
+      await updateProfile(name.trim())
+      setName(name.trim())
+      setProfileSuccess('Nome atualizado.')
+    } catch (requestError) {
+      setProfileError(readableError(requestError))
+    } finally {
+      setProfileBusy(false)
+    }
+  }
 
   async function changePassword(event: FormEvent<HTMLFormElement>) {
     event.preventDefault()
@@ -72,7 +93,7 @@ export function Profile() {
               <UserRound size={15} /> CONFIGURAÇÕES DA CONTA
             </span>
             <h1>Meu perfil</h1>
-            <p>Consulte seus dados e altere sua credencial de acesso.</p>
+            <p>Atualize seu nome e gerencie sua senha de acesso.</p>
           </div>
         </header>
         {error && (
@@ -105,6 +126,8 @@ export function Profile() {
                   <p>Informações cadastradas para sua conta.</p>
                 </div>
               </div>
+              <form onSubmit={saveProfile}>
+              <fieldset disabled={profileBusy}>
               <div className="row g-3">
                 <div className="col-12 col-md-6">
                   <label className="form-label auth-label" htmlFor="nome-perfil">
@@ -113,8 +136,15 @@ export function Profile() {
                   <input
                     className="form-control profile-input"
                     id="nome-perfil"
-                    value={user.name}
-                    readOnly
+                    value={name}
+                    onChange={event => {
+                      setName(event.target.value)
+                      setProfileSuccess('')
+                      setProfileError('')
+                    }}
+                    autoComplete="name"
+                    maxLength={120}
+                    required
                   />
                 </div>
                 <div className="col-12 col-md-6">
@@ -130,10 +160,16 @@ export function Profile() {
                   />
                 </div>
               </div>
+              {profileError && <p className="form-message error" role="alert">{profileError}</p>}
+              {profileSuccess && <p className="form-message success" role="status">{profileSuccess}</p>}
               <p className="profile-api-note">
-                Para atualizar seus dados cadastrais, entre em contato com a administração da
-                clínica.
+                Para alterar o e-mail ou o perfil de acesso, entre em contato com a administração da clínica.
               </p>
+              <div className="profile-form-actions"><button className="btn profile-primary-button" type="submit" disabled={!name.trim() || name.trim() === user.name || profileBusy}>
+                <Check size={17} /> {profileBusy ? 'Salvando...' : 'Salvar nome'}
+              </button></div>
+              </fieldset>
+              </form>
             </section>
 
             <section className="profile-card">

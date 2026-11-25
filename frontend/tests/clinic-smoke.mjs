@@ -50,6 +50,7 @@ const tutor = {
 const tutors = [tutor]
 const bay = { id: 1, identificacao: 'A-01', status: 'DISPONIVEL', observacao: 'Ala de observação' }
 const foods = []
+const medications = []
 const fasts = []
 const user = () => ({
   id: 2,
@@ -214,6 +215,18 @@ await page.route('**/qrvet/api/v1/**', async route => {
       foods.unshift(item)
       return send(item, 201)
     }
+    if (path === '/internacoes/1/medicacao') {
+      const item = {
+        ...body,
+        id: medications.length + 1,
+        internacaoId: 1,
+        usuarioId: 2,
+        responsavelNome: 'Marina Silva',
+        dataHoraRegistro: '2026-09-21T15:10:00Z',
+      }
+      medications.unshift(item)
+      return send(item, 201)
+    }
     if (path === '/internacoes/1/encerrar') {
       status = body.statusEncerramento
       bay.status = 'DISPONIVEL'
@@ -231,7 +244,16 @@ await page.route('**/qrvet/api/v1/**', async route => {
   } else {
     if (path === '/auth/csrf') return send({ token: 'csrf', headerName: 'X-XSRF-TOKEN' })
     if (path === '/auth/me') return loggedIn ? send(user()) : send({}, 401)
-    if (path === '/users') return send(paged(members, url))
+    if (path === '/users') {
+      const name = (url.searchParams.get('name') || '').toLocaleLowerCase('pt-BR')
+      const role = url.searchParams.get('role')
+      const confirmed = url.searchParams.get('confirmed')
+      return send(paged(members.filter(member =>
+        (!name || (member.name + ' ' + member.email).toLocaleLowerCase('pt-BR').includes(name)) &&
+        (!role || member.role === role) &&
+        (confirmed === null || member.confirmed === (confirmed === 'true'))
+      ), url))
+    }
     if (path.includes('/sessions'))
       return send(
         paged(
@@ -248,8 +270,15 @@ await page.route('**/qrvet/api/v1/**', async route => {
         )
       )
     if (path === '/alimentacao/agenda') return send([])
+    if (/^\/internacoes\/\d+\/evolucoes$/.test(path)) return send(paged([], url))
     if (path === '/tutores') return send(paged(tutors, url))
-    if (path === '/pacientes') return send(paged(patients, url))
+    if (path === '/pacientes') {
+      const active = url.searchParams.get('active')
+      const matching = active === null ? patients : patients.filter(p =>
+        (created && status === 'ATIVA' && p.id === admission().pacienteId) === (active === 'true')
+      )
+      return send(paged(matching, url))
+    }
     if (/^\/pacientes\/\d+$/.test(path))
       return send(
         patients.find(p => p.id === Number(path.split('/').pop())) ?? {},
@@ -284,6 +313,7 @@ await page.route('**/qrvet/api/v1/**', async route => {
       })
     if (path.endsWith('/jejum')) return send(fasts)
     if (path.endsWith('/alimentacao')) return send(foods)
+    if (path.endsWith('/medicacao')) return send(medications)
     if (path.includes('/public/')) {
       assert(!req.headers().authorization, 'Public QR must not send bearer tokens')
       return send({
@@ -318,7 +348,7 @@ const shot = name => page.screenshot({ path: 'tests/artifacts/' + name + '.png',
 await mkdir('tests/artifacts', { recursive: true })
 try {
   await visit('/inicio')
-  await page.getByText('Nenhum paciente internado no momento.').waitFor()
+  await page.getByRole('heading', { name: 'Nenhum paciente internado', exact: true }).waitFor()
   await shot('dashboard-empty')
   await visit('/tutores')
   await page.getByRole('button', { name: 'Novo tutor', exact: true }).click()
@@ -375,6 +405,7 @@ try {
     'http://localhost:5173/public/internacoes/qr/' + token
   )
   assert.equal(await page.locator('.clinic-print-label img').count(), 1)
+  assert.equal(await page.getByRole('link', { name: 'Baixar QR' }).getAttribute('download'), 'internacao-1.png')
   await page.emulateMedia({ media: 'print' })
   assert.equal(
     await page.locator('.clinic-print-label').evaluate(el => getComputedStyle(el).visibility),
@@ -397,6 +428,7 @@ try {
   assert(
     writes.some(w => w.path === '/internacoes/1/tutor/email' && w.method === 'POST' && !w.body)
   )
+  await page.getByRole('tab', { name: 'Cuidados', exact: true }).click()
   await page.getByRole('button', { name: 'Iniciar jejum', exact: true }).click()
   await fill({ motivo: 'Exame' })
   await save()
@@ -418,9 +450,11 @@ try {
   await page.getByRole('link', { name: 'Ver detalhes de Luna' }).waitFor()
   await shot('patients')
   await page.getByPlaceholder('Buscar por paciente ou tutor').fill('ana')
-  assert.equal(await page.locator('tbody tr').count(), 3)
+  await page.waitForFunction(() => document.querySelectorAll('.clinic-patient-card').length === 3)
+  assert.equal(await page.locator('.clinic-patient-card').count(), 3)
   await page.getByRole('button', { name: 'Internados', exact: true }).click()
-  assert.equal(await page.locator('tbody tr').count(), 1)
+  await page.waitForFunction(() => document.querySelectorAll('.clinic-patient-card').length === 1)
+  assert.equal(await page.locator('.clinic-patient-card').count(), 1)
   await page.getByRole('link', { name: 'Ver detalhes de Luna' }).click()
   await page.getByRole('heading', { name: 'Histórico de internações' }).waitFor()
   await shot('patient-detail')
@@ -477,26 +511,13 @@ try {
     await page.getByRole('button', { name: 'Registrar alimentação', exact: true }).count(),
     0
   )
-  await visit('/consultar-qr')
-  await page.locator('[name="token"]').fill('inválido')
-  await page.getByRole('button', { name: 'Consultar internação' }).click()
-  await page.getByRole('alert').waitFor()
-  await page
-    .locator('[name="token"]')
-    .fill('https://clinic.example/public/internacoes/qr/' + token + '?origem=qr#paciente')
-  await page.getByRole('button', { name: 'Consultar internação' }).click()
-  await page.waitForURL('**/public/internacoes/qr/' + token)
+  await visit('/public/internacoes/qr/' + token)
   await page.setViewportSize({ width: 390, height: 844 })
   await page.getByRole('heading', { name: 'Luna', exact: true }).waitFor()
   assert(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth))
   await shot('public-mobile')
   role = 'ADMIN'
-  await visit('/consultar-qr')
-  await page
-    .locator('[name="token"]')
-    .fill('https://clinic.example/internacoes/1?origem=qr#paciente')
-  await page.getByRole('button', { name: 'Consultar internação' }).click()
-  await page.waitForURL('**/internacoes/1')
+  await visit('/internacoes/1')
   await page.getByRole('heading', { name: 'Luna', exact: true }).waitFor()
   for (const path of ['/inicio', '/pacientes', '/equipe', '/internacoes/1', '/meu-perfil']) {
     await visit(path)
@@ -554,6 +575,8 @@ try {
   await page.getByRole('heading', { name: 'Luna', exact: true }).waitFor()
   role = 'TUTOR'
   await visit('/internacoes/1')
+  await page.waitForURL('**/meu-perfil')
+  await visit('/')
   await page.waitForURL('**/meu-perfil')
   loggedIn = false
   await visit('/public/internacoes/qr/' + token)

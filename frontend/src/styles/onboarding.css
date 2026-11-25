@@ -1,0 +1,48 @@
+.onboarding-help-button, .onboarding-welcome button {
+  display: inline-flex; align-items: center; justify-content: center; gap: .45rem;
+  min-height: 44px; padding: .6rem .8rem; border: 1px solid var(--border);
+  border-radius: .6rem; color: var(--green-700); background: white; font-size: .82rem; font-weight: 600;
+}
+.onboarding-help-button:hover, .onboarding-welcome button:hover { background: #edf6f0; }
+.onboarding-help-button:focus-visible, .onboarding-welcome button:focus-visible, .help-tip-trigger:focus-visible {
+  outline: 3px solid #79ac92; outline-offset: 3px;
+}
+.onboarding-welcome {
+  display: flex; align-items: center; gap: 1rem; margin: 1.25rem clamp(1.25rem, 3vw, 2.5rem) 0;
+  padding: 1.2rem; border: 1px solid #c8ded2; border-radius: .85rem;
+  background: #f0f8f3; color: var(--ink);
+}
+.onboarding-mark { display: grid; place-items: center; width: 48px; height: 48px; flex-shrink: 0; border-radius: .8rem; background: #dceee3; color: var(--green-700); }
+.onboarding-welcome p { margin: .3rem 0 0; font-size: .85rem; color: var(--muted); }
+.onboarding-welcome-actions { margin-left: auto; display: flex; flex-wrap: wrap; gap: .5rem; flex-shrink: 0; }
+.onboarding-welcome .onboarding-start { background: var(--green-700); color: white; }
+.onboarding-guide { line-height: 1.6; }
+.onboarding-guide h3 { font-size: 1.35rem; font-weight: 700; margin: 1.5rem 0 .65rem; }
+.onboarding-guide > p { color: var(--muted); font-size: .9rem; }
+.onboarding-guide .onboarding-progress { font-size: .78rem; font-weight: 600; margin-bottom: .5rem; }
+.onboarding-track { display: flex; gap: .4rem; }
+.onboarding-track span { flex: 1; height: 5px; border-radius: 8px; background: #e4ece7; }
+.onboarding-track .complete { background: var(--green-700); }
+.onboarding-guide ol { padding: 0; list-style: none; margin: 1.4rem 0; }
+.onboarding-guide li { display: flex; align-items: start; gap: .8rem; font-size: .9rem; margin: 1rem 0; }
+.onboarding-guide li > span { display: grid; place-items: center; flex-shrink: 0; width: 26px; height: 26px; border-radius: 50%; background: #eaf4ed; color: var(--green-700); font-size: .75rem; font-weight: 700; }
+.onboarding-note { display: flex; gap: .7rem; padding: 1rem; border-radius: .6rem; background: #f0f6f2; color: var(--green-700); font-size: .85rem; }
+.onboarding-note svg { flex-shrink: 0; margin-top: .2rem; }
+.onboarding-note p { margin: 0; }
+.onboarding-guide .onboarding-replay { margin: 1rem 0; font-size: .78rem; }
+.onboarding-controls, .onboarding-controls > div { display: flex; gap: .5rem; justify-content: space-between; flex-wrap: wrap; }
+.help-tip { display: inline-flex; position: relative; vertical-align: middle; margin-left: .3rem; font-weight: 400; }
+.page-context-help { display: flex; flex-direction: row-reverse; justify-content: flex-end; align-items: center; gap: .2rem; margin-top: .5rem; font-size: .78rem; color: var(--green-700); }
+.page-context-help .help-tip { margin-left: 0; }
+.clinic-page .help-tip-trigger { padding: .4rem; min-height: 36px; width: 36px; border: 0; border-radius: 50%; background: transparent; }
+.help-tip-content { position: absolute; z-index: 80; top: 100%; left: 0; width: min(280px, 65vw); padding: .85rem 1rem; border: 1px solid #c8ded2; border-radius: .65rem; background: #153e33; color: white; box-shadow: 0 8px 24px #082c2826; font-size: .8rem; line-height: 1.6; letter-spacing: normal; text-align: left; }
+@media (max-width: 767px) {
+  .onboarding-welcome { flex-wrap: wrap; }
+  .onboarding-welcome > div:not(.onboarding-welcome-actions) { flex: 1; }
+  .onboarding-welcome-actions { margin-left: 0; width: 100%; }
+  .onboarding-controls { gap: .5rem; position: sticky; bottom: -1.75rem; background: white; padding: .75rem 0; border-top: 1px solid var(--border); box-shadow: 0 -8px 16px white; }
+  .onboarding-controls > div { width: 100%; }
+  .onboarding-guide h3 { font-size: 1.15rem; }
+  .onboarding-help-button { padding: .5rem; }
+}
+@media print { .onboarding-welcome, .onboarding-help-button, .help-tip { display: none; } }

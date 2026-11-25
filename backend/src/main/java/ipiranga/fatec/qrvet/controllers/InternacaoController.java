@@ -8,13 +8,16 @@ import ipiranga.fatec.qrvet.dtos.request.InternacaoRequest;
 import ipiranga.fatec.qrvet.dtos.request.JejumRequest;
 import ipiranga.fatec.qrvet.dtos.request.PaginationRequest;
 import ipiranga.fatec.qrvet.dtos.request.RegistroAlimentacaoRequest;
+import ipiranga.fatec.qrvet.dtos.request.RegistroMedicacaoRequest;
 import ipiranga.fatec.qrvet.dtos.response.JejumResponse;
 import ipiranga.fatec.qrvet.dtos.response.InternacaoQrCodeResponse;
 import ipiranga.fatec.qrvet.dtos.response.InternacaoResponse;
 import ipiranga.fatec.qrvet.dtos.response.MessageResponse;
 import ipiranga.fatec.qrvet.dtos.response.PageResponse;
 import ipiranga.fatec.qrvet.dtos.response.RegistroAlimentacaoResponse;
+import ipiranga.fatec.qrvet.dtos.response.RegistroMedicacaoResponse;
 import ipiranga.fatec.qrvet.services.InternacaoService;
+import ipiranga.fatec.qrvet.services.MedicacaoService;
 import ipiranga.fatec.qrvet.services.NutricaoClinicaService;
 import jakarta.validation.Valid;
 import org.springframework.http.HttpStatus;
@@ -29,12 +32,15 @@ public class InternacaoController {
     private static final Logger logger = LoggerFactory.getLogger(InternacaoController.class);
     private final InternacaoService service;
     private final NutricaoClinicaService nutricaoService;
+    private final MedicacaoService medicacaoService;
 
     public InternacaoController(
             InternacaoService service,
-            NutricaoClinicaService nutricaoService) {
+            NutricaoClinicaService nutricaoService,
+            MedicacaoService medicacaoService) {
         this.service = service;
         this.nutricaoService = nutricaoService;
+        this.medicacaoService = medicacaoService;
     }
 
     @PostMapping
@@ -128,5 +134,18 @@ public class InternacaoController {
     @GetMapping("/{id}/alimentacao")
     public List<RegistroAlimentacaoResponse> foodHistory(@PathVariable Long id) {
         return nutricaoService.foodHistory(id);
+    }
+
+    @PostMapping("/{id}/medicacao")
+    public ResponseEntity<RegistroMedicacaoResponse> registerMedication(
+            @PathVariable Long id,
+            @Valid @RequestBody RegistroMedicacaoRequest request) {
+        return ResponseEntity.status(HttpStatus.CREATED)
+                .body(medicacaoService.registerMedication(id, request));
+    }
+
+    @GetMapping("/{id}/medicacao")
+    public List<RegistroMedicacaoResponse> medicationHistory(@PathVariable Long id) {
+        return medicacaoService.medicationHistory(id);
     }
 }

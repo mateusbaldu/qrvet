@@ -131,7 +131,7 @@ class AuditFlowIntegrationTests {
         perform(post("/v1/auth/login").content("""
                 {"email":"%s","password":"%s"}
                 """.formatted(receptionist.getEmail(), password)), null)
-                .andExpect(status().isInternalServerError());
+                .andExpect(status().isUnauthorized());
 
         AuditLog failed = await("LOGIN_FAILED");
         assertFalse(failed.getDetails().contains(password));
@@ -162,6 +162,9 @@ class AuditFlowIntegrationTests {
                 """.formatted(patientId, bayId, veterinarian.getId())), receptionist)
                 .andExpect(status().isCreated())).get("id").asLong();
         assertTrue(awaitAction("HOSPITALIZATION_CREATED", hospitalizationId));
+        AuditLog hospitalizationCreated = await("HOSPITALIZATION_CREATED");
+        assertTrue(hospitalizationCreated.getDetails().contains("\"veterinarioId\":" + veterinarian.getId()));
+        assertTrue(hospitalizationCreated.getDetails().contains(veterinarian.getName()));
 
         perform(put("/v1/internacoes/" + hospitalizationId + "/encerrar")
                 .content("{\"statusEncerramento\":\"ALTA\"}"), receptionist)

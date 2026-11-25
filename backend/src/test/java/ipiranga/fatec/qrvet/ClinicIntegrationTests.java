@@ -21,6 +21,10 @@ import java.util.Base64;
 import java.util.List;
 import java.util.stream.Stream;
 import java.sql.Timestamp;
+import java.time.LocalDate;
+import org.apache.poi.ss.usermodel.CellType;
+import org.apache.poi.ss.usermodel.DateUtil;
+import org.apache.poi.xssf.usermodel.XSSFWorkbook;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.Test;
@@ -75,6 +79,7 @@ class ClinicIntegrationTests {
     @Autowired JdbcTemplate jdbc;
     @Autowired EntityManager entities;
     @Autowired TutorRepository tutors;
+    @Autowired ipiranga.fatec.qrvet.services.DemoDataSeeder demoDataSeeder;
     private static final Path photoDirectory = temporaryPhotoDirectory();
     private static Path temporaryPhotoDirectory() {
         try { return Files.createTempDirectory("qrvet-photo-tests-"); }
@@ -158,6 +163,8 @@ class ClinicIntegrationTests {
                 .andExpect(status().isOk()).andExpect(jsonPath("$.total").value(1));
         perform(post("/v1/internacoes/" + id + "/jejum").content("{\"motivo\":\"Exame\"}"), assistant).andExpect(status().isCreated());
         perform(post("/v1/internacoes/" + id + "/alimentacao").content("{\"alimento\":\"Ração\",\"quantidade\":\"40 g\"}"), assistant).andExpect(status().isBadRequest());
+        perform(post("/v1/internacoes/" + id + "/medicacao").content("{\"medicamento\":\"Ondansetrona\",\"dose\":\"0,5\",\"unidade\":\"mg/kg\",\"via\":\"Intravenosa\",\"prescricao\":\"A cada 8 horas\",\"observacoes\":\"Sem intercorrências\"}"), assistant).andExpect(status().isCreated());
+        perform(get("/v1/internacoes/" + id + "/medicacao"), vet).andExpect(jsonPath("$[0].medicamento").value("Ondansetrona"));
         String publicPath = "/v1/public/internacoes/qr/" + admission.get("uuidToken").asText();
         perform(get(publicPath), null).andExpect(status().isOk()).andExpect(jsonPath("$.jejumAtivo").value(true)).andExpect(jsonPath("$.tutorId").doesNotExist());
         perform(put("/v1/internacoes/" + id + "/jejum/encerrar"), assistant).andExpect(status().isOk());
@@ -209,8 +216,8 @@ class ClinicIntegrationTests {
         long id = admission.get("id").asLong();
         JsonNode qr = body(perform(get("/v1/internacoes/" + id + "/qrcode"), receptionist)
                 .andExpect(status().isOk()));
-        String staffUrl = "http://localhost:5173/internacoes/" + id;
-        String tutorUrl = "http://localhost:5173/public/internacoes/qr/" + admission.get("uuidToken").asText();
+        String staffUrl = "http://localhost:3000/internacoes/" + id;
+        String tutorUrl = "http://localhost:3000/public/internacoes/qr/" + admission.get("uuidToken").asText();
         assertEquals(staffUrl, qr.get("url").asText());
         assertEquals(tutorUrl, qr.get("tutorUrl").asText());
         assertEquals("ana@qrvet.test", qr.get("tutorEmail").asText());
@@ -241,9 +248,9 @@ class ClinicIntegrationTests {
             assertArrayEquals(new String[] { "ana@qrvet.test" }, message.getTo());
             assertTrue(message.getSubject().contains("Luna"));
             assertTrue(message.getText().contains("Ana Silva"));
-            assertTrue(message.getText().contains("http://localhost:5173/public/internacoes/qr/"
+            assertTrue(message.getText().contains("http://localhost:3000/public/internacoes/qr/"
                     + admission.get("uuidToken").asText()));
-            assertFalse(message.getText().contains("http://localhost:5173/internacoes/"));
+            assertFalse(message.getText().contains("http://localhost:3000/internacoes/"));
         }
     }
 
@@ -311,6 +318,69 @@ class ClinicIntegrationTests {
                 .andExpect(status().isBadRequest());
     }
 
+    @Test
+    void administratorsCanChangeTeamRolesAndOldTokensUseCurrentPermissions() throws Exception {
+        String path = "/v1/users/" + vet.getId() + "/role";
+        String oldAccessToken = tokens.generateAccessToken(vet, Instant.now());
+        perform(put(path).content("{\"role\":\"ADMIN\"}"), vet).andExpect(status().isForbidden());
+        perform(put(path).content("{\"role\":null}"), admin).andExpect(status().isBadRequest());
+        perform(put(path).content("{\"role\":\"UNKNOWN\"}"), admin).andExpect(status().isBadRequest());
+        perform(put("/v1/users/999999/role").content("{\"role\":\"ADMIN\"}"), admin).andExpect(status().isNotFound());
+        perform(put("/v1/users/" + admin.getId() + "/role").content("{\"role\":\"TUTOR\"}"), admin)
+                .andExpect(status().isConflict());
+        perform(put(path).content("{\"role\":\"ADMIN\"}"), admin).andExpect(status().isOk())
+                .andExpect(jsonPath("$.role").value("ADMIN"));
+        entities.flush(); entities.clear();
+        mvc.perform(get("/v1/users").header("Authorization", "Bearer " + oldAccessToken)).andExpect(status().isOk());
+        perform(put(path).content("{\"role\":\"RECEPCIONISTA\"}"), admin).andExpect(status().isOk());
+        entities.flush(); entities.clear();
+        mvc.perform(get("/v1/users").header("Authorization", "Bearer " + oldAccessToken)).andExpect(status().isForbidden());
+        assertEquals(Role.RECEPCIONISTA, users.findById(vet.getId()).orElseThrow().getRole());
+        User pending = user(Role.AUXILIAR_TECNICO, false);
+        perform(put("/v1/users/" + pending.getId() + "/role").content("{\"role\":\"VETERINARIO\"}"), admin)
+                .andExpect(status().isOk()).andExpect(jsonPath("$.confirmed").value(false));
+    }
+
+    @Test
+    void pendingMealsCanBeEditedWithoutChangingOtherMealsOrCompletedHistory() throws Exception {
+        long id = openHospitalization().get("id").asLong();
+        Instant time = Instant.now().plusSeconds(3600).truncatedTo(java.time.temporal.ChronoUnit.SECONDS);
+        JsonNode item = schedule(id, time);
+        JsonNode other = schedule(id, time.plusSeconds(3600));
+        String path = "/v1/internacoes/" + id + "/alimentacao/agenda/" + item.get("id").asLong();
+        String data = "{\"alimento\":\" Dieta pastosa \",\"quantidade\":\" 50 ml \",\"horario\":\"%s\"}";
+        perform(put(path).content(data.formatted(time)), receptionist).andExpect(status().isForbidden());
+        perform(put(path).content(data.formatted(time)), null).andExpect(status().isUnauthorized());
+        perform(put(path).content(data.formatted(time).replace("Dieta pastosa", " ")), vet).andExpect(status().isBadRequest());
+        perform(put(path).content(data.formatted(time.plusSeconds(3600))), vet).andExpect(status().isConflict());
+        perform(put(path).content(data.formatted(Instant.now().minusSeconds(3600))), vet).andExpect(status().isBadRequest());
+        perform(post("/v1/internacoes/" + id + "/jejum").content("{\"motivo\":\"Exame\"}"), vet).andExpect(status().isCreated());
+        Instant changed = time.plusSeconds(7200);
+        perform(put(path).content(data.formatted(changed)), assistant).andExpect(status().isOk())
+                .andExpect(jsonPath("$.alimento").value("Dieta pastosa"))
+                .andExpect(jsonPath("$.quantidade").value("50 ml"))
+                .andExpect(jsonPath("$.jejumAtivo").value(true));
+        entities.flush(); entities.clear();
+        perform(get("/v1/alimentacao/agenda").param("inicio", time.toString()).param("fim", changed.plusSeconds(1).toString()), vet)
+                .andExpect(status().isOk()).andExpect(jsonPath("$[0].id").value(other.get("id").asLong()))
+                .andExpect(jsonPath("$[0].quantidade").value("40 g"))
+                .andExpect(jsonPath("$[1].alimento").value("Dieta pastosa"));
+        Instant due = Instant.now().minusSeconds(120).truncatedTo(java.time.temporal.ChronoUnit.SECONDS);
+        jdbc.update("update alimentacao_agendada set horario = ? where id = ?", Timestamp.from(due), item.get("id").asLong());
+        entities.clear();
+        perform(put(path).content(data.formatted(due)), vet).andExpect(status().isOk());
+        perform(put("/v1/internacoes/" + id + "/jejum/encerrar"), vet).andExpect(status().isOk());
+        perform(put(path + "/concluir").content("{}"), assistant).andExpect(status().isOk());
+        perform(put(path).content(data.formatted(changed)), vet).andExpect(status().isConflict());
+        String otherPath = "/v1/internacoes/" + id + "/alimentacao/agenda/" + other.get("id").asLong();
+        perform(put(otherPath + "/cancelar").content("{\"motivo\":\"Mudança\"}"), vet).andExpect(status().isOk());
+        perform(put(otherPath).content(data.formatted(changed)), vet).andExpect(status().isConflict());
+        perform(put("/v1/internacoes/999999/alimentacao/agenda/" + item.get("id").asLong()).content(data.formatted(changed)), vet)
+                .andExpect(status().isNotFound());
+        perform(put("/v1/internacoes/" + id + "/encerrar").content("{\"statusEncerramento\":\"ALTA\"}"), receptionist).andExpect(status().isOk());
+        perform(put(otherPath).content(data.formatted(changed)), vet).andExpect(status().isBadRequest());
+    }
+
     private JsonNode schedule(long admissionId, Instant at) throws Exception {
         return body(perform(post("/v1/internacoes/" + admissionId + "/alimentacao/agenda").content("""
                 {"alimento":"Ração úmida","quantidade":"40 g","horarios":["%s"]}
@@ -372,9 +442,123 @@ class ClinicIntegrationTests {
     }
 
     @Test
+    void profileNameIsEditableOnlyForTheCurrentUserAndSurvivesReload() throws Exception {
+        String oldName = admin.getName();
+        perform(put("/v1/auth/me").content("{\"name\":\"  Marina Atualizada  \",\"role\":\"ADMIN\",\"id\":" + admin.getId() + "}"), vet)
+                .andExpect(status().isOk()).andExpect(jsonPath("$.name").value("Marina Atualizada"))
+                .andExpect(jsonPath("$.id").value(vet.getId())).andExpect(jsonPath("$.role").value("VETERINARIO"));
+        entities.flush(); entities.clear();
+        perform(get("/v1/auth/me"), vet).andExpect(status().isOk()).andExpect(jsonPath("$.name").value("Marina Atualizada"));
+        assertEquals(oldName, users.findById(admin.getId()).orElseThrow().getName());
+        perform(put("/v1/auth/me").content("{\"name\":\"   \"}"), vet).andExpect(status().isBadRequest());
+        perform(put("/v1/auth/me").content(json.writeValueAsString(java.util.Map.of("name", "n".repeat(121)))), vet)
+                .andExpect(status().isBadRequest());
+        perform(put("/v1/auth/me").content("{\"name\":\"Teste\"}"), null).andExpect(status().isUnauthorized());
+        perform(put("/v1/auth/me").content("{\"name\":\"Auxiliar Atualizado\"}"), assistant).andExpect(status().isOk());
+    }
+
+    @Test
+    void patientAlertsArePersistentPrivateAndEditableByClinicalLeads() throws Exception {
+        JsonNode admission = openHospitalization();
+        long patientId = admission.get("pacienteId").asLong(), id = admission.get("id").asLong();
+        String path = "/v1/pacientes/" + patientId + "/alertas";
+        String content = """
+                {"alergias":"  Alergia registrada  ","restricoesAlimentares":"Evitar frango","cuidadosManejo":"Sensível a ruídos"}
+                """;
+        perform(put(path).content(content), receptionist).andExpect(status().isForbidden());
+        perform(put(path).content(content), assistant).andExpect(status().isForbidden());
+        perform(put(path).content(content), null).andExpect(status().isUnauthorized());
+        perform(put(path).content(content), vet).andExpect(status().isOk()).andExpect(jsonPath("$.alertas.alergias").value("Alergia registrada"));
+        entities.flush(); entities.clear();
+        perform(get("/v1/pacientes/" + patientId), receptionist).andExpect(status().isOk()).andExpect(jsonPath("$.alertas.restricoesAlimentares").value("Evitar frango"));
+        perform(get("/v1/internacoes/" + id), vet).andExpect(status().isOk()).andExpect(jsonPath("$.alertas.cuidadosManejo").value("Sensível a ruídos"));
+        perform(get("/v1/internacoes/" + id + "/cuidados"), assistant).andExpect(status().isOk()).andExpect(jsonPath("$.alertas.alergias").value("Alergia registrada"));
+        JsonNode publicView = body(perform(get("/v1/public/internacoes/qr/" + admission.get("uuidToken").asText()), null).andExpect(status().isOk()));
+        assertEquals("Alergia registrada", publicView.path("alertas").path("alergias").asText());
+        assertEquals("Evitar frango", publicView.path("alertas").path("restricoesAlimentares").asText());
+        assertEquals("Sensível a ruídos", publicView.path("alertas").path("cuidadosManejo").asText());
+        assertFalse(publicView.has("tutorId"));
+        assertFalse(publicView.has("tutorEmail"));
+        perform(put(path).content(json.writeValueAsString(java.util.Map.of("alergias", "x".repeat(1001)))) , vet).andExpect(status().isBadRequest());
+        // Editing ordinary demographics must preserve clinical alerts.
+        perform(put("/v1/pacientes/" + patientId).content("""
+                {"tutorId":%d,"nome":"Luna","especie":"Felina","raca":"SRD","sexo":"Fêmea","peso":5,"dataNascimento":"2021-04-12"}
+                """.formatted(body(perform(get("/v1/pacientes/" + patientId), vet)).get("tutorId").asLong())), receptionist)
+                .andExpect(status().isOk()).andExpect(jsonPath("$.alertas.alergias").value("Alergia registrada"));
+        perform(put(path).content("{\"alergias\":\" \"}"), admin).andExpect(status().isOk()).andExpect(jsonPath("$.alertas.alergias").isEmpty())
+                .andExpect(jsonPath("$.alertas.restricoesAlimentares").isEmpty());
+        perform(put("/v1/pacientes/999999999/alertas").content("{}"), vet).andExpect(status().isNotFound());
+    }
+
+    @Test
+    void evolutionNotesKeepAuthorTextHistoryAndClosedAdmissionRules() throws Exception {
+        JsonNode admission = openHospitalization();
+        long id = admission.get("id").asLong();
+        String path = "/v1/internacoes/" + id + "/evolucoes";
+        String originalName = vet.getName();
+        JsonNode note = body(perform(post(path).content("""
+                {"texto":"  Paciente aceitou alimento.\\nManter acompanhamento.  ","profissionalId":99999,"profissionalNome":"Falso","dataHoraRegistro":"2000-01-01T00:00:00Z"}
+                """), vet).andExpect(status().isCreated()).andExpect(jsonPath("$.profissionalId").value(vet.getId()))
+                .andExpect(jsonPath("$.profissionalNome").value(originalName)));
+        assertEquals("Paciente aceitou alimento.\nManter acompanhamento.", note.get("texto").asText());
+        assertTrue(Instant.parse(note.get("dataHoraRegistro").asText()).isAfter(Instant.now().minusSeconds(60)));
+        perform(put("/v1/auth/me").content("{\"name\":\"Novo nome\"}"), vet).andExpect(status().isOk());
+        perform(post(path).content("{\"texto\":\"Tutor trouxe ração.\"}"), assistant).andExpect(status().isCreated());
+        entities.flush(); entities.clear();
+        perform(get(path).param("size", "1"), vet).andExpect(status().isOk()).andExpect(jsonPath("$.total").value(2))
+                .andExpect(jsonPath("$.pages").value(2)).andExpect(jsonPath("$.items[0].texto").value("Tutor trouxe ração."));
+        perform(get(path).param("size", "1").param("page", "1"), assistant).andExpect(status().isOk())
+                .andExpect(jsonPath("$.items[0].profissionalNome").value(originalName));
+        perform(put("/v1/internacoes/" + id + "/encerrar").content("{\"statusEncerramento\":\"ALTA\"}"), vet).andExpect(status().isOk());
+        perform(post(path).content("{\"texto\":\"Novo registro\"}"), vet).andExpect(status().isBadRequest());
+        perform(get(path), vet).andExpect(status().isOk()).andExpect(jsonPath("$.total").value(2));
+        perform(get("/v1/public/internacoes/qr/" + admission.get("uuidToken").asText()), null)
+                .andExpect(status().isOk()).andExpect(jsonPath("$.evolucoes.total").value(2))
+                .andExpect(jsonPath("$.saidaInternacao").isNotEmpty());
+        String publicPath = "/v1/public/internacoes/qr/" + admission.get("uuidToken").asText();
+        perform(get(publicPath).param("size", "1"), null).andExpect(status().isOk())
+                .andExpect(jsonPath("$.evolucoes.pages").value(2))
+                .andExpect(jsonPath("$.evolucoes.items[0].texto").value("Tutor trouxe ração."))
+                .andExpect(jsonPath("$.evolucoes.items[0].profissionalId").doesNotExist())
+                .andExpect(jsonPath("$.evolucoes.items[0].internacaoId").doesNotExist());
+        perform(get(publicPath).param("size", "1").param("page", "1"), null).andExpect(status().isOk())
+                .andExpect(jsonPath("$.evolucoes.items[0].profissionalNome").value(originalName));
+        perform(get(publicPath).param("page", "-1"), null).andExpect(status().isBadRequest());
+        perform(get(publicPath).param("size", "101"), null).andExpect(status().isBadRequest());
+        perform(get("/v1/public/internacoes/qr/" + UUID.randomUUID()), null).andExpect(status().isNotFound());
+        JsonNode otherAdmission = body(perform(post("/v1/internacoes").content("""
+                {"pacienteId":%d,"baiaId":%d,"veterinarioId":%d,"motivo":"Nova internação","diagnosticoInicial":"Avaliação"}
+                """.formatted(admission.get("pacienteId").asLong(), admission.get("baiaId").asLong(), vet.getId())), receptionist)
+                .andExpect(status().isCreated()));
+        perform(get("/v1/public/internacoes/qr/" + otherAdmission.get("uuidToken").asText()), null)
+                .andExpect(status().isOk()).andExpect(jsonPath("$.evolucoes.total").value(0));
+    }
+
+    @Test
+    void evolutionNotesRejectInvalidDataAndUnauthorizedRoles() throws Exception {
+        long id = openHospitalization().get("id").asLong();
+        String path = "/v1/internacoes/" + id + "/evolucoes";
+        for (User user : List.of(receptionist, user(Role.TUTOR, true))) {
+            perform(get(path), user).andExpect(status().isForbidden());
+            perform(post(path).content("{\"texto\":\"Teste\"}"), user).andExpect(status().isForbidden());
+        }
+        perform(get(path), null).andExpect(status().isUnauthorized());
+        perform(post(path).content("{\"texto\":\"  \"}"), vet).andExpect(status().isBadRequest());
+        perform(post(path).content(json.writeValueAsString(java.util.Map.of("texto", "x".repeat(10001)))), vet).andExpect(status().isBadRequest());
+        perform(get(path).param("size", "101"), vet).andExpect(status().isBadRequest());
+        perform(get("/v1/internacoes/999999999/evolucoes"), vet).andExpect(status().isNotFound());
+        perform(post("/v1/internacoes/999999999/evolucoes").content("{\"texto\":\"Teste\"}"), vet).andExpect(status().isNotFound());
+        perform(get(path), admin).andExpect(status().isOk()).andExpect(jsonPath("$.total").value(0));
+    }
+
+    @Test
     void localPhotoUploadValidatesBytesAndRequiresPrivatePatientAccess() throws Exception {
-        long id = openHospitalization().get("pacienteId").asLong();
+        JsonNode admission = openHospitalization();
+        long id = admission.get("pacienteId").asLong();
+        long admissionId = admission.get("id").asLong();
+        String admissionPhotoPath = "/v1/internacoes/" + admissionId + "/foto";
         String path = "/v1/pacientes/" + id + "/foto";
+        perform(get(admissionPhotoPath), assistant).andExpect(status().isNotFound());
         ByteArrayOutputStream output = new ByteArrayOutputStream();
         ImageIO.write(new BufferedImage(24, 24, BufferedImage.TYPE_INT_RGB), "png", output);
         MockMultipartFile photo = new MockMultipartFile("foto", "../../foto.png", "image/png", output.toByteArray());
@@ -382,6 +566,16 @@ class ClinicIntegrationTests {
                 .cookie(new Cookie("XSRF-TOKEN", "test-csrf")).header("X-XSRF-TOKEN", "test-csrf"))
                 .andExpect(status().isOk()).andExpect(jsonPath("$.fotoVersao").isNotEmpty());
         perform(get(path), receptionist).andExpect(status().isOk()).andExpect(content().contentType("image/jpeg"));
+        for (User user : List.of(admin, vet, receptionist, assistant)) {
+            perform(get(admissionPhotoPath), user).andExpect(status().isOk())
+                    .andExpect(content().contentType("image/jpeg")).andExpect(header().string("Cache-Control", "no-store"));
+        }
+        perform(get("/v1/internacoes/" + admissionId), vet).andExpect(status().isOk()).andExpect(jsonPath("$.fotoVersao").isNotEmpty());
+        perform(get("/v1/internacoes/" + admissionId + "/cuidados"), assistant).andExpect(status().isOk()).andExpect(jsonPath("$.fotoVersao").isNotEmpty());
+        perform(get("/v1/internacoes"), vet).andExpect(status().isOk()).andExpect(jsonPath("$.items[0].fotoVersao").isNotEmpty());
+        perform(get(admissionPhotoPath), null).andExpect(status().isUnauthorized());
+        perform(get(admissionPhotoPath), user(Role.TUTOR, true)).andExpect(status().isForbidden());
+        perform(get("/v1/internacoes/999999999/foto"), vet).andExpect(status().isNotFound());
         perform(get(path), assistant).andExpect(status().isForbidden());
         perform(get(path), null).andExpect(status().isUnauthorized());
         mvc.perform(multipart(path).file(new MockMultipartFile("foto", "fake.png", "image/png", "<svg>fake</svg>".getBytes()))
@@ -390,6 +584,193 @@ class ClinicIntegrationTests {
                 .andExpect(status().isBadRequest());
         perform(delete(path), receptionist).andExpect(status().isNoContent());
         perform(get(path), vet).andExpect(status().isNotFound());
+        perform(get(admissionPhotoPath), assistant).andExpect(status().isNotFound());
+        perform(get("/v1/internacoes/" + admissionId), vet).andExpect(jsonPath("$.fotoVersao").isEmpty());
         perform(get("/v1/pacientes/" + id), vet).andExpect(jsonPath("$.fotoVersao").isEmpty());
+    }
+
+    @Test
+    void clinicPerformanceReportFiltersAndExportsForAdminOnly() throws Exception {
+        User secondVet = users.saveAndFlush(User.builder()
+                .name("Dra. Helena Costa")
+                .email(UUID.randomUUID() + "@qrvet.test")
+                .role(Role.VETERINARIO)
+                .active(true)
+                .confirmed(true)
+                .passwordHash(passwords.encode("Test-only-123!"))
+                .build());
+
+        long tutor = body(perform(post("/v1/tutores").content("""
+                {"nome":"Carlos Souza","cpf":"52998224725","telefone":"11999999999","email":"carlos@qrvet.test","endereco":"Rua B"}
+                """), receptionist).andExpect(status().isCreated())).get("id").asLong();
+
+        long patient1 = body(perform(post("/v1/pacientes").content("""
+                {"tutorId":%d,"nome":"Thor","especie":"Canina","raca":"SRD","sexo":"Macho","peso":12.0,"dataNascimento":"2020-01-10","observacoes":""}
+                """.formatted(tutor)), receptionist).andExpect(status().isCreated())).get("id").asLong();
+        long patient2 = body(perform(post("/v1/pacientes").content("""
+                {"tutorId":%d,"nome":"Mel","especie":"Felina","raca":"SRD","sexo":"Fêmea","peso":3.8,"dataNascimento":"2022-03-15","observacoes":""}
+                """.formatted(tutor)), receptionist).andExpect(status().isCreated())).get("id").asLong();
+        long patient3 = body(perform(post("/v1/pacientes").content("""
+                {"tutorId":%d,"nome":"Max","especie":"Canina","raca":"SRD","sexo":"Macho","peso":9.5,"dataNascimento":"2019-07-20","observacoes":""}
+                """.formatted(tutor)), receptionist).andExpect(status().isCreated())).get("id").asLong();
+
+        long bay1 = body(perform(post("/v1/baias").content("{\"identificacao\":\"REP-B1-" + UUID.randomUUID() + "\"}"), admin)
+                .andExpect(status().isCreated())).get("id").asLong();
+        long bay2 = body(perform(post("/v1/baias").content("{\"identificacao\":\"REP-B2-" + UUID.randomUUID() + "\"}"), admin)
+                .andExpect(status().isCreated())).get("id").asLong();
+
+        // secondVet attends 2 hospitalizations (1 ALTA, 1 ATIVA on bay1 after release)
+        long adm1 = body(perform(post("/v1/internacoes").content("""
+                {"pacienteId":%d,"baiaId":%d,"veterinarioId":%d,"motivo":"Gastroenterite","diagnosticoInicial":"Suspeita viral","observacoes":""}
+                """.formatted(patient1, bay1, secondVet.getId())), receptionist).andExpect(status().isCreated())).get("id").asLong();
+
+        perform(post("/v1/internacoes/" + adm1 + "/evolucoes").content("{\"texto\":\"Evolução Dra. Helena\"}"), secondVet)
+                .andExpect(status().isCreated());
+        perform(post("/v1/internacoes/" + adm1 + "/medicacao").content("""
+                {"medicamento":"Ondansetrona","dose":"2","unidade":"mg","via":"IV","prescricao":"12/12h","observacoes":""}
+                """), assistant).andExpect(status().isCreated());
+        perform(post("/v1/internacoes/" + adm1 + "/alimentacao").content("""
+                {"alimento":"Dieta leve","quantidade":"80g","aceitacaoObservacao":"Boa aceitação"}
+                """), assistant).andExpect(status().isCreated());
+        perform(put("/v1/internacoes/" + adm1 + "/encerrar").content("{\"statusEncerramento\":\"ALTA\"}"), secondVet)
+                .andExpect(status().isOk());
+
+        long adm2 = body(perform(post("/v1/internacoes").content("""
+                {"pacienteId":%d,"baiaId":%d,"veterinarioId":%d,"motivo":"Pós-operatório","diagnosticoInicial":"Recuperação","observacoes":""}
+                """.formatted(patient2, bay1, secondVet.getId())), receptionist).andExpect(status().isCreated())).get("id").asLong();
+        perform(post("/v1/internacoes/" + adm2 + "/jejum").content("{\"motivo\":\"Exame laboratorial\"}"), secondVet)
+                .andExpect(status().isCreated());
+
+        // first vet attends 1 hospitalization on bay2
+        body(perform(post("/v1/internacoes").content("""
+                {"pacienteId":%d,"baiaId":%d,"veterinarioId":%d,"motivo":"Observação clínica","diagnosticoInicial":"Hidratação","observacoes":""}
+                """.formatted(patient3, bay2, vet.getId())), receptionist).andExpect(status().isCreated()));
+
+        for (User forbiddenUser : List.of(vet, receptionist, assistant, user(Role.TUTOR, true))) {
+            perform(get("/v1/relatorios/clinica"), forbiddenUser).andExpect(status().isForbidden());
+            perform(get("/v1/relatorios/clinica/export"), forbiddenUser).andExpect(status().isForbidden());
+            perform(get("/v1/relatorios/clinica/export/xlsx"), forbiddenUser).andExpect(status().isForbidden());
+        }
+        perform(get("/v1/relatorios/clinica"), null).andExpect(status().isUnauthorized());
+
+        perform(get("/v1/relatorios/clinica")
+                .param("startDate", "2026-05-10T00:00:00Z")
+                .param("endDate", "2026-05-01T00:00:00Z"), admin)
+                .andExpect(status().isBadRequest());
+
+        JsonNode report = body(perform(get("/v1/relatorios/clinica"), admin)
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.resumoInternacoes.totalNoPeriodo").value(3))
+                .andExpect(jsonPath("$.resumoInternacoes.ativas").value(2))
+                .andExpect(jsonPath("$.resumoInternacoes.altas").value(1))
+                .andExpect(jsonPath("$.resumoInternacoes.obitos").value(0))
+                .andExpect(jsonPath("$.resumoCuidados.evolucoesRegistradas").value(1))
+                .andExpect(jsonPath("$.resumoCuidados.medicacoesAplicadas").value(1))
+                .andExpect(jsonPath("$.resumoCuidados.alimentacoesRegistradas").value(1))
+                .andExpect(jsonPath("$.resumoCuidados.jejunsIniciados").value(1))
+                .andExpect(jsonPath("$.atendimentosPorVeterinario[0].veterinarioId").value(secondVet.getId()))
+                .andExpect(jsonPath("$.atendimentosPorVeterinario[0].veterinarioNome").value("Dra. Helena Costa"))
+                .andExpect(jsonPath("$.atendimentosPorVeterinario[0].totalInternacoes").value(2))
+                .andExpect(jsonPath("$.atendimentosPorVeterinario[0].altas").value(1))
+                .andExpect(jsonPath("$.atendimentosPorVeterinario[0].ativas").value(1))
+                .andExpect(jsonPath("$.atendimentosPorVeterinario[1].veterinarioId").value(vet.getId()))
+                .andExpect(jsonPath("$.atendimentosPorVeterinario[1].totalInternacoes").value(1)));
+
+        assertEquals(2L, report.path("utilizacaoBaias").get(0).path("totalInternacoesNoPeriodo").asLong());
+        assertEquals(bay1, report.path("utilizacaoBaias").get(0).path("baiaId").asLong());
+
+        // Filter by specific veterinarian
+        perform(get("/v1/relatorios/clinica").param("veterinarioId", String.valueOf(vet.getId())), admin)
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.resumoInternacoes.totalNoPeriodo").value(1))
+                .andExpect(jsonPath("$.atendimentosPorVeterinario.length()").value(1))
+                .andExpect(jsonPath("$.atendimentosPorVeterinario[0].veterinarioId").value(vet.getId()));
+
+        // Export CSV
+        String csv = perform(get("/v1/relatorios/clinica/export"), admin)
+                .andExpect(status().isOk())
+                .andExpect(header().string("Content-Disposition", "attachment; filename=\"relatorio-performance-clinica.csv\""))
+                .andExpect(content().contentTypeCompatibleWith("text/csv"))
+                .andReturn().getResponse().getContentAsString( java.nio.charset.StandardCharsets.UTF_8);
+
+        assertTrue(csv.contains("RESUMO DE INTERNAÇÕES"));
+        assertTrue(csv.contains("ATENDIMENTOS POR VETERINÁRIO"));
+        assertTrue(csv.contains("Dra. Helena Costa"));
+        assertTrue(csv.contains("PRODUTIVIDADE DA EQUIPE"));
+        assertTrue(csv.contains("UTILIZAÇÃO DE BAIAS"));
+
+        perform(get("/v1/relatorios/clinica/export/xlsx").param("fuso", "Fuso/Inválido"), admin)
+                .andExpect(status().isBadRequest());
+        byte[] excel = perform(get("/v1/relatorios/clinica/export/xlsx")
+                .param("startDate", "2020-01-01T03:00:00Z")
+                .param("endDate", "2099-01-01T02:59:59.999Z")
+                .param("veterinarioId", String.valueOf(secondVet.getId()))
+                .param("fuso", "America/Sao_Paulo"), admin)
+                .andExpect(status().isOk())
+                .andExpect(header().string("Content-Disposition", "attachment; filename=\"relatorio-performance-clinica.xlsx\""))
+                .andExpect(content().contentType("application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"))
+                .andReturn().getResponse().getContentAsByteArray();
+
+        try (var workbook = new XSSFWorkbook(new ByteArrayInputStream(excel))) {
+            assertEquals(4, workbook.getNumberOfSheets());
+            var resumo = workbook.getSheetAt(0);
+            assertEquals("Resumo", resumo.getSheetName());
+            var dataFinal = resumo.getRow(5).getCell(1);
+            assertTrue(DateUtil.isCellDateFormatted(dataFinal));
+            assertEquals(LocalDate.of(2098, 12, 31), dataFinal.getLocalDateTimeCellValue().toLocalDate());
+            assertEquals("Dra. Helena Costa", resumo.getRow(5).getCell(3).getStringCellValue());
+            assertEquals(2, resumo.getRow(9).getCell(1).getNumericCellValue());
+            assertEquals(1, resumo.getRow(9).getCell(4).getNumericCellValue());
+
+            var veterinarios = workbook.getSheet("Veterinários");
+            assertTrue(veterinarios.getPaneInformation().isFreezePane());
+            assertEquals("A5:H6", veterinarios.getCTWorksheet().getAutoFilter().getRef());
+            assertEquals(5, veterinarios.getLastRowNum());
+            assertEquals("Dra. Helena Costa", veterinarios.getRow(5).getCell(0).getStringCellValue());
+            assertEquals(CellType.NUMERIC, veterinarios.getRow(5).getCell(2).getCellType());
+            assertEquals(String.valueOf(secondVet.getId()), veterinarios.getRow(5).getCell(7).getStringCellValue());
+
+            var equipe = workbook.getSheet("Equipe");
+            assertEquals("Auxiliar técnico", equipe.getRow(5).getCell(2).getStringCellValue());
+            assertEquals(2, equipe.getRow(5).getCell(6).getNumericCellValue());
+
+            var baias = workbook.getSheet("Baias");
+            assertEquals("Ocupada", baias.getRow(5).getCell(1).getStringCellValue());
+            assertEquals(2, baias.getRow(5).getCell(2).getNumericCellValue());
+        }
+    }
+
+    @Test
+    void adminCanDeactivateAndReactivateUserAndDemoSeederIsIdempotent() throws Exception {
+        perform(put("/v1/users/" + vet.getId() + "/status")
+                        .contentType("application/json")
+                        .content("{\"active\":false}"),
+                admin)
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.active").value(false));
+
+        verify(sessions).revokeAllSessions(vet.getId());
+
+        // Deactivated user cannot access endpoints protected by @qrvetSecurity.hasAnyRole(...)
+        perform(get("/v1/pacientes"), vet)
+                .andExpect(status().isUnauthorized());
+
+        perform(put("/v1/users/" + vet.getId() + "/status")
+                        .contentType("application/json")
+                        .content("{\"active\":true}"),
+                admin)
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.active").value(true));
+
+        perform(get("/v1/pacientes"), vet)
+                .andExpect(status().isOk());
+
+        // DemoDataSeeder creates all 4 test users and clinical data idempotently
+        demoDataSeeder.seed("teste@123");
+        demoDataSeeder.seed("teste@123");
+
+        assertTrue(users.findByEmailIgnoreCase("veterinario@qrvet.com").orElseThrow().isActive());
+        assertTrue(users.findByEmailIgnoreCase("recepcao@qrvet.com").orElseThrow().isActive());
+        assertTrue(users.findByEmailIgnoreCase("auxiliar@qrvet.com").orElseThrow().isActive());
     }
 }

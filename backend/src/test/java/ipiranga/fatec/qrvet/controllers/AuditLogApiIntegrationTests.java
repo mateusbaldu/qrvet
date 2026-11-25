@@ -26,7 +26,10 @@ import org.springframework.transaction.annotation.Transactional;
 import java.time.Instant;
 import java.util.UUID;
 
+import static org.hamcrest.Matchers.containsString;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.content;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.header;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
@@ -98,6 +101,23 @@ class AuditLogApiIntegrationTests {
     void rejectsInvalidPagination() throws Exception {
         perform(get("/v1/audit-logs").param("page", "-1").param("size", "101"), admin)
                 .andExpect(status().isBadRequest());
+    }
+
+    @Test
+    void adminDownloadsFilteredAuditReportCsv() throws Exception {
+        Instant first = Instant.parse("2026-01-10T10:00:00Z");
+        save("LOGIN_SUCCESS", "auth", admin.getId(), first, "{\"email\":\"admin@qrvet.test\"}");
+        save("PATIENT_CREATED", "patient", receptionist.getId(), first.plusSeconds(1), "{\"name\":\"Luna\"}");
+
+        perform(get("/v1/audit-logs/export")
+                        .param("action", "PATIENT_CREATED")
+                        .param("resourceName", "patient"), admin)
+                .andExpect(status().isOk())
+                .andExpect(header().string("Content-Disposition", "attachment; filename=\"relatorio-auditoria.csv\""))
+                .andExpect(content().contentTypeCompatibleWith("text/csv"))
+                .andExpect(content().string(containsString("RESUMO POR AÇÃO")))
+                .andExpect(content().string(containsString("\"Paciente criado\",\"PATIENT_CREATED\",1")))
+                .andExpect(content().string(containsString("REGISTROS DE AUDITORIA")));
     }
 
     private void save(String action, String resourceName, Long userId, Instant timestamp, String details) {

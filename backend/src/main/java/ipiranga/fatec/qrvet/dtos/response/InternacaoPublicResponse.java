@@ -13,8 +13,13 @@ public record InternacaoPublicResponse(
         String motivo,
         InternacaoStatus status,
         boolean jejumAtivo,
-        Instant entradaInternacao) {
-    public static InternacaoPublicResponse from(Internacao internacao, boolean jejumAtivo) {
+        Instant entradaInternacao,
+        Instant saidaInternacao,
+        String veterinarioNome,
+        AlertasPacienteResponse alertas,
+        PageResponse<EvolucaoPublicResponse> evolucoes) {
+    public static InternacaoPublicResponse from(Internacao internacao, boolean jejumAtivo,
+                                               PageResponse<EvolucaoPublicResponse> evolucoes) {
         return new InternacaoPublicResponse(
                 internacao.getPaciente().getNome(),
                 internacao.getPaciente().getEspecie(),
@@ -24,6 +29,10 @@ public record InternacaoPublicResponse(
                 internacao.getMotivo(),
                 internacao.getStatus(),
                 jejumAtivo,
-                internacao.getEntradaInternacao());
+                internacao.getEntradaInternacao(),
+                internacao.getSaidaInternacao(),
+                internacao.getVeterinario().getName(),
+                AlertasPacienteResponse.from(internacao.getPaciente()),
+                evolucoes);
     }
 }

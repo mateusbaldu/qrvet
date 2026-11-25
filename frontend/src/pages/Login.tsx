@@ -25,16 +25,12 @@ export function Login() {
     setErro('')
     setEnviando(true)
     try {
-      const user = await login(email.trim(), senha)
+      await login(email.trim(), senha)
       const requestedPath = loginState?.from
       navigate(
         requestedPath?.startsWith('/') && !requestedPath.startsWith('//')
           ? requestedPath
-          : ['ADMIN', 'VETERINARIO', 'RECEPCIONISTA'].includes(user.role)
-            ? '/inicio'
-            : user.role === 'AUXILIAR_TECNICO'
-              ? '/cuidados'
-              : '/consultar-qr',
+          : '/',
         { replace: true }
       )
     } catch (error) {

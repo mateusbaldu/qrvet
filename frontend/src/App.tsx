@@ -10,8 +10,9 @@ import { AdminRoute, ProtectedRoute, RouteAccess } from './auth/RouteGuards'
 import { Registry, PatientDetail } from './pages/Registry'
 import { Feeding } from './pages/Feeding'
 import { Dashboard } from './pages/Dashboard'
+import { Reports } from './pages/Reports'
 import { Hospitalizations, HospitalizationDetail, CareLookup } from './pages/Hospitalizations'
-import { PublicHospitalization, QrLookup, Sessions, Bootstrap } from './pages/ClinicAccess'
+import { PublicHospitalization, Sessions, AuditLogs, Bootstrap } from './pages/ClinicAccess'
 
 export default function App() {
   return (
@@ -29,7 +30,9 @@ export default function App() {
             <Route path="/" element={<HomeRedirect />} />
             <Route element={<AdminRoute />}>
               <Route path="/equipe" element={<Team />} />
+              <Route path="/relatorios" element={<Reports />} />
               <Route path="/sessoes" element={<Sessions />} />
+              <Route path="/auditoria" element={<AuditLogs />} />
             </Route>
             <Route element={<RouteAccess path="/inicio" />}>
               <Route path="/inicio" element={<Dashboard />} />
@@ -56,7 +59,6 @@ export default function App() {
             <Route element={<RouteAccess path="/cuidados" />}>
               <Route path="/cuidados" element={<CareLookup />} />
             </Route>
-            <Route path="/consultar-qr" element={<QrLookup />} />
             <Route path="/meu-perfil" element={<Profile />} />
           </Route>
         </Route>
@@ -80,7 +82,7 @@ function HospitalizationAccess() {
 function HomeRedirect() {
   const { user } = useAuth()
 
-  let destination = '/consultar-qr'
+  let destination = '/meu-perfil'
 
   if (user && ['ADMIN', 'VETERINARIO', 'RECEPCIONISTA'].includes(user.role)) {
     destination = '/inicio'

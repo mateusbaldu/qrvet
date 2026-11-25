@@ -5,6 +5,7 @@ import { useResource } from '../hooks/useResource'
 import { Editor, EmptyState, Notice, Page, Pagination, ResourceState } from '../components/ClinicUI'
 import { usersApi, type Role, type User } from '../services/api'
 import { clinicApi, dateTime } from '../services/clinic'
+import { useAuth } from '../auth/useAuth'
 
 const roleLabels: Record<Role, string> = {
   ADMIN: 'Administrador',
@@ -21,6 +22,7 @@ const filters = [
   ['AUXILIAR_TECNICO', 'Auxiliares'],
   ['TUTOR', 'Tutores'],
   ['PENDING', 'Pendentes'],
+  ['INACTIVE', 'Inativos'],
 ]
 const initials = (name: string) =>
   name
@@ -31,6 +33,9 @@ const initials = (name: string) =>
     .join('')
 
 export function Team() {
+  const { user } = useAuth()
+  const [editing, setEditing] = useState<User | null>(null)
+  const [togglingStatus, setTogglingStatus] = useState<User | null>(null)
   const [search, setSearch] = useState('')
   const [filter, setFilter] = useState('')
   const [page, setPage] = useState(0)
@@ -41,8 +46,9 @@ export function Team() {
     () =>
       clinicApi.list<User>('/users', page, {
         name: search.trim() || undefined,
-        role: filter && filter !== 'PENDING' ? filter : undefined,
-        confirmed: filter === 'PENDING' ? false : undefined,
+        role: filter && filter !== 'PENDING' && filter !== 'INACTIVE' ? filter : undefined,
+        confirmed: filter === 'PENDING' ? false : filter === 'INACTIVE' ? true : undefined,
+        active: filter === 'INACTIVE' ? false : undefined,
       }),
     [page, search, filter]
   )
@@ -173,6 +179,14 @@ export function Team() {
                       <td>{new Date(member.createdAt).toLocaleDateString('pt-BR')}</td>
                       <td>
                         <div className="clinic-table-actions">
+                          <button
+                            disabled={member.id === user?.id}
+                            title={member.id === user?.id ? 'Peça a outro administrador para alterar sua permissão.' : undefined}
+                            aria-label={'Editar permissão de ' + member.name}
+                            onClick={() => setEditing(member)}
+                          >
+                            Editar permissão
+                          </button>
                           {!member.confirmed ? (
                             <button
                               aria-label={'Reenviar convite para ' + member.name}
@@ -182,10 +196,27 @@ export function Team() {
                               Reenviar
                             </button>
                           ) : (
-                            <Link className="clinic-button" to={'/sessoes?usuario=' + member.id}>
-                              <ShieldCheck size={15} />
-                              Sessões
-                            </Link>
+                            <>
+                              <button
+                                disabled={member.id === user?.id}
+                                title={
+                                  member.id === user?.id
+                                    ? 'Peça a outro administrador para alterar o status da sua conta.'
+                                    : undefined
+                                }
+                                aria-label={
+                                  (member.active ? 'Desativar conta de ' : 'Ativar conta de ') +
+                                  member.name
+                                }
+                                onClick={() => setTogglingStatus(member)}
+                              >
+                                {member.active ? 'Desativar' : 'Ativar'}
+                              </button>
+                              <Link className="clinic-button" to={'/sessoes?usuario=' + member.id}>
+                                <ShieldCheck size={15} />
+                                Sessões
+                              </Link>
+                            </>
                           )}
                         </div>
                       </td>
@@ -231,6 +262,20 @@ export function Team() {
           }}
         />
       )}
+      {editing && <Editor
+        title="Editar permissão"
+        description={<><p>{editing.name} · {editing.email}</p><p>A alteração será aplicada no próximo acesso às funções do sistema.</p>
+          <p>Administrador: gestão completa. Veterinário: atendimento clínico. Auxiliar técnico: cuidados e evoluções. Recepcionista: cadastros e internações. Tutor: sem acesso à área da equipe.</p></>}
+        fields={[{ name: 'role', label: 'Permissão', value: editing.role, wide: true,
+          options: Object.entries(roleLabels).map(([value, label]) => ({ value, label })) }]}
+        submitLabel="Salvar permissão"
+        onCancel={() => setEditing(null)}
+        onSave={async data => {
+          await usersApi.updateRole(editing.id, data.role as Role)
+          setSuccess('Permissão de ' + editing.name + ' atualizada.')
+          resource.reload()
+        }}
+      />}
       {resending && (
         <Editor
           title="Reenviar convite?"
@@ -241,6 +286,35 @@ export function Team() {
           onSave={async () => {
             await usersApi.resendInvitation(resending.id)
             setSuccess('Novo convite enviado para ' + resending.email + '.')
+            resource.reload()
+          }}
+        />
+      )}
+      {togglingStatus && (
+        <Editor
+          title={(togglingStatus.active ? 'Desativar' : 'Ativar') + ' conta?'}
+          description={
+            togglingStatus.active
+              ? 'Ao desativar ' +
+                togglingStatus.name +
+                ', todas as sessões ativas serão encerradas e o acesso ficará bloqueado até a conta ser reativada.'
+              : 'Ao ativar ' +
+                togglingStatus.name +
+                ', o membro voltará a acessar o sistema com a permissão ' +
+                roleLabels[togglingStatus.role] +
+                '.'
+          }
+          fields={[]}
+          submitLabel={togglingStatus.active ? 'Desativar conta' : 'Ativar conta'}
+          onCancel={() => setTogglingStatus(null)}
+          onSave={async () => {
+            const nextActive = !togglingStatus.active
+            await usersApi.updateStatus(togglingStatus.id, nextActive)
+            setSuccess(
+              'Conta de ' +
+                togglingStatus.name +
+                (nextActive ? ' ativada.' : ' desativada.')
+            )
             resource.reload()
           }}
         />

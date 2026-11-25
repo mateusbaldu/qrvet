@@ -37,6 +37,20 @@ public class Paciente {
     @Column(name = "observacoes")
     private String observacoes;
 
+    @Column(length = 1000)
+    private String alergias;
+    @Column(name = "restricoes_alimentares", length = 1000)
+    private String restricoesAlimentares;
+    @Column(name = "cuidados_manejo", length = 1000)
+    private String cuidadosManejo;
+
+    public String getAlergias() { return alergias; }
+    public void setAlergias(String value) { alergias = value; }
+    public String getRestricoesAlimentares() { return restricoesAlimentares; }
+    public void setRestricoesAlimentares(String value) { restricoesAlimentares = value; }
+    public String getCuidadosManejo() { return cuidadosManejo; }
+    public void setCuidadosManejo(String value) { cuidadosManejo = value; }
+
     @Column(name = "foto_arquivo", length = 80)
     private String fotoArquivo;
 

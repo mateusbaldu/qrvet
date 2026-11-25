@@ -14,21 +14,29 @@ export const appRoutes: AppRoute[] = [
   { path: '/baias', label: 'Baias', roles: ['ADMIN', 'VETERINARIO', 'RECEPCIONISTA'] },
   { path: '/alimentacao', label: 'Alimentação', roles: ['ADMIN', 'VETERINARIO', 'AUXILIAR_TECNICO'] },
   { path: '/cuidados', label: 'Cuidados', roles: ['ADMIN', 'VETERINARIO', 'AUXILIAR_TECNICO'] },
+  { path: '/relatorios', label: 'Relatórios', roles: ['ADMIN'] },
   { path: '/sessoes', label: 'Sessões', roles: ['ADMIN'] },
-  {
-    path: '/consultar-qr',
-    label: 'Consultar QR Code',
-    roles: ['ADMIN', 'VETERINARIO', 'RECEPCIONISTA', 'AUXILIAR_TECNICO', 'TUTOR'],
-  },
+  { path: '/auditoria', label: 'Auditoria', roles: ['ADMIN'] },
 ]
 
 export const adminRoutes: AppRoute[] = [
   { path: '/equipe', label: 'Equipe', roles: ['ADMIN'] },
 ]
 
-export const routeRoles = (path: string): Role[] =>
-  appRoutes.find(route => route.path === path)?.roles ??
-  (path.startsWith('/internacoes/') ? routeRoles('/internacoes') : undefined) ??
-  (path.startsWith('/pacientes/') ? routeRoles('/pacientes') : undefined) ??
-  adminRoutes.find(route => route.path === path)?.roles ??
-  []
+export function routeRoles(path: string): Role[] {
+  const directRoute = appRoutes.find(route => route.path === path)
+  if (directRoute) {
+    return directRoute.roles
+  }
+  if (path.startsWith('/internacoes/')) {
+    return ['ADMIN', 'VETERINARIO', 'RECEPCIONISTA', 'AUXILIAR_TECNICO']
+  }
+  if (path.startsWith('/pacientes/')) {
+    return routeRoles('/pacientes')
+  }
+  const adminRoute = adminRoutes.find(route => route.path === path)
+  if (adminRoute) {
+    return adminRoute.roles
+  }
+  return []
+}

@@ -8,6 +8,7 @@ import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.AccessDeniedException;
+import org.springframework.security.authentication.BadCredentialsException;
 import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
@@ -24,6 +25,11 @@ public class GlobalExceptionHandler {
     private static final Logger logger = LoggerFactory.getLogger(GlobalExceptionHandler.class);
     private static final Pattern SENSITIVE_LOG_VALUE = Pattern.compile(
             "(?i)(password|senha|token|secret|segredo|credential|credencial)\\s*[:=]\\s*[^\\s,;]+");
+
+    @ExceptionHandler(org.springframework.http.converter.HttpMessageNotReadableException.class)
+    ResponseEntity<ErrorResponse> unreadableRequest() {
+        return errorResponse(HttpStatus.BAD_REQUEST, "Confira o formato e os valores dos campos informados.", Map.of());
+    }
 
     @ExceptionHandler(MethodArgumentNotValidException.class)
     ResponseEntity<ErrorResponse> validation(MethodArgumentNotValidException e) {
@@ -84,6 +90,12 @@ public class GlobalExceptionHandler {
     ResponseEntity<ErrorResponse> accessDenied(AccessDeniedException e) {
         logger.warn("Access denied for request: {}", e.getMessage());
         return errorResponse(HttpStatus.FORBIDDEN, "Acesso não permitido.", Map.of());
+    }
+
+    @ExceptionHandler(BadCredentialsException.class)
+    ResponseEntity<ErrorResponse> badCredentials(BadCredentialsException e) {
+        logger.warn("Authentication failed: {}", safeLogMessage(e.getMessage()));
+        return errorResponse(HttpStatus.UNAUTHORIZED, e.getMessage(), Map.of());
     }
 
     @ExceptionHandler(Exception.class)

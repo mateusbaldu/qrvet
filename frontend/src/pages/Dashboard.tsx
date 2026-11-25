@@ -1,161 +1,98 @@
-import { useAuth } from '../auth/useAuth'
-import { FeedingSummary } from './FeedingSummary'
+﻿import { useState } from 'react'
 import { Link } from 'react-router-dom'
-import { ArrowRight, HeartPulse, House, PawPrint, Plus, QrCode, Users } from 'lucide-react'
+import { ArrowRight, CalendarDays, Fence, HeartPulse, PawPrint, Plus, RefreshCw, Search, Users } from 'lucide-react'
+import { useAuth } from '../auth/useAuth'
 import { Page, ResourceState, EmptyState, StatusBadge } from '../components/ClinicUI'
 import { useResource } from '../hooks/useResource'
-import { clinicApi, dateTime, type Baia, type Internacao } from '../services/clinic'
+import { allPages, clinicApi, dateTime, searchText, type Baia, type Internacao } from '../services/clinic'
+import { FeedingSummary } from './FeedingSummary'
+import { PatientAvatar } from '../components/PatientEditor'
+import '../styles/dashboard.css'
+
+const bayStatuses = ['OCUPADA', 'DISPONIVEL', 'MANUTENCAO'] as const
 
 export function Dashboard() {
   const { user } = useAuth()
+  const [search, setSearch] = useState('')
+  const [onlyMine, setOnlyMine] = useState(false)
   const resource = useResource(async () => {
-    const [patients, tutors, bays, availableBays, admissions] = await Promise.all([
-      clinicApi.list('/pacientes'),
-      clinicApi.list('/tutores'),
-      clinicApi.list<Baia>('/baias', 0, { size: 100 }),
-      clinicApi.list<Baia>('/baias', 0, { status: 'DISPONIVEL' }),
-      clinicApi.list<Internacao>('/internacoes/ativas'),
+    const [patients, tutors, bays, admissions] = await Promise.all([
+      clinicApi.list('/pacientes'), clinicApi.list('/tutores'),
+      allPages<Baia>('/baias'), allPages<Internacao>('/internacoes/ativas'),
     ])
-    return {
-      patients: patients.total,
-      tutors: tutors.total,
-      bays: bays.items,
-      availableBays: availableBays.total,
-      admissions: admissions.items,
+    const bayCounts = { OCUPADA: 0, DISPONIVEL: 0, MANUTENCAO: 0 }
+    for (const bay of bays) bayCounts[bay.status]++
+    return { patients: patients.total, tutors: tutors.total, bayTotal: bays.length, bayCounts,
+      admissions: admissions.sort((a, b) => Date.parse(b.entradaInternacao) - Date.parse(a.entradaInternacao)),
     }
   }, ['dashboard'])
   const data = resource.data
+  const clinical = user?.role === 'ADMIN' || user?.role === 'VETERINARIO'
+  const admissions = data?.admissions.filter(i =>
+    (!onlyMine || i.veterinarioId === user?.id) &&
+    searchText([i.pacienteNome, i.baiaIdentificacao, i.veterinarioNome].join(' ')).includes(searchText(search.trim()))
+  ) ?? []
   return (
-    <Page
-      title="Um bom dia começa com cuidado."
-      description="Uma visão da clínica para organizar o seu próximo atendimento."
-      action={
-        <Link className="clinic-button clinic-primary" to="/internacoes?nova=1">
-          <Plus size={17} />
-          Abrir internação
-        </Link>
-      }
-    >
-      <div className="clinic-actions">
-        <Link className="clinic-button" to="/pacientes?novo=1">
-          <Plus size={16} />
-          Cadastrar paciente e tutor
-        </Link>
-      </div>
+    <Page title="Visão geral da clínica" description={`Olá, ${user?.name.split(' ')[0] ?? ''}. Acompanhe os pacientes e organize os cuidados de hoje.`}
+      action={<div className="dashboard-heading-actions">
+        <button onClick={resource.reload} disabled={resource.loading} aria-label="Atualizar painel" title="Atualizar painel"><RefreshCw size={17} /></button>
+        <Link className="clinic-button clinic-primary" to="/internacoes?nova=1"><Plus size={18} />Abrir internação</Link>
+      </div>}>
+      <div className="dashboard-date"><CalendarDays size={16} />{new Date().toLocaleDateString('pt-BR', { weekday: 'long', day: 'numeric', month: 'long' })}</div>
       <ResourceState {...resource} />
-      {data && (
-        <>
-          <div className="clinic-stats">
-            {[
-              {
-                label: 'Pacientes cadastrados',
-                value: data.patients,
-                icon: PawPrint,
-                path: '/pacientes',
-              },
-              {
-                label: 'Internações ativas',
-                value: data.admissions.length,
-                icon: HeartPulse,
-                path: '/internacoes',
-              },
-              {
-                label: 'Baias disponíveis',
-                value: data.availableBays,
-                icon: House,
-                path: '/baias',
-              },
-              { label: 'Tutores cadastrados', value: data.tutors, icon: Users, path: '/tutores' },
-            ].map(item => (
-              <Link key={item.path} className="clinic-stat" to={item.path}>
-                <span>
-                  <item.icon size={20} />
-                  <ArrowRight size={16} />
-                </span>
-                <strong>{item.value}</strong>
-                <small>{item.label}</small>
-              </Link>
-            ))}
-          </div>
-          {(user?.role === 'ADMIN' || user?.role === 'VETERINARIO') && <FeedingSummary />}
-          <div className="clinic-detail-grid">
-            <section className="clinic-panel">
-              <div className="clinic-section-heading">
-                <div>
-                  <h2>Quem está sob nossos cuidados</h2>
-                  <p>As internações mais recentes da clínica.</p>
-                </div>
-                <Link to="/internacoes">Ver todas →</Link>
+      {data && <>
+        <div className="clinic-stats dashboard-stats">
+          {[
+            { label: 'Internações ativas', value: data.admissions.length, icon: HeartPulse, path: '/internacoes', detail: 'Acompanhar pacientes', tone: 'green' },
+            { label: 'Baias disponíveis', value: data.bayCounts.DISPONIVEL, icon: Fence, path: '/baias', detail: 'Consultar ocupação', tone: 'blue' },
+            { label: 'Pacientes cadastrados', value: data.patients, icon: PawPrint, path: '/pacientes', detail: 'Abrir cadastros', tone: 'violet' },
+            { label: 'Tutores cadastrados', value: data.tutors, icon: Users, path: '/tutores', detail: 'Consultar responsáveis', tone: 'amber' },
+          ].map(item => <Link key={item.path} className={`clinic-stat dashboard-stat tone-${item.tone}`} to={item.path}>
+            <span className="dashboard-stat-top"><small>{item.label}</small><span className="dashboard-stat-icon"><item.icon size={21} /></span></span>
+            <strong>{item.value}</strong><span className="dashboard-stat-bottom">{item.detail}<ArrowRight size={15} /></span>
+          </Link>)}
+        </div>
+        <div className={clinical ? 'dashboard-summary dashboard-summary-paired' : 'dashboard-summary'}>
+          {clinical && <FeedingSummary />}
+          <section className="clinic-panel dashboard-bays" aria-labelledby="dashboard-bays-title">
+            <h2 id="dashboard-bays-title"><Fence size={20} aria-hidden="true" /> Ocupação das baias</h2>
+            {data.bayTotal ? <>
+              <div className="dashboard-occupancy-number"><strong>{data.bayCounts.OCUPADA}<small> / {data.bayTotal}</small></strong><span>ocupadas</span></div>
+              <div className="dashboard-occupancy-bar" aria-hidden="true">
+                {bayStatuses.map(status => <span key={status} className={'bay-' + status.toLowerCase()} style={{ width: `${data.bayCounts[status] / data.bayTotal * 100}%` }} />)}
               </div>
-              {data.admissions.length ? (
-                data.admissions.slice(0, 6).map(i => (
-                  <Link className="clinic-dashboard-row" key={i.id} to={'/internacoes/' + i.id}>
-                    <span className="clinic-avatar">
-                      <PawPrint size={19} />
-                    </span>
-                    <span>
-                      <strong>{i.pacienteNome}</strong>
-                      <small>
-                        Baia {i.baiaIdentificacao} · Entrada {dateTime(i.entradaInternacao)}
-                      </small>
-                    </span>
-                    <StatusBadge status={i.status} />
-                    <ArrowRight size={17} />
-                  </Link>
-                ))
-              ) : (
-                <EmptyState title="Tudo tranquilo por aqui">
-                  <p>Nenhum paciente internado no momento.</p>
-                </EmptyState>
-              )}
-            </section>
-            <aside>
-              <section className="clinic-panel clinic-shortcuts">
-                <h2>Próximos passos</h2>
-                <Link to="/pacientes">
-                  <PawPrint size={20} />
-                  <span>
-                    <strong>Pacientes</strong>
-                    <small>Consultar e cadastrar animais</small>
-                  </span>
-                  <ArrowRight size={16} />
-                </Link>
-                <Link to="/tutores">
-                  <Users size={20} />
-                  <span>
-                    <strong>Tutores</strong>
-                    <small>Dados dos responsáveis</small>
-                  </span>
-                  <ArrowRight size={16} />
-                </Link>
-                <Link to="/consultar-qr">
-                  <QrCode size={20} />
-                  <span>
-                    <strong>Consultar QR Code</strong>
-                    <small>Abrir o acompanhamento</small>
-                  </span>
-                  <ArrowRight size={16} />
-                </Link>
-              </section>
-              <section className="clinic-panel">
-                <h2>Ocupação das baias</h2>
-                <div className="clinic-occupancy" aria-label="Ocupação das baias">
-                  {data.bays.map(b => (
-                    <Link title={b.identificacao + ' · ' + b.status} to="/baias" key={b.id}>
-                      <StatusBadge status={b.status}>{b.identificacao}</StatusBadge>
-                    </Link>
-                  ))}
-                </div>
-                {!data.bays.length && <p>Nenhuma baia cadastrada.</p>}
-                <p className="clinic-muted">
-                  {data.bays.filter(b => b.status === 'OCUPADA').length} ocupadas de{' '}
-                  {data.bays.length} baias
-                </p>
-              </section>
-            </aside>
+              <div className="dashboard-bay-legend">
+                {bayStatuses.map(status => <span key={status}><i className={'bay-' + status.toLowerCase()} aria-hidden="true" /><StatusBadge status={status} /> {data.bayCounts[status]}</span>)}
+              </div>
+            </> : <p>Nenhuma baia cadastrada.</p>}
+            <Link className="dashboard-bays-link" to="/baias">Consultar baias <ArrowRight size={15} /></Link>
+          </section>
+        </div>
+        <section className="clinic-panel dashboard-patients" aria-labelledby="dashboard-patients-title">
+          <div className="clinic-section-heading">
+            <h2 id="dashboard-patients-title">Pacientes internados <span className="dashboard-count">{data.admissions.length}</span></h2>
+            <Link to="/internacoes">Ver todas <ArrowRight size={14} /></Link>
           </div>
-        </>
-      )}
+          <div className="dashboard-patient-tools">
+            <label className="clinic-search"><span className="visually-hidden">Buscar paciente internado</span><span className="clinic-search-input"><Search size={17} /><input type="search" placeholder="Buscar paciente, baia ou veterinário" value={search} onChange={e => setSearch(e.target.value)} /></span></label>
+            {user?.role === 'VETERINARIO' && <button className={onlyMine ? 'selected' : ''} aria-pressed={onlyMine} onClick={() => setOnlyMine(!onlyMine)}>Meus pacientes</button>}
+          </div>
+          {admissions.length ? <>
+            <div className="dashboard-list-labels" aria-hidden="true"><span>Paciente / baia</span><span>Veterinário</span><span>Entrada</span><span>Motivo</span></div>
+            {admissions.slice(0, 6).map(i => <Link className="dashboard-patient-row" key={i.id} to={'/internacoes/' + i.id}>
+              <span className="dashboard-patient-identity"><PatientAvatar patient={{ id: i.pacienteId, nome: i.pacienteNome, fotoVersao: i.fotoVersao ?? null }} photoPath={'/internacoes/' + i.id + '/foto'} compact /><span><strong>{i.pacienteNome}</strong><small>Baia {i.baiaIdentificacao} · <StatusBadge status={i.status} /></small></span></span>
+              <span className="dashboard-patient-detail"><span className="dashboard-patient-label">Veterinário</span>{i.veterinarioNome}</span>
+              <span className="dashboard-patient-detail"><span className="dashboard-patient-label">Entrada</span><time dateTime={i.entradaInternacao}>{dateTime(i.entradaInternacao)}</time></span>
+              <span className="dashboard-patient-detail dashboard-patient-reason">
+                <span className="dashboard-patient-label">Motivo</span>
+                <span className="dashboard-patient-reason-text">{i.motivo?.trim() || '—'}</span>
+              </span>
+              <ArrowRight size={18} aria-hidden="true" />
+            </Link>)}
+            {admissions.length > 6 && <p className="dashboard-list-footer">Exibindo 6 de {admissions.length} pacientes. <Link to="/internacoes">Consultar todas as internações</Link></p>}
+          </> : <EmptyState title={data.admissions.length ? 'Nenhum paciente nesta busca' : 'Nenhum paciente internado'}><p>{data.admissions.length ? 'Tente outro nome, baia ou veterinário.' : 'As novas internações aparecerão aqui para acompanhamento.'}</p></EmptyState>}
+        </section>
+      </>}
     </Page>
   )
 }

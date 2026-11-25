@@ -7,6 +7,7 @@ import org.springframework.boot.test.system.CapturedOutput;
 import org.springframework.boot.test.system.OutputCaptureExtension;
 import org.springframework.http.ResponseEntity;
 import org.springframework.http.HttpStatus;
+import org.springframework.security.authentication.BadCredentialsException;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
@@ -25,6 +26,18 @@ class GlobalExceptionHandlerTests {
         assertEquals("BAD_REQUEST", response.getBody().codigo());
         assertTrue(output.getOut().contains("WARN"));
         assertTrue(output.getOut().contains("Invalid application request"));
+    }
+
+    @Test
+    void badCredentialsReturnsUnauthorizedAndWritesWarning(CapturedOutput output) {
+        ResponseEntity<ErrorResponse> response =
+                handler.badCredentials(new BadCredentialsException("Invalid credentials"));
+
+        assertEquals(HttpStatus.UNAUTHORIZED, response.getStatusCode());
+        assertEquals("UNAUTHORIZED", response.getBody().codigo());
+        assertEquals("Invalid credentials", response.getBody().message());
+        assertTrue(output.getOut().contains("WARN"));
+        assertTrue(output.getOut().contains("Authentication failed"));
     }
 
     @Test

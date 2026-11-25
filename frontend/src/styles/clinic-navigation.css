@@ -1,0 +1,26 @@
+.clinic-tablist { display: flex; gap: .4rem; padding: .35rem; margin-bottom: 1.25rem; background: #eaf1ed; border-radius: .65rem; width: fit-content; max-width: 100%; }
+.clinic-page .clinic-tablist > button { min-width: 110px; border: 1px solid transparent; background: transparent; color: #536e62; }
+.clinic-page .clinic-tablist > button[aria-selected="true"] { background: white; border-color: #d8e5dd; color: var(--green-950); box-shadow: 0 2px 4px #103b2410; }
+.clinic-tabs > [hidden] { display: none; }
+.care-patient-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(min(100%, 250px), 1fr)); gap: 1rem; margin-bottom: 1.25rem; }
+.clinic-page .care-patient-card { display: flex; align-items: center; gap: .9rem; padding: 1rem; background: white; border: 1px solid var(--border); border-radius: .8rem; text-decoration: none; color: var(--ink); }
+.care-patient-card:hover { border-color: var(--green-700); background: #f8fcf9; }
+.care-patient-card > span:nth-child(2) { flex: 1; min-width: 0; }
+.care-patient-card strong, .care-patient-card small { display: block; overflow-wrap: anywhere; }
+.care-patient-card small { color: var(--muted); font-size: .75rem; margin: .35rem 0; }
+.care-patient-card .clinic-patient-photo { width: 80px; height: 80px; border-radius: .7rem; }
+.care-directory-heading { display: flex; gap: .75rem; justify-content: space-between; align-items: center; flex-wrap: wrap; margin-bottom: 1rem; }
+.care-directory-heading p { color: var(--muted); font-size: .83rem; margin: 0; }
+.care-return-link { margin-bottom: 1.25rem; }
+.feeding-patient-identity { display: flex; align-items: center; gap: .7rem; }
+.feeding-patient-identity > span:last-child { min-width: 0; overflow-wrap: anywhere; }
+.feeding-confirm-patient { display: flex; gap: 1rem; align-items: center; padding: 1rem; background: #f3f8f5; border-radius: .7rem; margin-bottom: 1.25rem; }
+.feeding-confirm-patient .clinic-patient-photo { width: 88px; height: 88px; border-radius: .7rem; }
+.feeding-confirm-patient strong { display: block; font-size: 1rem; }
+.feeding-confirm-patient p { color: var(--muted); font-size: .8rem; margin: .35rem 0 0; }
+@media (max-width: 575px) {
+  .clinic-tablist { width: 100%; }
+  .clinic-page .clinic-tablist > button { flex: 1; min-width: 0; padding: .65rem .55rem; }
+  .feeding-patient-identity { align-items: flex-start; gap: .5rem; }
+  .feeding-confirm-patient { padding: .8rem; gap: .75rem; }
+}

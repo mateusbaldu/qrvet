@@ -7,10 +7,10 @@ import java.time.LocalDate;
 
 public record PacienteResponse(Long id, Long tutorId, String tutorNome, String nome, String especie, String raca,
                                String sexo, LocalDate dataNascimento, BigDecimal peso,
-                               String observacoes, Instant dataCadastro, String fotoVersao) {
+                               String observacoes, Instant dataCadastro, String fotoVersao, AlertasPacienteResponse alertas) {
     public static PacienteResponse from(Paciente paciente) {
         return new PacienteResponse(paciente.getId(), paciente.getTutor().getId(), paciente.getTutor().getNome(), paciente.getNome(),
                 paciente.getEspecie(), paciente.getRaca(), paciente.getSexo(), paciente.getDataNascimento(),
-                paciente.getPeso(), paciente.getObservacoes(), paciente.getDataCadastro(), paciente.getFotoArquivo());
+                paciente.getPeso(), paciente.getObservacoes(), paciente.getDataCadastro(), paciente.getFotoArquivo(), AlertasPacienteResponse.from(paciente));
     }
 }

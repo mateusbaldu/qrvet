@@ -1,11 +1,10 @@
 import { useState } from 'react'
-import { Link, useNavigate, useParams, useSearchParams } from 'react-router-dom'
+import { Link, useLocation, useNavigate, useParams } from 'react-router-dom'
 import {
   ArrowRight,
   ClipboardList,
   Copy,
   Download,
-  HeartPulse,
   Mail,
   Plus,
   Printer,
@@ -14,6 +13,11 @@ import {
 } from 'lucide-react'
 import { FeedingChecklist } from './Feeding'
 import { useAuth } from '../auth/useAuth'
+import { PatientAlerts } from '../components/PatientAlerts'
+import { EvolutionNotes } from '../components/EvolutionNotes'
+import { PatientAvatar } from '../components/PatientEditor'
+import { ClinicTabs } from '../components/ClinicTabs'
+import { queryPage, returnToList, useListNavigation, useListScroll } from '../hooks/useListNavigation'
 import { useResource } from '../hooks/useResource'
 import {
   Editor,
@@ -31,11 +35,14 @@ import {
   clinicApi,
   dateTime,
   labels,
+  paginate,
+  searchText,
   type Alimentacao,
   type Baia,
   type Cuidado,
   type Internacao,
   type Jejum,
+  type Medicacao,
   type Paciente,
   type QrCode,
   type Veterinario,
@@ -129,11 +136,12 @@ function AdmissionEditor({ patientId, onClose }: { patientId: string; onClose: (
 }
 
 export function Hospitalizations() {
-  const [params, setParams] = useSearchParams()
-  const [page, setPage] = useState(0)
+  const { params, updateQuery, listLocation } = useListNavigation()
+  const page = queryPage(params)
   const [creating, setCreating] = useState(params.has('paciente') || params.has('nova'))
-  const [search, setSearch] = useState('')
-  const [status, setStatus] = useState('ATIVA')
+  const search = params.get('busca') ?? ''
+  const requestedStatus = params.get('situacao') ?? 'ATIVA'
+  const status = requestedStatus === 'TODAS' ? '' : ['ATIVA', 'ALTA', 'OBITO'].includes(requestedStatus) ? requestedStatus : 'ATIVA'
   const navigate = useNavigate()
   const resource = useResource(
     () =>
@@ -144,14 +152,16 @@ export function Hospitalizations() {
     [page, search, status]
   )
   const result = resource.data
+  useListScroll(!resource.loading && !!result)
   const closeEditor = () => {
     setCreating(false)
-    if (params.has('paciente') || params.has('nova')) setParams({}, { replace: true })
+    if (params.has('paciente') || params.has('nova')) updateQuery({ paciente: null, nova: null })
   }
   return (
     <Page
       title="Internações"
-      description="Um olhar atento para cada paciente, da entrada à recuperação."
+      help="Para abrir uma internação, é necessário um paciente sem internação ativa, uma baia disponível e um veterinário com convite aceito. Use os filtros para consultar altas e óbitos."
+      description="Acompanhe os pacientes internados e consulte o histórico de internações."
       action={
         <button className="clinic-primary" onClick={() => setCreating(true)}>
           <Plus size={17} />
@@ -172,8 +182,7 @@ export function Hospitalizations() {
               placeholder="Paciente, baia, veterinário ou código"
               value={search}
               onChange={e => {
-                setSearch(e.target.value)
-                setPage(0)
+                updateQuery({ busca: e.target.value, pagina: 0 })
               }}
             />
           </span>
@@ -190,8 +199,7 @@ export function Hospitalizations() {
               aria-pressed={status === value}
               className={status === value ? 'selected' : ''}
               onClick={() => {
-                setStatus(value)
-                setPage(0)
+                updateQuery({ situacao: value || 'TODAS', pagina: 0 })
               }}
             >
               {label}
@@ -209,13 +217,13 @@ export function Hospitalizations() {
                   <StatusBadge status={i.status} />
                   <small>#{i.id}</small>
                 </div>
-                <h2>{i.pacienteNome}</h2>
-                <p className="clinic-card-location">
-                  Baia {i.baiaIdentificacao} · {i.veterinarioNome}
-                </p>
+                <Link className="admission-card-identity" to={'/internacoes/' + i.id} state={{ returnTo: listLocation }}>
+                  <PatientAvatar patient={{ id: i.pacienteId, nome: i.pacienteNome, fotoVersao: i.fotoVersao ?? null }} photoPath={'/internacoes/' + i.id + '/foto'} />
+                  <span><h2>{i.pacienteNome}</h2><small>Baia {i.baiaIdentificacao} · {i.veterinarioNome}</small></span>
+                </Link>
                 <p className="clinic-clamp">{i.motivo}</p>
                 <p className="clinic-card-date">Entrada: {dateTime(i.entradaInternacao)}</p>
-                <Link className="clinic-card-link" to={'/internacoes/' + i.id}>
+                <Link className="clinic-card-link" to={'/internacoes/' + i.id} state={{ returnTo: listLocation }}>
                   Acompanhar internação <ArrowRight size={16} />
                 </Link>
               </article>
@@ -226,7 +234,7 @@ export function Hospitalizations() {
               <p>Altere os filtros ou abra uma nova internação.</p>
             </EmptyState>
           )}
-          <Pagination {...result} onChange={setPage} />
+          <Pagination {...result} onChange={page => { updateQuery({ pagina: page }); window.scrollTo({ top: 0, behavior: 'instant' }) }} />
         </>
       )}
       <details className="clinic-code-lookup">
@@ -251,7 +259,11 @@ export function Hospitalizations() {
 
 export function HospitalizationDetail() {
   const { id = '' } = useParams()
+  const location = useLocation()
+  const { params, updateQuery } = useListNavigation()
   const { user } = useAuth()
+  const clinical = user?.role === 'ADMIN' || user?.role === 'VETERINARIO'
+  const tab = ['evolucoes', 'cuidados'].includes(params.get('aba') ?? '') ? params.get('aba')! : 'resumo'
   const [closing, setClosing] = useState(false)
   const [success, setSuccess] = useState('')
   const resource = useResource(
@@ -262,13 +274,14 @@ export function HospitalizationDetail() {
   return (
     <Page
       title={i?.pacienteNome ?? 'Internação'}
+      help="O QR Code da etiqueta abre esta internação para a equipe autenticada. Para o tutor, use o envio por e-mail: ele recebe um link de acompanhamento sem login."
       description={
         i
           ? 'Internação #' + i.id + ' · Baia ' + i.baiaIdentificacao + ' · ' + i.veterinarioNome
           : 'Acompanhamento e histórico de cuidados.'
       }
       action={
-        <Link className="clinic-button" to="/internacoes">
+        <Link className="clinic-button" to={returnToList(location.state, '/internacoes')}>
           Voltar às internações
         </Link>
       }
@@ -277,11 +290,10 @@ export function HospitalizationDetail() {
       <ResourceState {...resource} />
       {i && (
         <>
-          <div className="clinic-patient-banner">
-            <span className="clinic-avatar">
-              <HeartPulse size={23} />
-            </span>
+          <div className="clinic-patient-banner hospitalization-banner">
+            <PatientAvatar patient={{ id: i.pacienteId, nome: i.pacienteNome, fotoVersao: i.fotoVersao ?? null }} photoPath={'/internacoes/' + i.id + '/foto'} large />
             <div>
+              <strong className="hospitalization-patient-name">{i.pacienteNome}</strong>
               <StatusBadge status={i.status}>
                 {labels[i.status]} · #{i.id}
               </StatusBadge>
@@ -297,20 +309,9 @@ export function HospitalizationDetail() {
               )}
             </div>
           </div>
-          <div className="clinic-detail-grid">
-            <div>
-              {user?.role === 'ADMIN' || user?.role === 'VETERINARIO' ? (
-                <CarePanel id={id} admission={i} />
-              ) : (
-                <section className="clinic-panel">
-                  <h2>Informações da internação</h2>
-                  <p>{i.motivo}</p>
-                  <p>Os cuidados são registrados pela equipe clínica.</p>
-                </section>
-              )}
-            </div>
-            <aside>
-              <QrPanel id={id} patientName={i.pacienteNome} />
+          <PatientAlerts alerts={i.alertas} patientId={i.pacienteId} onSaved={resource.reload} />
+          <ClinicTabs label="Seções da internação" value={clinical ? tab : 'resumo'} onChange={aba => updateQuery({ aba })} tabs={[
+            { id: 'resumo', label: 'Resumo', content: <div className="clinic-detail-grid">
               <section className="clinic-panel">
                 <h2>Resumo clínico</h2>
                 <dl className="clinic-details single">
@@ -318,17 +319,19 @@ export function HospitalizationDetail() {
                     'Motivo': i.motivo,
                     'Diagnóstico inicial': i.diagnosticoInicial,
                     'Veterinário responsável': i.veterinarioNome,
+                    'Entrada': dateTime(i.entradaInternacao),
+                    ...(i.saidaInternacao ? { 'Saída': dateTime(i.saidaInternacao) } : {}),
                     'Observações': i.observacoes || 'Nenhuma observação registrada.',
-                  }).map(([label, value]) => (
-                    <div key={label}>
-                      <dt>{label}</dt>
-                      <dd>{value}</dd>
-                    </div>
-                  ))}
+                  }).map(([label, value]) => <div key={label}><dt>{label}</dt><dd>{value}</dd></div>)}
                 </dl>
               </section>
-            </aside>
-          </div>
+              <aside><QrPanel id={id} patientName={i.pacienteNome} /></aside>
+            </div> },
+            ...(clinical ? [
+              { id: 'evolucoes', label: 'Evoluções', content: <EvolutionNotes admissionId={id} active={i.status === 'ATIVA'} /> },
+              { id: 'cuidados', label: 'Cuidados', content: <CarePanel id={id} admission={i} /> },
+            ] : []),
+          ]} />
           {closing && (
             <Editor
               title="Encerrar internação"
@@ -476,36 +479,95 @@ export function QrPanel({ id, patientName }: { id: string; patientName: string }
   )
 }
 
+function careFieldsForAction(action: 'food' | 'medication' | 'fast' | 'end' | null): Field[] {
+  if (action === 'fast') {
+    return [{ name: 'motivo', label: 'Motivo do jejum', maxLength: 255, wide: true }]
+  }
+  if (action === 'food') {
+    return [
+      { name: 'alimento', label: 'Alimento', maxLength: 100 },
+      { name: 'quantidade', label: 'Quantidade (inclua a unidade)', maxLength: 50 },
+      {
+        name: 'aceitacaoObservacao',
+        label: 'Aceitação e observações',
+        type: 'textarea',
+        required: false,
+      },
+    ]
+  }
+  if (action === 'medication') {
+    return [
+      { name: 'medicamento', label: 'Medicamento', maxLength: 100 },
+      { name: 'dose', label: 'Dose', maxLength: 50 },
+      { name: 'unidade', label: 'Unidade', maxLength: 30, hint: 'Ex.: mg/kg, mL, UI' },
+      {
+        name: 'via',
+        label: 'Via',
+        maxLength: 50,
+        hint: 'Ex.: Oral, Intravenosa, Subcutânea',
+      },
+      { name: 'prescricao', label: 'Prescrição', maxLength: 255, wide: true },
+      {
+        name: 'observacoes',
+        label: 'Observações',
+        type: 'textarea',
+        required: false,
+      },
+    ]
+  }
+  return []
+}
+
+function careEditorTitle(action: 'food' | 'medication' | 'fast' | 'end'): string {
+  if (action === 'food') return 'Registrar alimentação'
+  if (action === 'medication') return 'Registrar medicação'
+  if (action === 'fast') return 'Iniciar jejum'
+  return 'Confirmar encerramento do jejum'
+}
+
+function careEditorDescription(
+  action: 'food' | 'medication' | 'fast' | 'end'
+): string | undefined {
+  if (action === 'end') {
+    return 'Confirme o encerramento para liberar os registros de alimentação.'
+  }
+  if (action === 'medication') {
+    return 'Confirme a administração da medicação ao paciente.'
+  }
+  return undefined
+}
+
+function careEndpointSuffix(action: 'food' | 'medication' | 'fast' | 'end'): string {
+  if (action === 'food') return 'alimentacao'
+  if (action === 'medication') return 'medicacao'
+  if (action === 'fast') return 'jejum'
+  return 'jejum/encerrar'
+}
+
+function careSuccessMessage(action: 'food' | 'medication' | 'fast' | 'end'): string {
+  if (action === 'food') return 'Alimentação registrada.'
+  if (action === 'medication') return 'Medicação registrada.'
+  if (action === 'fast') return 'Jejum iniciado.'
+  return 'Jejum encerrado.'
+}
+
 export function CarePanel({ id, admission }: { id: string; admission?: Internacao }) {
-  const [action, setAction] = useState<'food' | 'fast' | 'end' | null>(null)
+  const [action, setAction] = useState<'food' | 'medication' | 'fast' | 'end' | null>(null)
   const [success, setSuccess] = useState('')
   const resource = useResource(
     async () => {
-      const [summary, fasts, foods] = await Promise.all([
+      const [summary, fasts, foods, medications] = await Promise.all([
         request<Cuidado>('/internacoes/' + id + '/cuidados'),
         request<Jejum[]>('/internacoes/' + id + '/jejum'),
         request<Alimentacao[]>('/internacoes/' + id + '/alimentacao'),
+        request<Medicacao[]>('/internacoes/' + id + '/medicacao'),
       ])
-      return { summary, fasts, foods }
+      return { summary, fasts, foods, medications }
     },
     [id, admission?.status]
   )
   const fasting = resource.data?.fasts.some(f => f.ativo) ?? false
-  const fields: Field[] =
-    action === 'fast'
-      ? [{ name: 'motivo', label: 'Motivo do jejum', maxLength: 255, wide: true }]
-      : action === 'food'
-        ? [
-            { name: 'alimento', label: 'Alimento', maxLength: 100 },
-            { name: 'quantidade', label: 'Quantidade (inclua a unidade)', maxLength: 50 },
-            {
-              name: 'aceitacaoObservacao',
-              label: 'Aceitação e observações',
-              type: 'textarea',
-              required: false,
-            },
-          ]
-        : []
+  const fields = careFieldsForAction(action)
   const events = resource.data
     ? [
         ...resource.data.foods.map(f => ({
@@ -515,6 +577,14 @@ export function CarePanel({ id, admission }: { id: string; admission?: Internaca
           detail: f.alimento + ' · ' + f.quantidade,
           note: f.aceitacaoObservacao,
           tone: 'food',
+        })),
+        ...resource.data.medications.map(m => ({
+          key: 'medication' + m.id,
+          date: m.dataHoraRegistro,
+          title: 'Medicação registrada',
+          detail: m.medicamento + ' · ' + m.dose + ' ' + m.unidade + ' · ' + m.via,
+          note: [m.prescricao, m.observacoes, m.responsavelNome].filter(Boolean).join(' · '),
+          tone: 'medication',
         })),
         ...resource.data.fasts.flatMap(f => [
           {
@@ -564,10 +634,12 @@ export function CarePanel({ id, admission }: { id: string; admission?: Internaca
           : []),
       ].sort((a, b) => Date.parse(b.date) - Date.parse(a.date))
     : []
-  return (
-    <>
+  const { params, updateQuery } = useListNavigation()
+  const careTab = params.get('aba') === 'evolucoes' ? 'evolucoes' : 'cuidados'
+  const careContent = <>
       <FeedingChecklist
         admissionId={id}
+        admissionSummary={resource.data?.summary}
         active={resource.data?.summary.status === 'ATIVA'}
         onChanged={resource.reload}
       />
@@ -608,6 +680,9 @@ export function CarePanel({ id, admission }: { id: string; admission?: Internaca
                   >
                     Registrar alimentação
                   </button>
+                  <button onClick={() => setAction('medication')}>
+                    Registrar medicação
+                  </button>
                   <button onClick={() => setAction(fasting ? 'end' : 'fast')}>
                     {fasting ? 'Encerrar jejum' : 'Iniciar jejum'}
                   </button>
@@ -616,40 +691,23 @@ export function CarePanel({ id, admission }: { id: string; admission?: Internaca
             )}
             {action && (
               <Editor
-                title={
-                  action === 'food'
-                    ? 'Registrar alimentação'
-                    : action === 'fast'
-                      ? 'Iniciar jejum'
-                      : 'Confirmar encerramento do jejum'
-                }
-                description={
-                  action === 'end'
-                    ? 'Confirme o encerramento para liberar os registros de alimentação.'
-                    : undefined
-                }
+                title={careEditorTitle(action)}
+                description={careEditorDescription(action)}
                 fields={fields}
                 onCancel={() => setAction(null)}
                 onSave={async data => {
+                  let method = 'POST'
+                  let payload: Record<string, string | number> | undefined = data
+                  if (action === 'end') {
+                    method = 'PUT'
+                    payload = undefined
+                  }
                   await clinicApi.save(
-                    '/internacoes/' +
-                      id +
-                      '/' +
-                      (action === 'food'
-                        ? 'alimentacao'
-                        : action === 'fast'
-                          ? 'jejum'
-                          : 'jejum/encerrar'),
-                    action === 'end' ? undefined : data,
-                    action === 'end' ? 'PUT' : 'POST'
+                    '/internacoes/' + id + '/' + careEndpointSuffix(action),
+                    payload,
+                    method
                   )
-                  setSuccess(
-                    action === 'food'
-                      ? 'Alimentação registrada.'
-                      : action === 'fast'
-                        ? 'Jejum iniciado.'
-                        : 'Jejum encerrado.'
-                  )
+                  setSuccess(careSuccessMessage(action))
                   resource.reload()
                 }}
               />
@@ -677,70 +735,59 @@ export function CarePanel({ id, admission }: { id: string; admission?: Internaca
           </>
         )}
       </section>
-    </>
-  )
+  </>
+  return <>
+    {!admission && resource.data && <>
+      <div className="clinic-patient-banner hospitalization-banner">
+        <PatientAvatar patient={{ id: resource.data.summary.id, nome: resource.data.summary.pacienteNome, fotoVersao: resource.data.summary.fotoVersao ?? null }} photoPath={'/internacoes/' + id + '/foto'} large />
+        <div><strong className="hospitalization-patient-name">{resource.data.summary.pacienteNome}</strong><p>Baia {resource.data.summary.baiaIdentificacao} · Internação #{id}</p><StatusBadge status={resource.data.summary.status} /></div>
+      </div>
+      <PatientAlerts alerts={resource.data.summary.alertas} />
+    </>}
+    {!admission ? <ClinicTabs label="Seções dos cuidados" value={careTab} onChange={aba => updateQuery({ aba })} tabs={[
+      { id: 'cuidados', label: 'Cuidados', content: careContent },
+      { id: 'evolucoes', label: 'Evoluções', content: resource.data && <EvolutionNotes admissionId={id} active={resource.data.summary.status === 'ATIVA'} /> },
+    ]} /> : careContent}
+  </>
 }
 
 export function CareLookup() {
-  const [params] = useSearchParams()
-  const [id, setId] = useState(params.get('internacao') ?? '')
+  const { params, updateQuery, listLocation } = useListNavigation()
+  const id = params.get('internacao') ?? ''
+  const search = params.get('busca') ?? ''
   const resource = useResource(() => allPages<Cuidado>('/internacoes/cuidados'), ['care'])
-  return (
-    <Page
-      title="Cuidados"
-      description="Acompanhe a alimentação e o jejum dos pacientes internados."
-      action={
-        <Link className="clinic-button clinic-primary" to="/alimentacao">
-          Checklist geral de alimentação
-        </Link>
-      }
-    >
+  const matches = (resource.data ?? []).filter(i => searchText(`${i.pacienteNome} ${i.baiaIdentificacao} ${i.id}`).includes(searchText(search.trim())))
+  const result = paginate(matches, queryPage(params))
+  useListScroll(!resource.loading && !!resource.data, !id)
+  const listParams = new URLSearchParams()
+  for (const key of ['busca', 'pagina']) if (params.has(key)) listParams.set(key, params.get(key)!)
+  const returnUrl = '/cuidados' + (listParams.size ? '?' + listParams.toString() : '')
+  return <Page title="Cuidados" description="Encontre o paciente pela foto, pelo nome ou pela baia e abra os cuidados."
+    help="Selecione o cartão de um paciente internado para registrar os cuidados e consultar as evoluções. Para internações encerradas, consulte pelo código."
+    action={<Link className="clinic-button clinic-primary" to="/alimentacao">Checklist geral de alimentação</Link>}>
+    {id ? <>
+      <Link className="clinic-button care-return-link" to={returnUrl}>Voltar aos pacientes em cuidados</Link>
+      <CarePanel key={id} id={id} />
+    </> : <>
+      <div className="clinic-toolbar clinic-panel"><label className="clinic-search"><span>Buscar paciente ou baia</span><span className="clinic-search-input"><Search size={18} /><input type="search" placeholder="Nome, baia ou código da internação" value={search} onChange={e => updateQuery({ busca: e.target.value, pagina: 0 })} /></span></label></div>
       <ResourceState {...resource} />
-      <div className="clinic-toolbar clinic-panel">
-        <label className="clinic-search">
-          Paciente internado
-          <select
-            value={resource.data?.some(i => String(i.id) === id) ? id : ''}
-            onChange={e => setId(e.target.value)}
-          >
-            <option value="">Selecione um paciente</option>
-            {resource.data?.map(i => (
-              <option key={i.id} value={i.id}>
-                {i.pacienteNome} · Baia {i.baiaIdentificacao} · #{i.id}
-              </option>
-            ))}
-          </select>
-        </label>
-      </div>
-      <details className="clinic-code-lookup">
-        <summary>Consultar histórico pelo código</summary>
-        <form
-          className="clinic-toolbar"
-          onSubmit={e => {
-            e.preventDefault()
-            setId(String(new FormData(e.currentTarget).get('id')))
-          }}
-        >
-          <label>
-            Código da internação
-            <input name="id" type="number" min="1" step="1" required />
-          </label>
-          <button>Consultar</button>
-        </form>
-      </details>
-      {id ? (
-        <CarePanel key={id} id={id} />
-      ) : (
-        <EmptyState
-          title={
-            resource.data?.length
-              ? 'Selecione um paciente para começar'
-              : 'Nenhuma internação ativa'
-          }
-        >
-          <p>Consulte o histórico ou registre os cuidados da equipe.</p>
-        </EmptyState>
-      )}
-    </Page>
-  )
+      {resource.data && <>
+        <div className="care-directory-heading"><p>{matches.length} paciente(s) nesta seleção</p></div>
+        {result.items.length ? <div className="care-patient-grid">{result.items.map(i => {
+          const target = new URLSearchParams(params)
+          target.set('internacao', String(i.id))
+          target.delete('aba')
+          return <Link className="care-patient-card" key={i.id} to={'/cuidados?' + target.toString()} state={{ returnTo: listLocation }} aria-label={'Abrir cuidados de ' + i.pacienteNome}>
+            <PatientAvatar patient={{ id: i.id, nome: i.pacienteNome, fotoVersao: i.fotoVersao ?? null }} photoPath={'/internacoes/' + i.id + '/foto'} />
+            <span><strong>{i.pacienteNome}</strong><small>Baia {i.baiaIdentificacao} · #{i.id}</small><StatusBadge status={i.status} /></span><ArrowRight size={18} />
+          </Link>
+        })}</div> : <EmptyState title={resource.data.length ? 'Nenhum paciente nesta busca' : 'Nenhuma internação ativa'}><p>{resource.data.length ? 'Tente outro nome, baia ou código.' : 'Novas internações aparecerão aqui para acompanhamento.'}</p></EmptyState>}
+        {result.pages > 1 && <Pagination {...result} onChange={pagina => { updateQuery({ pagina }); window.scrollTo({ top: 0, behavior: 'instant' }) }} />}
+      </>}
+      <details className="clinic-code-lookup"><summary>Consultar histórico pelo código</summary><form className="clinic-toolbar" onSubmit={e => {
+        e.preventDefault()
+        updateQuery({ internacao: String(new FormData(e.currentTarget).get('id')), aba: null }, false)
+      }}><label>Código da internação<input name="id" type="number" min="1" step="1" required /></label><button>Consultar</button></form></details>
+    </>}
+  </Page>
 }

@@ -3,6 +3,9 @@ import { Link, useSearchParams } from 'react-router-dom'
 import { CalendarDays, Check, Clock, Plus, RefreshCw, Search, Utensils } from 'lucide-react'
 import { Editor, EmptyState, Notice, Page, ResourceState, type Field } from '../components/ClinicUI'
 import { useResource } from '../hooks/useResource'
+import { useListNavigation, useListScroll } from '../hooks/useListNavigation'
+import { PatientAvatar } from '../components/PatientEditor'
+import '../styles/clinic-navigation.css'
 import { ApiError, request } from '../services/api'
 import {
   agendaPath,
@@ -17,6 +20,11 @@ import {
 
 const timeLabel = (value: string) =>
   new Date(value).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })
+
+const localDateTime = (value: string) => {
+  const date = new Date(value)
+  return localDate(date) + 'T' + String(date.getHours()).padStart(2, '0') + ':' + String(date.getMinutes()).padStart(2, '0')
+}
 
 function ScheduleEditor({
   admissions,
@@ -172,15 +180,23 @@ export function FeedingChecklist({
   admissionId,
   active = true,
   onChanged,
+  initialFilter = 'TODAS',
+  admissionSummary,
 }: {
   admissionId?: string
   active?: boolean
   onChanged?: () => void
+  initialFilter?: string
+  admissionSummary?: Cuidado
 }) {
-  const [date, setDate] = useState(localDate())
-  const [search, setSearch] = useState('')
-  const [filter, setFilter] = useState('TODAS')
+  const { params, updateQuery } = useListNavigation()
+  const requestedDate = params.get('dia') ?? ''
+  const date = /^\d{4}-\d{2}-\d{2}$/.test(requestedDate) && !Number.isNaN(Date.parse(requestedDate)) ? requestedDate : localDate()
+  const search = admissionId ? '' : params.get('busca') ?? ''
+  const requestedFilter = params.get('filtro') ?? initialFilter
+  const filter = ['PENDENTE', 'ATRASADA', 'JEJUM', 'CONCLUIDA', 'CANCELADA'].includes(requestedFilter) ? requestedFilter : 'TODAS'
   const [creating, setCreating] = useState(false)
+  const [editing, setEditing] = useState<AgendaAlimentacao | null>(null)
   const [schedulePatient, setSchedulePatient] = useState<string>()
   const [action, setAction] = useState<{
     item: AgendaAlimentacao
@@ -198,6 +214,11 @@ export function FeedingChecklist({
     [admissionId ?? 'directory']
   )
   const reload = resource.reload
+  useListScroll(!admissionId && !resource.loading && !directory.loading && !!resource.data)
+  function patientPhoto(item: AgendaAlimentacao, compact = false) {
+    const summary = admissionSummary ?? directory.data?.find(i => i.id === item.internacaoId)
+    return <PatientAvatar compact={compact} patient={{ id: item.internacaoId, nome: item.pacienteNome, fotoVersao: summary ? summary.fotoVersao ?? null : admissionId || directory.loading ? null : 'atual' }} photoPath={'/internacoes/' + item.internacaoId + '/foto'} />
+  }
   useEffect(() => {
     const refresh = () => {
       setNow(Date.now())
@@ -301,11 +322,11 @@ export function FeedingChecklist({
             value={date}
             required
             onChange={e => {
-              if (e.target.value) setDate(e.target.value)
+              if (e.target.value) updateQuery({ dia: e.target.value })
             }}
           />
         </label>
-        <button onClick={() => setDate(localDate())}>Hoje</button>
+        <button onClick={() => updateQuery({ dia: localDate() })}>Hoje</button>
         {!admissionId && (
           <label className="clinic-search">
             Buscar paciente ou baia
@@ -314,7 +335,7 @@ export function FeedingChecklist({
               <input
                 type="search"
                 value={search}
-                onChange={e => setSearch(e.target.value)}
+                onChange={e => updateQuery({ busca: e.target.value })}
                 placeholder="Nome do paciente ou baia"
               />
             </span>
@@ -334,7 +355,7 @@ export function FeedingChecklist({
             key={value}
             aria-pressed={filter === value}
             className={filter === value ? 'selected' : ''}
-            onClick={() => setFilter(value)}
+            onClick={() => updateQuery({ filtro: value })}
           >
             {label}
           </button>
@@ -356,10 +377,7 @@ export function FeedingChecklist({
                       <time dateTime={item.horario}>{timeLabel(item.horario)}</time>
                     </div>
                     <div className="feeding-patient">
-                      <strong>{item.pacienteNome}</strong>
-                      <small>
-                        Baia {item.baiaIdentificacao} · Internação #{item.internacaoId}
-                      </small>
+                      <div className="feeding-patient-identity">{patientPhoto(item, true)}<span><strong>{item.pacienteNome}</strong><small>Baia {item.baiaIdentificacao} · Internação #{item.internacaoId}</small></span></div>
                       <p>
                         {item.alimento} · {item.quantidade}
                       </p>
@@ -378,6 +396,11 @@ export function FeedingChecklist({
                       </span>
                       {item.status === 'PENDENTE' && (
                         <>
+                          <button
+                            disabled={!active || item.internacaoStatus !== 'ATIVA'}
+                            aria-label={'Editar alimentação de ' + item.pacienteNome + ' às ' + timeLabel(item.horario)}
+                            onClick={() => setEditing(item)}
+                          >Editar</button>
                           <button
                             className="feeding-check"
                             disabled={
@@ -475,13 +498,35 @@ export function FeedingChecklist({
           }}
         />
       )}
+      {editing && <Editor
+        title="Editar alimentação programada"
+        description={<><p>{editing.pacienteNome} · Baia {editing.baiaIdentificacao}</p><p>Altere esta refeição. Para mudar o horário, selecione uma data futura. As demais refeições da programação permanecem como estão.</p></>}
+        fields={[
+          { name: 'alimento', label: 'Alimento', value: editing.alimento, maxLength: 100 },
+          { name: 'quantidade', label: 'Quantidade (inclua a unidade)', value: editing.quantidade, maxLength: 50 },
+          { name: 'horario', label: 'Data e horário', type: 'datetime-local', value: localDateTime(editing.horario), wide: true },
+        ]}
+        submitLabel="Salvar programação"
+        onCancel={() => setEditing(null)}
+        onSave={async data => {
+          const unchangedTime = String(data.horario) === localDateTime(editing.horario)
+          const horario = unchangedTime ? editing.horario : new Date(String(data.horario)).toISOString()
+          if (!unchangedTime && Date.parse(horario) <= Date.now()) throw new ApiError(400, 'Selecione um horário futuro para reagendar.')
+          await clinicApi.save('/internacoes/' + editing.internacaoId + '/alimentacao/agenda/' + editing.id,
+            { alimento: data.alimento, quantidade: data.quantidade, horario }, 'PUT')
+          const newDay = localDate(new Date(horario))
+          if (newDay !== date) updateQuery({ dia: newDay })
+          setSuccess('Programação da alimentação atualizada.')
+          refresh()
+          onChanged?.()
+        }}
+      />}
       {action && (
         <Editor
           title={action.kind === 'concluir' ? 'Concluir alimentação' : 'Cancelar alimentação'}
+          beforeFields={<div className="feeding-confirm-patient">{patientPhoto(action.item)}<div><strong>{action.item.pacienteNome}</strong><p>Baia {action.item.baiaIdentificacao} · Internação #{action.item.internacaoId}</p><p>{dateTime(action.item.horario)}</p></div></div>}
           description={
             <>
-              {action.item.pacienteNome} · {dateTime(action.item.horario)}
-              <br />
               {action.item.alimento} · {action.item.quantidade}
               {action.kind === 'concluir' && (
                 <p>
@@ -535,9 +580,12 @@ export function FeedingChecklist({
 export function Feeding() {
   const [params] = useSearchParams()
   const id = params.get('internacao') ?? undefined
+  const requestedFilter = params.get('filtro') ?? 'TODAS'
+  const initialFilter = ['PENDENTE', 'ATRASADA', 'JEJUM', 'CONCLUIDA', 'CANCELADA'].includes(requestedFilter) ? requestedFilter : 'TODAS'
   return (
     <Page
       title="Alimentação"
+      help="Escolha o dia e filtre as refeições. Concluir só fica disponível a partir do horário agendado, com internação ativa e sem jejum. A confirmação registra o horário real e o responsável."
       description="Organize os horários e acompanhe as refeições da equipe em um só lugar."
       action={
         <Link className="clinic-button" to="/cuidados">
@@ -546,7 +594,7 @@ export function Feeding() {
         </Link>
       }
     >
-      <FeedingChecklist key={id} admissionId={id} />
+      <FeedingChecklist key={id ?? 'general'} admissionId={id} initialFilter={initialFilter} />
     </Page>
   )
 }

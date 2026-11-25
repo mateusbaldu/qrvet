@@ -4,6 +4,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import ipiranga.fatec.qrvet.dtos.request.AgendaAlimentacaoRequest;
+import ipiranga.fatec.qrvet.dtos.request.AgendaAlimentacaoUpdateRequest;
 import ipiranga.fatec.qrvet.dtos.request.JejumRequest;
 import ipiranga.fatec.qrvet.dtos.request.RegistroAlimentacaoRequest;
 import ipiranga.fatec.qrvet.dtos.response.AgendaAlimentacaoResponse;
@@ -164,6 +165,31 @@ public class NutricaoClinicaService {
         }
         item.cancel(reason.trim());
         return AgendaAlimentacaoResponse.from(item, jejumRepository.existsByInternacaoIdAndAtivoTrue(internacaoId));
+    }
+
+    @Transactional
+    @PreAuthorize("@qrvetSecurity.hasAnyRole('ADMIN', 'VETERINARIO', 'AUXILIAR_TECNICO')")
+    public AgendaAlimentacaoResponse updateSchedule(Long internacaoId, Long agendaId, AgendaAlimentacaoUpdateRequest request) {
+        Internacao admission = lockAdmission(internacaoId);
+        AlimentacaoAgendada item = findSchedule(agendaId, internacaoId);
+        if (admission.getStatus() != InternacaoStatus.ATIVA) {
+            throw new InvalidRequestException("A internação foi encerrada.");
+        }
+        if (item.getStatus() != AlimentacaoAgendada.Status.PENDENTE) {
+            throw new OperationConflictException("Somente agendamentos pendentes podem ser editados.");
+        }
+        Instant time = request.horario().truncatedTo(ChronoUnit.SECONDS);
+        // Allow correcting food/quantity on an overdue meal while retaining its original time.
+        if (!time.equals(item.getHorario()) && !time.isAfter(Instant.now())) {
+            throw new InvalidRequestException("Selecione um horário futuro para reagendar.");
+        }
+        if (agendaRepository.existsByInternacaoIdAndHorarioAndStatusNotAndIdNot(internacaoId, time,
+                AlimentacaoAgendada.Status.CANCELADA, agendaId)) {
+            throw new OperationConflictException("Já existe alimentação agendada nesse horário. Confira a agenda do paciente.");
+        }
+        item.update(request.alimento().trim(), request.quantidade().trim(), time);
+        return AgendaAlimentacaoResponse.from(agendaRepository.saveAndFlush(item),
+                jejumRepository.existsByInternacaoIdAndAtivoTrue(internacaoId));
     }
 
     // --- JEJUM ---

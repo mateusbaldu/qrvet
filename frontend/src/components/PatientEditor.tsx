@@ -5,14 +5,20 @@ import { ApiError, readableError, request } from '../services/api'
 import { tutorFields, uploadPhoto } from '../services/patientForm'
 import { clinicApi, localDate, searchText, type Paciente, type Tutor } from '../services/clinic'
 
-export function PatientAvatar({ patient, large = false }: { patient: Paciente; large?: boolean }) {
+export function PatientAvatar({ patient, large = false, compact = false, photoPath }: {
+  patient: Pick<Paciente, 'id' | 'nome' | 'fotoVersao'>
+  large?: boolean
+  compact?: boolean
+  photoPath?: string
+}) {
   const [photo, setPhoto] = useState<{ key: string; url: string } | null>(null)
-  const key = patient.id + ':' + patient.fotoVersao
+  const path = photoPath ?? '/pacientes/' + patient.id + '/foto'
+  const key = path + ':' + patient.fotoVersao
   useEffect(() => {
     let active = true,
       url = ''
     if (patient.fotoVersao)
-      request<Blob>('/pacientes/' + patient.id + '/foto', { responseType: 'blob' })
+      request<Blob>(path, { responseType: 'blob' })
         .then(blob => {
           if (active) {
             url = URL.createObjectURL(blob)
@@ -26,13 +32,16 @@ export function PatientAvatar({ patient, large = false }: { patient: Paciente; l
       active = false
       if (url) URL.revokeObjectURL(url)
     }
-  }, [patient.id, patient.fotoVersao, key])
+  }, [path, patient.fotoVersao, key])
   return (
-    <span className={'clinic-avatar' + (large ? ' large' : '')}>
+    <span className={'clinic-avatar clinic-patient-photo' + (large ? ' large' : '') + (compact ? ' compact' : '')}>
       {photo?.key === key ? (
-        <img src={photo.url} alt={'Foto de ' + patient.nome} />
+        <img src={photo.url} alt={'Foto de ' + patient.nome} onError={() => setPhoto(null)} />
       ) : (
-        <PawPrint size={large ? 30 : 20} />
+        <span className="clinic-photo-placeholder">
+          <PawPrint size={compact ? 20 : large ? 48 : 32} aria-hidden="true" />
+          {!compact && <small>Sem foto</small>}
+        </span>
       )}
     </span>
   )
@@ -140,6 +149,12 @@ export function PatientEditor({
       closeOnSave={false}
       beforeFields={
         <section className="clinic-form-section">
+          {patient && (
+            <div className="clinic-editor-patient">
+              <PatientAvatar patient={patient} large />
+              <strong>{patient.nome}</strong>
+            </div>
+          )}
           <h3>Tutor responsável</h3>
           <div className="clinic-mode-switch" role="group" aria-label="Responsável pelo paciente">
             <button

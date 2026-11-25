@@ -3,19 +3,26 @@ package ipiranga.fatec.qrvet.services;
 import ipiranga.fatec.qrvet.dtos.request.PaginationRequest;
 import ipiranga.fatec.qrvet.dtos.request.ResetPasswordRequest;
 import ipiranga.fatec.qrvet.dtos.request.UserRequest;
+import ipiranga.fatec.qrvet.dtos.request.UserStatusRequest;
 import ipiranga.fatec.qrvet.dtos.response.PageResponse;
 import ipiranga.fatec.qrvet.exceptions.InvalidRequestException;
+import ipiranga.fatec.qrvet.exceptions.OperationConflictException;
 import ipiranga.fatec.qrvet.exceptions.ResourceAlreadyExistsException;
 import ipiranga.fatec.qrvet.models.User;
 import ipiranga.fatec.qrvet.models.enums.Role;
 import ipiranga.fatec.qrvet.repositories.UserRepository;
+import ipiranga.fatec.qrvet.security.QRVetSecurity;
 import ipiranga.fatec.qrvet.security.SessionService;
 import ipiranga.fatec.qrvet.security.UserInvitationService;
+import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.data.domain.PageImpl;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.domain.Specification;
+import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
+import org.springframework.security.core.authority.SimpleGrantedAuthority;
+import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.security.crypto.password.PasswordEncoder;
 
 import java.time.Instant;
@@ -112,6 +119,52 @@ class UserServiceTests {
         assertThrows(InvalidRequestException.class,
                 () -> service.confirmUserInvitation(new ResetPasswordRequest("token", password)));
         verifyNoInteractions(invitations);
+    }
+
+    @AfterEach
+    void clearSecurityContext() {
+        SecurityContextHolder.clearContext();
+    }
+
+    @Test
+    void deactivatesAndReactivatesConfirmedUserAndRevokesSessions() {
+        User admin = new User(1L, "Admin", "admin@test", "hash", Role.ADMIN, true, 0, true);
+        User vet = user(2L, "Helena", "vet@test", true, true);
+        SecurityContextHolder.getContext().setAuthentication(
+                new UsernamePasswordAuthenticationToken("1", null, List.of(new SimpleGrantedAuthority("ROLE_ADMIN"))));
+
+        when(repository.findAdministratorsForUpdate()).thenReturn(List.of(admin));
+        when(repository.findUserByIdWithLock(2L)).thenReturn(Optional.of(vet));
+        when(repository.saveAndFlush(vet)).thenReturn(vet);
+
+        var deactivated = service.updateStatus(2L, new UserStatusRequest(false));
+        assertFalse(deactivated.active());
+        assertEquals(1, vet.getAuthenticationVersion());
+        verify(sessions).revokeAllSessions(2L);
+
+        var reactivated = service.updateStatus(2L, new UserStatusRequest(true));
+        assertTrue(reactivated.active());
+
+        assertThrows(OperationConflictException.class,
+                () -> service.updateStatus(1L, new UserStatusRequest(false)));
+    }
+
+    @Test
+    void qrvetSecurityChecksActiveAndConfirmedStatusInHasAnyRole() {
+        QRVetSecurity security = new QRVetSecurity(repository);
+        User activeVet = user(10L, "Helena", "vet@test", true, true);
+        User inactiveVet = user(11L, "Inativo", "inativo@test", false, true);
+
+        when(repository.findById(10L)).thenReturn(Optional.of(activeVet));
+        when(repository.findById(11L)).thenReturn(Optional.of(inactiveVet));
+
+        SecurityContextHolder.getContext().setAuthentication(
+                new UsernamePasswordAuthenticationToken("10", null, List.of(new SimpleGrantedAuthority("ROLE_VETERINARIO"))));
+        assertTrue(security.hasAnyRole("VETERINARIO"));
+
+        SecurityContextHolder.getContext().setAuthentication(
+                new UsernamePasswordAuthenticationToken("11", null, List.of(new SimpleGrantedAuthority("ROLE_VETERINARIO"))));
+        assertFalse(security.hasAnyRole("VETERINARIO"));
     }
 
     private static User user(Long id, String name, String email, boolean active, boolean confirmed) {

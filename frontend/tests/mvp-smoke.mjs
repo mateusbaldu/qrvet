@@ -6,10 +6,11 @@ const browser = await chromium.launch({
   headless: true,
   ...(process.env.PLAYWRIGHT_CHANNEL ? { channel: process.env.PLAYWRIGHT_CHANNEL } : {}),
 })
-const page = await browser.newPage({
+const context = await browser.newContext({
   viewport: { width: 1440, height: 1000 },
   timezoneId: 'America/Sao_Paulo',
 })
+const page = await context.newPage()
 await page.clock.setFixedTime(new Date('2026-09-28T15:00:00Z'))
 page.setDefaultTimeout(10000)
 const errors = [],
@@ -134,7 +135,13 @@ await page.route('**/qrvet/api/v1/**', async route => {
     if (path === '/internacoes' || path === '/internacoes/ativas') return send(paged([]))
     if (path === '/internacoes/cuidados') return send(paged([care]))
     if (path === '/internacoes/1/cuidados') return send(care)
-    if (path === '/internacoes/1/jejum' || path === '/internacoes/1/alimentacao') return send([])
+    if (path === '/internacoes/1/evolucoes') return send(paged([]))
+    if (
+      path === '/internacoes/1/jejum' ||
+      path === '/internacoes/1/alimentacao' ||
+      path === '/internacoes/1/medicacao'
+    )
+      return send([])
     if (path === '/baias')
       return send(paged([{ id: 1, identificacao: 'A-01', status: 'DISPONIVEL' }]))
     if (path === '/internacoes/veterinarios') return send([{ id: 2, name: 'Marina Silva' }])
@@ -206,6 +213,21 @@ try {
   await page.getByAltText('Foto de Mel').waitFor()
   await page.getByRole('button', { name: 'Editar paciente', exact: true }).click()
   await fill({ peso: '9.2', observacoes: 'Prefere alimento úmido.' })
+  // Accidental backdrop interactions and switching browser tabs must preserve the draft.
+  await page.mouse.click(5, 5)
+  assert(await dialog().isVisible(), 'Backdrop click must keep the editor open')
+  await page.keyboard.press('Tab')
+  const otherTab = await page.context().newPage()
+  await otherTab.bringToFront()
+  await page.bringToFront()
+  await otherTab.close()
+  await page.evaluate(() => {
+    document.dispatchEvent(new Event('visibilitychange'))
+    window.dispatchEvent(new Event('focus'))
+  })
+  assert(await dialog().isVisible(), 'Returning to the tab must keep the editor open')
+  assert.equal(await page.locator('[name="peso"]').inputValue(), '9.2')
+  assert.equal(await page.locator('[name="observacoes"]').inputValue(), 'Prefere alimento úmido.')
   await save()
   await page.getByText('9,2 kg', { exact: true }).waitFor()
   assert.equal(patients.length, 1)
@@ -214,6 +236,21 @@ try {
   await save()
   await page.getByRole('link', { name: '11888888888' }).waitFor()
   await shot('ficha')
+  const portrait = await page.getByAltText('Foto de Mel').boundingBox()
+  assert(portrait.width >= 200 && portrait.height >= 200, 'Patient detail photo must be prominent')
+  await visit('/pacientes')
+  await page.getByAltText('Foto de Mel').waitFor()
+  const cardPhoto = await page.getByAltText('Foto de Mel').boundingBox()
+  assert(cardPhoto.width >= 200 && cardPhoto.height >= 150, 'Patient cards must lead with a large photo')
+  await shot('pacientes')
+  await page.setViewportSize({ width: 390, height: 844 })
+  assert(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth))
+  await shot('pacientes-mobile')
+  await page.getByRole('link', { name: 'Ver detalhes de Mel', exact: true }).click()
+  await page.getByAltText('Foto de Mel').waitFor()
+  assert(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth))
+  await shot('ficha-mobile')
+  await page.setViewportSize({ width: 1440, height: 1000 })
   await page.getByRole('button', { name: 'Remover foto', exact: true }).click()
   await save()
   await page.getByRole('button', { name: 'Adicionar foto', exact: true }).waitFor()
@@ -273,6 +310,7 @@ try {
   await page.getByText('Dieta revisada', { exact: true }).waitFor()
   await shot('checklist')
   await page.getByRole('button', { name: 'Concluídas', exact: true }).click()
+  await page.waitForFunction(() => document.querySelectorAll('.clinic-feeding-list > li').length === 1)
   assert.equal(await rows.count(), 1)
   await page.getByRole('button', { name: 'Todas', exact: true }).click()
   await page.getByLabel('Dia do checklist', { exact: true }).fill('2026-09-29')

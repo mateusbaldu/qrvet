@@ -49,8 +49,8 @@ services:
       QRVET_MAIL_FROM: no-reply@qrvet.local
       QRVET_JWT_SECRET: ${QRVET_JWT_SECRET:?Configure QRVET_JWT_SECRET em .env.dev}
       QRVET_BOOTSTRAP_SECRET: ${QRVET_BOOTSTRAP_SECRET:?Configure QRVET_BOOTSTRAP_SECRET em .env.dev}
-      QRVET_FRONTEND_URL: http://localhost:5173
-      QRVET_PUBLIC_URL: http://localhost:5173
+      QRVET_FRONTEND_URL: ${QRVET_FRONTEND_URL:-http://localhost:5173}
+      QRVET_PUBLIC_URL: ${QRVET_PUBLIC_URL:-${QRVET_FRONTEND_URL:-http://localhost:5173}}
       QRVET_COOKIE_SECURE: "false"
       QRVET_BOOTSTRAP_ADMIN_ENABLED: "false"
     depends_on:

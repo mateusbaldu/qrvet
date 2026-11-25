@@ -1,12 +1,13 @@
 import { useState } from 'react'
 import { Link, useNavigate, useParams, useSearchParams } from 'react-router-dom'
 import {
-  ArrowRight,
+  Download,
   HeartPulse,
+  NotebookPen,
   PawPrint,
-  QrCode as QrIcon,
   RefreshCw,
   ShieldCheck,
+  ShieldAlert,
 } from 'lucide-react'
 import { useResource } from '../hooks/useResource'
 import {
@@ -18,13 +19,21 @@ import {
   ResourceState,
   StatusBadge,
 } from '../components/ClinicUI'
-import { request, type User } from '../services/api'
-import { allPages, clinicApi, dateTime, type Session } from '../services/clinic'
+import { readableError, request, type User } from '../services/api'
+import { allPages, clinicApi, dateTime, downloadBlob, toEndOfDayIso, toStartOfDayIso, type AuditLog, type Session } from '../services/clinic'
+import '../styles/clinical-records.css'
 
 export function PublicHospitalization() {
   const { token = '' } = useParams()
-  const resource = useResource(() => clinicApi.publicDetails(token), [token])
+  const [evolutionPage, setEvolutionPage] = useState(0)
+  const resource = useResource(async () => ({ ...await clinicApi.publicDetails(token, evolutionPage), consultadoEm: new Date().toISOString() }), [token, evolutionPage])
   const i = resource.data
+  const alertFields = [
+    ['alergias', 'Alergias'],
+    ['restricoesAlimentares', 'Restrições alimentares'],
+    ['cuidadosManejo', 'Cuidados de manejo'],
+  ] as const
+  const activeAlerts = alertFields.filter(([key]) => i?.alertas?.[key]?.trim())
   return (
     <main className="clinic-public">
       <header className="public-brand">
@@ -37,11 +46,17 @@ export function PublicHospitalization() {
         </div>
         <span className="public-readonly">
           <ShieldCheck size={15} />
-          Consulta pública
+          Acompanhamento do tutor
         </span>
       </header>
       <div className="clinic-page public-content">
         <p className="clinic-eyebrow">ACOMPANHAMENTO DA INTERNAÇÃO</p>
+        <div className="public-refresh">
+          <p>{i ? <>Consultado em <time dateTime={i.consultadoEm}>{dateTime(i.consultadoEm)}</time></> : 'Informações registradas pela equipe da clínica.'}</p>
+          <button className="clinic-button" disabled={resource.loading} onClick={resource.reload}>
+            <RefreshCw size={16} aria-hidden="true" />{resource.loading ? 'Atualizando...' : 'Atualizar informações'}
+          </button>
+        </div>
         <ResourceState {...resource} />
         {i && (
           <>
@@ -68,6 +83,12 @@ export function PublicHospitalization() {
                 Não oferecer alimento. A equipe está acompanhando os cuidados.
               </p>
             )}
+            <section className={'clinic-panel patient-alerts' + (activeAlerts.length ? ' has-alerts' : '')} aria-labelledby="public-alerts-title">
+              <h2 id="public-alerts-title"><ShieldAlert size={20} aria-hidden="true" />Alertas e restrições</h2>
+              {activeAlerts.length ? <dl className="patient-alerts-list">
+                {activeAlerts.map(([key, label]) => <div key={key}><dt>{label}</dt><dd>{i.alertas[key]}</dd></div>)}
+              </dl> : <p className="clinic-muted">Nenhum alerta ou restrição registrado. Confirme as orientações com a equipe da clínica.</p>}
+            </section>
             <section className="clinic-panel">
               <h2>
                 <HeartPulse size={20} />
@@ -79,6 +100,14 @@ export function PublicHospitalization() {
                   <dd>{i.motivo}</dd>
                 </div>
                 <div>
+                  <dt>Veterinário responsável</dt>
+                  <dd>{i.veterinarioNome || 'Não informado'}</dd>
+                </div>
+                {i.saidaInternacao && <div>
+                  <dt>Encerramento da internação</dt>
+                  <dd>{dateTime(i.saidaInternacao)}</dd>
+                </div>}
+                <div>
                   <dt>Situação</dt>
                   <dd>
                     {i.status === 'ATIVA'
@@ -89,14 +118,21 @@ export function PublicHospitalization() {
                   </dd>
                 </div>
               </dl>
-              <button className="clinic-button" onClick={resource.reload}>
-                <RefreshCw size={16} />
-                Atualizar informações
-              </button>
+            </section>
+            <section className="clinic-panel evolution-notes" aria-labelledby="public-evolutions-title">
+              <h2 id="public-evolutions-title"><NotebookPen size={20} aria-hidden="true" />Evoluções do paciente</h2>
+              <p className="clinic-muted">Acompanhe as anotações da equipe, da mais recente à mais antiga.</p>
+              {i.evolucoes?.items.length ? <>
+                <p className="clinic-muted">{i.evolucoes.total} {i.evolucoes.total === 1 ? 'evolução registrada' : 'evoluções registradas'}</p>
+                <ol className="evolution-notes-list">{i.evolucoes.items.map((note, index) => <li key={index}>
+                  <header><strong>{note.profissionalNome}</strong><time dateTime={note.dataHoraRegistro}>{dateTime(note.dataHoraRegistro)}</time></header>
+                  <p>{note.texto}</p>
+                </li>)}</ol>
+                {i.evolucoes.pages > 1 && <Pagination {...i.evolucoes} onChange={setEvolutionPage} />}
+              </> : <EmptyState title="Nenhuma evolução registrada"><p>As atualizações desta internação aparecerão aqui assim que forem registradas pela equipe.</p></EmptyState>}
             </section>
             <p className="public-note">
-              Para informações detalhadas sobre a evolução do paciente, entre em contato com a
-              equipe da clínica.
+              As informações refletem os registros da equipe. Para esclarecer dúvidas sobre os cuidados e a evolução do paciente, entre em contato com a clínica.
             </p>
           </>
         )}
@@ -105,89 +141,9 @@ export function PublicHospitalization() {
             <ShieldCheck size={15} />
             Cuidado com responsabilidade
           </span>
-          <Link to="/login">
-            Acesso da equipe <ArrowRight size={14} />
-          </Link>
         </footer>
       </div>
     </main>
-  )
-}
-
-export function QrLookup() {
-  const [error, setError] = useState('')
-  const navigate = useNavigate()
-  return (
-    <Page
-      title="Consultar QR Code"
-      description="Um acesso rápido ao acompanhamento de quem está sob nossos cuidados."
-    >
-      <div className="clinic-lookup-grid">
-        <form
-          className="clinic-panel clinic-lookup-card"
-          onSubmit={e => {
-            e.preventDefault()
-            const raw = String(new FormData(e.currentTarget).get('token')).trim()
-            let path = raw
-            try {
-              path = new URL(raw).pathname
-            } catch {
-              /* Também aceita o código sem endereço. */
-            }
-            const admissionId =
-              path.match(/^\/internacoes\/([1-9]\d*)\/?$/)?.[1] ??
-              (/^[1-9]\d*$/.test(raw) ? raw : '')
-            if (admissionId) {
-              navigate('/internacoes/' + admissionId)
-              return
-            }
-            const token = path.replace(/^\/public\/internacoes\/qr\//, '').replace(/\/$/, '')
-            if (!/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(token)) {
-              setError('Informe um código ou endereço de QR Code válido.')
-              return
-            }
-            navigate('/public/internacoes/qr/' + token)
-          }}
-        >
-          <span className="clinic-lookup-icon">
-            <QrIcon size={48} strokeWidth={1.5} />
-          </span>
-          <h2>Encontre a internação</h2>
-          <p>Cole o link do QR Code no vidro da clínica ou digite o número da internação.</p>
-          <label>
-            Endereço ou código do QR Code
-            <input
-              name="token"
-              required
-              placeholder="Cole o link ou o código aqui"
-              autoComplete="off"
-              onChange={() => setError('')}
-            />
-          </label>
-          {error && (
-            <p role="alert" className="clinic-error">
-              {error}
-            </p>
-          )}
-          <button className="clinic-primary">
-            Consultar internação
-            <ArrowRight size={17} />
-          </button>
-        </form>
-        <aside className="clinic-panel clinic-lookup-help">
-          <h2>Como acessar pelo celular</h2>
-          <ol>
-            <li>Abra a câmera do seu celular.</li>
-            <li>Aponte para o QR Code no vidro da clínica.</li>
-            <li>Toque no link para abrir a internação do animal.</li>
-          </ol>
-          <p>
-            <ShieldCheck size={18} />A equipe acessa com sua conta. O tutor recebe por e-mail um
-            link de acompanhamento sem login.
-          </p>
-        </aside>
-      </div>
-    </Page>
   )
 }
 
@@ -307,6 +263,215 @@ export function Sessions() {
         <EmptyState title="Selecione um membro">
           <p>Os acessos ativos serão exibidos aqui.</p>
         </EmptyState>
+      )}
+    </Page>
+  )
+}
+
+function formatResourceCell(item: AuditLog): string {
+  if (!item.resourceId) {
+    return item.resourceName
+  }
+  return item.resourceName + ' #' + item.resourceId
+}
+
+export function AuditLogs() {
+  const [page, setPage] = useState(0)
+  const [userId, setUserId] = useState('')
+  const [action, setAction] = useState('')
+  const [resourceName, setResourceName] = useState('')
+  const [startDate, setStartDate] = useState('')
+  const [endDate, setEndDate] = useState('')
+  const [downloading, setDownloading] = useState(false)
+  const [downloadError, setDownloadError] = useState('')
+
+  const startIso = toStartOfDayIso(startDate)
+  const endIso = toEndOfDayIso(endDate)
+
+  const users = useResource(() => allPages<User>('/users'), ['audit-users'])
+  const logs = useResource(
+    () =>
+      clinicApi.list<AuditLog>('/audit-logs', page, {
+        userId: userId || undefined,
+        action: action || undefined,
+        resourceName: resourceName || undefined,
+        startDate: startIso,
+        endDate: endIso,
+      }),
+    [page, userId, action, resourceName, startIso, endIso]
+  )
+
+  async function downloadCsv() {
+    if (downloading) return
+    setDownloading(true)
+    setDownloadError('')
+    try {
+      const query = new URLSearchParams()
+      if (userId) query.set('userId', userId)
+      if (action) query.set('action', action)
+      if (resourceName) query.set('resourceName', resourceName)
+      if (startIso) query.set('startDate', startIso)
+      if (endIso) query.set('endDate', endIso)
+      const qs = query.toString()
+      let exportPath = '/audit-logs/export'
+      if (qs) {
+        exportPath = '/audit-logs/export?' + qs
+      }
+      const blob = await request<Blob>(exportPath, {
+        responseType: 'blob',
+      })
+      downloadBlob(blob, 'relatorio-auditoria.csv')
+    } catch (error) {
+      setDownloadError(readableError(error))
+    } finally {
+      setDownloading(false)
+    }
+  }
+
+  let downloadButtonLabel = 'Baixar relatório (CSV)'
+  if (downloading) {
+    downloadButtonLabel = 'Gerando relatório...'
+  }
+
+  return (
+    <Page
+      title="Auditoria"
+      help="Filtre os eventos por período, membro da equipe, ação ou recurso e exporte o relatório consolidado em CSV."
+      description="Rastreabilidade de acessos e operações críticas realizadas no sistema."
+      action={
+        <button className="clinic-primary" disabled={downloading} onClick={downloadCsv}>
+          <Download size={17} />
+          {downloadButtonLabel}
+        </button>
+      }
+    >
+      {downloadError && (
+        <p className="clinic-error" role="alert">
+          {downloadError}
+        </p>
+      )}
+      <div className="clinic-panel">
+        <div className="clinic-fields">
+          <label>
+            Data inicial
+            <input
+              type="date"
+              value={startDate}
+              onChange={e => {
+                setStartDate(e.target.value)
+                setPage(0)
+              }}
+            />
+          </label>
+          <label>
+            Data final
+            <input
+              type="date"
+              value={endDate}
+              onChange={e => {
+                setEndDate(e.target.value)
+                setPage(0)
+              }}
+            />
+          </label>
+          <label>
+            Membro da equipe
+            <select
+              value={userId}
+              onChange={e => {
+                setUserId(e.target.value)
+                setPage(0)
+              }}
+            >
+              <option value="">Todos os usuários</option>
+              {users.data?.map(u => (
+                <option value={u.id} key={u.id}>
+                  {u.name} · {u.email}
+                </option>
+              ))}
+            </select>
+          </label>
+          <label>
+            Recurso
+            <select
+              value={resourceName}
+              onChange={e => {
+                setResourceName(e.target.value)
+                setPage(0)
+              }}
+            >
+              <option value="">Todos os recursos</option>
+              <option value="auth">Autenticação</option>
+              <option value="patient">Paciente</option>
+              <option value="hospitalization">Internação</option>
+            </select>
+          </label>
+          <label className="clinic-field-wide">
+            Ação
+            <select
+              value={action}
+              onChange={e => {
+                setAction(e.target.value)
+                setPage(0)
+              }}
+            >
+              <option value="">Todas as ações</option>
+              <option value="LOGIN_SUCCESS">Login realizado</option>
+              <option value="LOGIN_FAILED">Falha no login</option>
+              <option value="LOGOUT">Logout realizado</option>
+              <option value="PASSWORD_CHANGED">Senha alterada</option>
+              <option value="PASSWORD_RECOVERY_REQUESTED">Recuperação de senha solicitada</option>
+              <option value="PASSWORD_RESET">Senha redefinida</option>
+              <option value="PATIENT_CREATED">Paciente criado</option>
+              <option value="PATIENT_UPDATED">Paciente atualizado</option>
+              <option value="HOSPITALIZATION_CREATED">Internação criada</option>
+              <option value="HOSPITALIZATION_UPDATED">Internação atualizada</option>
+            </select>
+          </label>
+        </div>
+      </div>
+      <ResourceState {...logs} />
+      {logs.data && (
+        <>
+          <section className="clinic-table-panel">
+            <div className="clinic-table-scroll">
+              <table className="clinic-table">
+                <thead>
+                  <tr>
+                    <th>Data/Hora</th>
+                    <th>Ação</th>
+                    <th>Recurso</th>
+                    <th>Usuário</th>
+                    <th>IP</th>
+                    <th>Detalhes</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {logs.data.items.map(item => (
+                    <tr key={item.id}>
+                      <td>{dateTime(item.timestamp)}</td>
+                      <td>
+                        <strong>{item.action}</strong>
+                      </td>
+                      <td>{formatResourceCell(item)}</td>
+                      <td>{item.userEmail || '—'}</td>
+                      <td>{item.ipAddress || '—'}</td>
+                      <td>
+                        <small>{item.details || '—'}</small>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+            {!logs.data.total && (
+              <EmptyState title="Nenhum registro de auditoria">
+                <p>Altere os filtros para consultar outros eventos.</p>
+              </EmptyState>
+            )}
+          </section>
+          <Pagination {...logs.data} onChange={setPage} />
+        </>
       )}
     </Page>
   )
